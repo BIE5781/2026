@@ -1,0 +1,241 @@
+---
+title: "Modelo animal univariado"
+author: "Diogo Melo, Alastair Wilson"
+date: "2026-05-06"
+output:
+  html_document:
+    code_folding: show
+    highlight: pygments
+    number_sections: false
+    toc: true
+    toc_depth: 2
+    theme: yeti
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+  pdf_document:
+    latex_engine: xelatex
+header-includes:
+  - \usepackage[brazilian]{babel}
+  - \usepackage[utf8]{inputenc}
+  - \usepackage[bitstream-charter]{mathdesign}
+  - \usepackage{setspace}
+  - \doublespacing
+fontsize: 14pt
+---
+
+\newcommand{\ihat}{\boldsymbol{\hat \imath}}
+\newcommand{\jhat}{\boldsymbol{\hat \jmath}}
+\newcommand{\uvec}{\boldsymbol{\vec{u}}}
+\newcommand{\vvec}{\boldsymbol{\vec{v}}}
+\newcommand{\wvec}{\boldsymbol{\vec{w}}}
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Crimson+Text|Overpass+Mono:400|Lora:700');
+
+code.r{
+	font-family: "Overpass Mono";
+	font-size: 10pt;
+}
+
+body{
+	font-family: 'Crimson Text';
+	font-size: 16pt;
+}
+
+h1,h2,h3,h4{
+	font-family: 'Lora';
+}
+
+h5,h6{
+ 	font-family: 'Crimson Text';
+}
+</style>
+
+<script type="text/x-mathjax-config">
+   MathJax.Hub.Config({  "HTML-CSS": { minScaleAdjust: 100, availableFonts: [] }  });
+</script>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Efeitos genéticos e ambientais no tamanho de esquilos
+
+Imagine que um estudo com esquilos tenha mostrado que animais maiores possuem maior aptidão (fitness) — eles têm, em média, maior probabilidade de sobreviver e/ou se reproduzir. Assim, o tamanho dos esquilos está sob seleção positiva, mas será que ele irá evoluir e, em caso afirmativo, quão rápido? A resposta depende da medida em que a variação de tamanho provém de efeitos genéticos vs. efeitos ambientais (por exemplo, variação na capacidade de forrageamento).
+
+Imagine que temos uma amostra de 500 esquilos capturados no campo, medidos e com amostras de DNA coletadas. As relações familiares (ou seja, o pedigree) foram determinadas por meio da genotipagem de um conjunto de marcadores moleculares. O pedigree abrange duas gerações (100 pais, 400 descendentes). Medidas de qualidade do forrageamento no local de coleta de cada indivíduo também foram feitas.
+
+```{r}
+squirels<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirels2.txt", header=T)
+squirels$ID<-as.factor(squirels$ID)
+squirels$sex<-as.factor(squirels$sex)
+squirels$SIRE<-as.factor(squirels$SIRE)
+squirels$DAM<-as.factor(squirels$DAM)
+
+#read in the pedigree file
+squirelsPED<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirelsPED.txt",header=T)
+```
+
+```{r, attr.message=FALSE, message=FALSE}
+#2. Automatically installs packages in this list that user does not already have
+
+list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedigreemm", "sommer")
+new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
+if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
+
+library(sommer)
+library(MCMCglmm)
+library(lme4)
+library(lmerTest)
+library(pedigreemm)
+```
+
+# Estrutura de dados
+
+Vamos dar uma olhada na estrutuda dos dados:
+
+```{r}
+head(squirels)
+head(squirelsPED)
+```
+
+Espero que isso seja autoexplicativo! Você pode incluir informações sobre o pai (SIRE) e a mãe (DAM) no arquivo de dados principal (como foi feito aqui), embora, por diversos motivos, seja frequentemente mais conveniente ter também um arquivo de dados de pedigree separado ao executar modelos animais (animal models).
+
+Note que o arquivo de pedigree separado é organizado de modo que cada esquilo deve aparecer na coluna “indivíduo” (individual) antes de poder aparecer como genitor. Na prática, isso significa que a geração mais antiga estará no topo do arquivo e os pais desses indivíduos serão desconhecidos, portanto, NA.
+
+Também podemos representar o pedigree graficamente, por exemplo, utilizando o pacote Pedantics do R.
+
+
+G¨RAFICOS
+
+# Estimando a $V_A$ para o tamanho corporal em esquilos
+
+Dado que os dados que utilizaremos foram, na verdade, simulados a partir de um delineamento simples de irmãos-germanos (full-sib) e meio-irmãos (half-sib) para a segunda geração (em oposição a uma estrutura de pedigree multigeracional complexa), e como também temos os fenótipos dos pais, temos opções de como analisar os dados; portanto, tentaremos algumas abordagens diferentes.
+
+## ANOVA simples de dados de irmãos (sibship)
+
+
+A regressão pai-filho poderia ser feita aqui, mas vamos ignorá-la e tentar a ANOVA como um ponto de partida simples. Isso é apropriado se utilizarmos apenas dados fenotípicos da geração de descendentes. Para esta geração, os dados são balanceados (número igual de descendentes por mãe e de mães por pai), sem fenótipos ausentes.
+
+Note que, de forma confusa, o comando anova no R é usado genericamente para comparar modelos ou testar a significância de termos, enquanto o R utiliza o comando aov para realizar uma ANOVA de mínimos quadrados ordinários.
+
+```{r}
+#6. Run an ANOVA
+mod_aov<-aov(size~SIRE, data=squirels, na.action=na.omit) 
+                      # this will drop parental generation for us since they have missing SIRE
+summary(mod_aov)  
+```
+
+O efeito do pai (sire) é estatisticamente significativo, o que significa que existe variância genética. Poderíamos executar uma ANOVA de dois fatores definindo a fórmula do modelo como tamanho ~ SIRE + DAM, se quiséssemos (tente fazer isso!). Também poderíamos usar esse modelo estatístico para calcular a herdabilidade. No entanto, o resultado é fornecido em termos de soma de quadrados (Sum Sq), e não como variância na escala real dos dados; portanto, para evitar ter que consultar muitas fórmulas e fazer cálculos aritméticos, vamos mudar para uma estrutura de modelos mistos, que é mais simples de interpretar.
+
+## Modelo sire-dam ajustado por REML
+
+Primeiro, usaremos o lme4 como um pacote genérico para ajustar modelos mistos simples (ou seja, modelos em que os fatores aleatórios possuem observações repetidas) por REML. Assim, podemos ajustar o pai (sire) como um efeito aleatório sobre o tamanho, consultar o summary do modelo para ver a estimativa de $V_{sire}$ e testar sua significância usando um teste de razão de verossimilhança (likelihood ratio test, LRT).
+
+```{r}
+#8. Mixed model with SIRE as random
+squirels_nosires = na.omit(squirels) # Omitindo observações sem fenótipos
+mod_sire<-lmer(size~(1|SIRE), data=squirels_nosires) 
+
+summary(mod_sire)
+rand(mod_sire)            #this will test significance of random effects using LRT
+```
+
+## Expandindo o modelo
+
+No entanto, irmãos completos também compartilham a mesma mãe, portanto, provavelmente é melhor modelar essa não independência. Ignorar esse fator poderia, potencialmente, levar a uma estimativa inflada da variância do pai (SIRE).
+
+Lembrando que este é um estudo de campo no qual os fatores ambientais não puderam ser controlados experimentalmente, podemos querer controlar estatisticamente, também, quaisquer efeitos da variação na qualidade da forragemento sobre o tamanho corporal. Finalmente, podemos desejar controlar qualquer dimorfismo sexual no tamanho do corpo.
+
+É claro que sempre vale a pena examinar os dados para verificar se os efeitos da forragemento ou do sexo são aparentes!
+
+```{r}
+#9. Look at the data
+plot(squirels$forage, squirels$size, pch = 19)
+plot(squirels$sex, squirels$size)  #sex 1 is female, 2 is male
+```
+
+Nenhuma relação muito clara entre essas duas variáveis e tamanho corporal, mas vamos incluí-las como efeitos fixos e testar formalmente a relação entre essas variáveis preditores e a variável resposta. Vamos também incluir um efeito randômico adicional relacionado às mães. Nós sempre podemos simplificar o modelo depois.
+
+```{r}
+#10. A SIRE-DAM MODEL 
+squirels_nosires = na.omit(squirels) #  omitindo observações sem fenótipo. 
+mod_sire_dam<-lmer(size~sex+forage+ (1|SIRE)+(1|DAM), data=squirels_nosires) 
+rand(mod_sire_dam)
+```
+
+
+O summary do modelo revela que as variâncias de pais e mães são parecidas, e que os efeitos fixos são pequenos, porém significativos.
+
+```{r}
+summary(mod_sire_dam)
+```
+
+Às vezes, usando um modelo desse tipo, chamado SIRE-DAM Model, você pode achar que a variância de DAMS é muito maior que a variância de SIRE. Isso indica contribuição importante de efeitos de dominância ou de efeitos maternos, ambos contribuindo para a variância do fenótipo.
+
+# Calculando a herdabilidade $h^2$
+
+Nesse desenho experimental, a variância associada aos pais, a SIRE variance, é um quarto da variância genética aditiva ($v_{sire} = 0.25 \times V_A$, você consegue imaginar por que?). A variância total é a soma de todas as variâncias. Nós podemos usar esses dois fatos pra calcular uma estimativa da herdabilidade. 
+
+```{r}
+#11. Calculate h2
+h2_sire_dam=(4*1.0155)/(0.8224+1.0155+3.4693)
+h2_sire_dam |> round (2)
+```
+
+# Modelos animais ajustados usando REML
+
+
+## Opções de software
+
+Infelizmente, não são muitos os pacotes genéricos de modelos mistos REML que conseguem ajustar modelos animais (animal models). Uma boa opção é o ASReml-R, que é um pacote de modelos mistos muito potente e flexível que permite ajustar modelos animais básicos e estendê-los de diversas formas interessantes para aplicações em genética quantitativa. No entanto, ele não é gratuito e não temos acesso a ele hoje. O WOMBAT é um bom programa REML gratuito (e um pouco complicado), mas precisa ser executado fora do R.
+
+Portanto, por enquanto, usaremos um pacote chamado pedigreemm, que faz interface com o lme4. Esses pacotes não são os ideais para ajustar modelos animais, mas, para fins ilustrativos, podemos usá-los para estimar a $h^2$ (herdabilidade) em um cenário simples. Mais tarde, ajustaremos o mesmo modelo animal usando o MCMCglmm. Este é um pacote de modelos mistos para R, potente e gratuito, que consegue ajustar modelos animais. No entanto, o MCMCglmm exige que adotemos um pensamento bayesiano (o que tem tanto vantagens quanto desvantagens) e verificações de modelo pós-ajuste mais extensas para garantir que "acreditamos" nos resultados.
+
+## Ajustando o modelo no pedigreemm 
+
+O pedigreemm precisa que o objeto do pedigree seja separado nos dados fenotípicos, num formato levemente diferente do que nós temos usado. Depois de ajustar o pedigree, podemos ajustar o modelo animal, mantendo os mesmos efeitos fixos que usamos anteriormente, mas substituindo os efeitos aleatórios de SIRE e DAM com um efeito associado ao ID de cada indivíduo e ponderado pelo pedigree.
+
+```{r}
+#13.Animal model in pedigreemm
+squirelsPED2<-pedigree(squirelsPED$SIRE,squirelsPED$DAM,squirelsPED$ID)  #restructure ped file
+
+mod_animalREML<-pedigreemm(size~sex+forage+(1|ID),pedigree=list(ID=squirelsPED2), 
+                   data=squirels, REML=TRUE, 
+                   control=lmerControl(check.nobs.vs.nlev="ignore",
+                                       check.nobs.vs.nRE="ignore"))
+summary(mod_animalREML)
+```
+
+A variância associada ao ID agora é uma estimativa direta da variância genética aditiva, e podemos calcular a herdabilidade simplesmente dividindo a variância aditiva pela variância total.
+
+```{r}
+#15. And calculate h2
+h2_animalREML=2.252/(2.252+2.615)
+h2_animalREML
+
+```
+
+## Por que as duas estimativas de herdabilidade são tão diferentes?
+
+O modelo sire-dam (pai-mãe) produz uma estimativa de $h^2 = 0,765$, que é notavelmente superior à estimativa do modelo animal de $h^2 = 0,463$. Por que isso ocorre? Na verdade, ambas são estimativas válidas e nenhuma das abordagens é inerentemente enviesada neste caso. Como os dados foram simulados, eu sei que a estimativa mais baixa está muito mais próxima da "verdade" (ou seja, a $h^2$ que foi definida para a população hipotética da qual os pais foram amostrados). É claro que, em situações reais, a "verdade" é desconhecida — mas espera-se que a estimativa do modelo animal seja melhor no sentido de ser mais precisa porque:
+
+- Embora o tamanho da amostra seja baixo para um estudo de genética quantitativa, o modelo sire-dam é incapaz de utilizar todos os dados fenotípicos disponíveis aqui. Ele não consegue usar os dados fenotípicos dos pais.
+
+- O modelo sire-dam não utiliza os dados de forma eficiente. A estimativa de $V_A$ é, na verdade, feita pela comparação das médias fenotípicas entre meio-irmãos paternos, das quais existem apenas 20. Ao usar um modelo sire-dam (e assumindo apenas herança aditiva), o número de pais — em vez de mães por pai ou descendentes por mãe — é a principal limitação para a precisão.
+
+- O modelo animal utiliza todos os dados com máxima eficiência. A estimativa de $V_A$ é informada por todas as comparações pareadas possíveis entre os indivíduos. Isso inclui pares de pais-prole, irmãos completos, meio-irmãos e indivíduos não aparentados.
+
+## Caracterizando a incerteza
+
+A combinação pedigreemm/lme4 utilizada aqui não gera prontamente medidas de incerteza (ex: erro padrão ou intervalo de confiança) para $V_A$ ou $h^2$ em nenhum dos modelos. Poderíamos provavelmente criar um método (ex: bootstrapping), mas a codificação não é trivial. Quantificar a incerteza nos parâmetros de genética quantitativa é crucial, e essa limitação é um bom motivo para trabalhar com pacotes mais especializados. Por exemplo, usando o ASReml-R (código não mostrado), as estimativas de $V_A$ e $h^2$ são (tranquilizadoramente!) as mesmas obtidas acima. No entanto, este programa também estima o erro padrão (EP) que, embora aproximado por razões técnicas, fornece uma imagem clara da precisão relativa das duas estratégias de modelagem. Também é fácil testar a $V_A$ (e quaisquer outros componentes de variância) usando testes de razão de verossimilhança no ASReml.
+
+- Modelo sire-dam (ASReml): $V_{pai} = 1,02$ $(0,457)$; $V_A = 4,06$ $(1,83)$; $h^2 = 0,765$ $(0,290)$
+- Modelo animal (ASReml): $V_A = 2,25$ $(0,480)$; $h^2 = 0,463$ $(0,078)$
+
+
+
+
+
+
