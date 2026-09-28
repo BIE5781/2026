@@ -73,12 +73,12 @@ squirels$sex<-as.factor(squirels$sex)
 squirels$SIRE<-as.factor(squirels$SIRE)
 squirels$DAM<-as.factor(squirels$DAM)
 
-#read in the pedigree file
+# ler o arquivo de pedigree
 squirelsPED<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirelsPED.txt",header=T)
 ```
 
 ```{r, attr.message=FALSE, message=FALSE}
-#2. Automatically installs packages in this list that user does not already have
+#2. Instalar automaticamente os pacotes desta lista que ainda não estão instalados
 
 list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedigreemm", "sommer")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
@@ -121,9 +121,9 @@ A regressão pai-filho poderia ser feita aqui, mas vamos ignorá-la e tentar a A
 Note que, de forma confusa, o comando anova no R é usado genericamente para comparar modelos ou testar a significância de termos, enquanto o R utiliza o comando aov para realizar uma ANOVA de mínimos quadrados ordinários.
 
 ```{r}
-#6. Run an ANOVA
+#6. Executar uma ANOVA
 mod_aov<-aov(size~SIRE, data=squirels, na.action=na.omit) 
-                      # this will drop parental generation for us since they have missing SIRE
+                      # isto removerá a geração parental, que não possui informação de SIRE
 summary(mod_aov)  
 ```
 
@@ -134,12 +134,12 @@ O efeito do pai (sire) é estatisticamente significativo, o que significa que ex
 Primeiro, usaremos o lme4 como um pacote genérico para ajustar modelos mistos simples (ou seja, modelos em que os fatores aleatórios possuem observações repetidas) por REML. Assim, podemos ajustar o pai (sire) como um efeito aleatório sobre o tamanho, consultar o summary do modelo para ver a estimativa de $V_{sire}$ e testar sua significância usando um teste de razão de verossimilhança (likelihood ratio test, LRT).
 
 ```{r}
-#8. Mixed model with SIRE as random
+#8. Modelo misto com SIRE como efeito aleatório
 squirels_nosires = na.omit(squirels) # Omitindo observações sem fenótipos
 mod_sire<-lmer(size~(1|SIRE), data=squirels_nosires) 
 
 summary(mod_sire)
-rand(mod_sire)            #this will test significance of random effects using LRT
+rand(mod_sire)            # isto testará a significância dos efeitos aleatórios usando o LRT
 ```
 
 ## Expandindo o modelo
@@ -151,15 +151,15 @@ Lembrando que este é um estudo de campo no qual os fatores ambientais não pude
 É claro que sempre vale a pena examinar os dados para verificar se os efeitos da forragemento ou do sexo são aparentes!
 
 ```{r}
-#9. Look at the data
+#9. Observar os dados
 plot(squirels$forage, squirels$size, pch = 19)
-plot(squirels$sex, squirels$size)  #sex 1 is female, 2 is male
+plot(squirels$sex, squirels$size)  # sexo 1 é feminino; sexo 2 é masculino
 ```
 
 Nenhuma relação muito clara entre essas duas variáveis e tamanho corporal, mas vamos incluí-las como efeitos fixos e testar formalmente a relação entre essas variáveis preditores e a variável resposta. Vamos também incluir um efeito randômico adicional relacionado às mães. Nós sempre podemos simplificar o modelo depois.
 
 ```{r}
-#10. A SIRE-DAM MODEL 
+#10. Um modelo SIRE-DAM
 squirels_nosires = na.omit(squirels) #  omitindo observações sem fenótipo. 
 mod_sire_dam<-lmer(size~sex+forage+ (1|SIRE)+(1|DAM), data=squirels_nosires) 
 rand(mod_sire_dam)
@@ -179,7 +179,7 @@ summary(mod_sire_dam)
 Nesse desenho experimental, a variância associada aos pais, a SIRE variance, é um quarto da variância genética aditiva ($v_{sire} = 0.25 \times V_A$, você consegue imaginar por que?). A variância total é a soma de todas as variâncias. Nós podemos usar esses dois fatos pra calcular uma estimativa da herdabilidade. 
 
 ```{r}
-#11. Calculate h2
+#11. Calcular h2
 h2_sire_dam=(4*1.0155)/(0.8224+1.0155+3.4693)
 h2_sire_dam |> round (2)
 ```
@@ -198,8 +198,8 @@ Portanto, por enquanto, usaremos um pacote chamado pedigreemm, que faz interface
 O pedigreemm precisa que o objeto do pedigree seja separado nos dados fenotípicos, num formato levemente diferente do que nós temos usado. Depois de ajustar o pedigree, podemos ajustar o modelo animal, mantendo os mesmos efeitos fixos que usamos anteriormente, mas substituindo os efeitos aleatórios de SIRE e DAM com um efeito associado ao ID de cada indivíduo e ponderado pelo pedigree.
 
 ```{r}
-#13.Animal model in pedigreemm
-squirelsPED2<-pedigree(squirelsPED$SIRE,squirelsPED$DAM,squirelsPED$ID)  #restructure ped file
+#13. Modelo animal no pedigreemm
+squirelsPED2<-pedigree(squirelsPED$SIRE,squirelsPED$DAM,squirelsPED$ID)  # reestruturar o arquivo de pedigree
 
 mod_animalREML<-pedigreemm(size~sex+forage+(1|ID),pedigree=list(ID=squirelsPED2), 
                    data=squirels, REML=TRUE, 
@@ -211,7 +211,7 @@ summary(mod_animalREML)
 A variância associada ao ID agora é uma estimativa direta da variância genética aditiva, e podemos calcular a herdabilidade simplesmente dividindo a variância aditiva pela variância total.
 
 ```{r}
-#15. And calculate h2
+#15. Calcular h2
 h2_animalREML=2.252/(2.252+2.615)
 h2_animalREML
 

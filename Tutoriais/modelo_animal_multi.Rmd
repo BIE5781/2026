@@ -74,21 +74,21 @@ Retornaremos ao conjunto de dados que já vimos, estendendo nossa análise anter
 Antes de qualquer coisa, precisamos carregar os arquivos com os dados que vamos usar no resto do tutorial.
 
 ```{r}
-#1. read in the main data file
+#1. ler o arquivo principal de dados
 squirels<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirels2.txt", header=T)
 squirels$ID<-as.factor(squirels$ID)
 squirels$sex<-as.factor(squirels$sex)
 squirels$SIRE<-as.factor(squirels$SIRE)
 squirels$DAM<-as.factor(squirels$DAM)
 
-#read in the pedigree file
+# ler o arquivo de pedigree
 squirelsPED<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirelsPED.txt",header=T)
 ```
 
 Vamos também carregar os pacotes que vamos usar.
 
 ```{r, attr.message=FALSE, message=FALSE, warning=FALSE}
-#2. Automatically installs packages in this list that user does not already have
+#2. Instalar automaticamente os pacotes desta lista que ainda não estão instalados
 
 list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedigreemm")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
@@ -105,7 +105,7 @@ library(pedigreemm)
 Vale a pena fazer um gráfico com os valores de agressividade e tamanhoe para verificar se existe uma relação simples entre os dois fenótipos.
 
 ```{r}
-#3. Test for size-aggression relationship
+#3. Testar a relação entre tamanho e agressividade
 mod_regression<-lm(aggression~size, data=squirels)
 plot(squirels$size,squirels$aggression, pch = 19)           
 abline(mod_regression)
@@ -133,17 +133,17 @@ O MCMCglmm é um método bayesiano — precisamos especificar as distribuições
 Vamos executar um modelo bivariado, mas, apenas para ver como o MCMCglmm funciona, vamos rodar primeiro um modelo univariado para a agressividade para verificar se ela é herdável (se não for, faz pouco sentido estimar uma correlação genética com o tamanho).
 
 ```{r}
-#4. Univariate animal models in mcmcglmm
+#4. Modelos animais univariados no mcmcglmm
 
-#first we'll set a prior for the variance components
+# primeiro, vamos definir uma distribuição a priori para os componentes de variância
 prior_uni <- list(G = list(G1 = list(V = 1, nu = 0.002)), 
             R = list(V = 1, nu = 0.002))
 
-#I think the package likes to reserve ID for an identity matrix so we’ll duplicate 
-#our identity column and call it “animal” in the data file 
+# Acho que o pacote reserva ID para uma matriz identidade, então vamos duplicar
+# nossa coluna de identidade e chamá-la de “animal” no arquivo de dados
 squirels$animal<-as.factor(squirels$ID)
 
-#then run the model
+# então, vamos ajustar o modelo
 
 model_uni <- MCMCglmm(aggression ~ 1+sex+forage, random = ~animal, pedigree = squirelsPED,
             data = squirels, prior = prior_uni)
@@ -162,7 +162,7 @@ Acima, vemos as estimativas da variança associada aos efeitos genéticos no ter
 Uma vantagem grande de modelos bayesianos é que temos uma distribuição posterior e completa para os parâmetros. Portanto, é trivial calcular tanto a herdabilidade quanto o intervalo de confiança da herdabilidade, usando o resultado desse modelo.
 
 ```{r}
-#5.Get a posterior for h2
+#5. Obter uma distribuição a posteriori para h2
 posterior.heritability<-model_uni$VCV[,1]/(model_uni$VCV[,1]+ model_uni$VCV[,2])
 ```
 
@@ -170,11 +170,11 @@ Você pode olhar pra essa distribuição a posteriori dos valores de herdabilida
 (Um cuidado necessário é que a herdabilidade neste modelo é restrita a valores positivos. Então, o intervalo de confiança nunca vai interceptar o zero e, portanto, não pode ser usado para um teste de hipótese clássico.)
 
 ```{r}
-mean(posterior.heritability)   # point estimate
+mean(posterior.heritability)   # estimador pontual
 ```
 
 ```{r}
-HPDinterval(posterior.heritability) # Credibility interval.
+HPDinterval(posterior.heritability) # intervalo de credibilidade
 ```
 
 ## Complicações
@@ -186,14 +186,14 @@ Provavelmente rodaríamos o modelo várias vezes para garantir que nossos result
 Embora os pontos acima sejam extremamente importantes para análises reais que se pretenda publicar, aqui vamos apenas plotar as distribuições a posteriori para fazer uma verificação visual rápida da execução do MCMC!
 
 ```{r}
-#6. Some diagnostic model plots
-plot(model_uni$Sol)   #plots traces and posterior distributions of fixed effects
+#6. Alguns gráficos de diagnóstico do modelo
+plot(model_uni$Sol)   # gráficos das cadeias e das distribuições a posteriori dos efeitos fixos
 ```
 
 Nos trace plots, o ideal é ver uma variação totalmente aleatória ao redor de uma média, e que não tenha nenhum ponto em que os valores fiquem estagnados em um único valor ou saltos entre valores médios diferentes. Da mesma forma, nos gráficos de densidade, o ideal é que tenhamos uma distribuição que se pareça com uma gaussiana, com apenas um valor máximo.
 
 ```{r}
-plot(model_uni$VCV)   #plots traces and posterior distributions of random effect (co)variances
+plot(model_uni$VCV)   # gráficos das cadeias e das distribuições a posteriori das (co)variâncias dos efeitos aleatórios
 ```
 
 Se você obtiver médias a posteriori instáveis e/ou distribuições com aspecto estranho, o primeiro passo habitual seria alterar as opções de execução do MCMCglmm em relação aos valores padrão (comprimento total de 13.000 iterações, sendo as primeiras 3.000 descartadas como burn-in, e as 10.000 restantes amostradas a cada 10 iterações — o intervalo de thinning —, resultando em uma amostra a posteriori de tamanho 1.000).
@@ -201,7 +201,7 @@ Se você obtiver médias a posteriori instáveis e/ou distribuições com aspect
 Por exemplo, você poderia utilizar um período de burn-in mais longo e mais iterações, além de amostrar a parte não descartada da cadeia com menos frequência para reduzir a autocorrelação. Naturalmente, isso vai demorar mais pra rodar.
 
 ```{r, eval=FALSE}
-#7. A longer run. Will you get the same answers?
+#7. Uma rodada mais longa. Vamos obter as mesmas respostas?
 model_uni2 <- MCMCglmm(aggression ~ 1+sex+forage, random = ~animal, pedigree = squirelsPED,
             data = squirels, nitt = 65000, thin = 50, burnin = 15000, prior = prior_uni)
 ```
@@ -211,7 +211,7 @@ model_uni2 <- MCMCglmm(aggression ~ 1+sex+forage, random = ~animal, pedigree = s
 Agora que tivemos um gostinho dos modelos MCMCglmm, vamos estender o modelo e calcular a matriz G entre o tamanho e a agressividade. É possível que esse modelo demore alguns minutos pra rodar no computador de vocês.
 
 ```{r}
-#8. Fitting a bivariate model, first specify a prior
+#8. Ajustar um modelo bivariado; primeiro, especificar uma distribuição a priori
 
 prior_bi <- list(G = list(G1 = list(V = diag(2), nu = 1.002)),
                           R = list(V = diag(2), nu = 1.002))
@@ -230,18 +230,18 @@ UMA PEQUENA DIGRESSÃO — Esse modelo provavelmente levou um minuto (ou vários
 Vamos observar os gráficos das estimativas dos componentes de variância para ver se consideramos que a execução gerou resultados confiáveis. Reiterando: isso não é uma verificação de modelo suficiente para uma análise formal que gere resultados publicáveis. Leia a vignette e as notas do curso de MCMCglmm de Hadfield para entender o que deve ser feito adequadamente. Estamos pegando atalhos consideráveis aqui para economizar tempo.
 
 ```{r, eval=FALSE}
-#9. Plot variance covariance estimates for diagnostics 
-plot(model_bi$VCV)   #plots traces and posterior distributions of random effect (co)variances
+#9. Plotar estimativas de variância e covariância para diagnóstico
+plot(model_bi$VCV)   # gráficos das cadeias e das distribuições a posteriori das (co)variâncias dos efeitos aleatórios
 ```
 
 Se os trace plots estiverem razoáveis, vamos continuar olhando o modelo.
 
 ```{r}
-#10. Summarise the bivariate model
+#10. Sumarizar o modelo bivariado
 summary(model_bi)
 ```
 
-This output contains estimates of the elements in G, the corresponding residual (environment) variance-covariance matrix (which we could call R), and the fixed effects. In all cases the posterior mean is provided as the point estimate.
+Esta saída contém estimativas dos elementos de G, da matriz de variância-covariância residual (ambiental), que poderíamos chamar de R, e dos efeitos fixos. Em todos os casos, a média a posteriori é fornecida como estimativa pontual.
 
 Esse sumário contém estimativa de todos os elementos da matriz G, os elementos da matriz residual, das variações ambientais e todos os efeitos fixos. Em todos os casos, a média é a média da posteriori, que te dá uma estimativa do valor do parâmetro.
 
@@ -251,19 +251,19 @@ Esse sumário contém estimativa de todos os elementos da matriz G, os elementos
 Na parte de "G-Structure" da tabela de sumário, os elementos estão na ordem: variância aditiva de tamanho, covariância entre tamanho e agressividade, covariância entre agressividade e tamanho, e variância aditiva de agressividade. Escrever o termo de covariança duas vezes pode parecer desnecessário, mas essa duplicidade facilita o trabalho com os objetos nas análises posteriores.
 
 ```{r}
-#11. Make a G matrix and calcular rG
+#11. Construir uma matriz G e calcular rG
 
 G_elements<-c(mean(model_bi$VCV[,1]), mean(model_bi$VCV[,2]), 
               mean(model_bi$VCV[,3]), mean(model_bi$VCV[,4]))
                         
-              #model_bi$VCV contains the posteriors (each 1000 values) of the 
-              #eight var-covar parameters (VA1,COVA12, COVA12, VA2, VR1, COVR12, COVR12, VR2).
-              #Here we get the means of columns 1:4 to get point estimates of genetic 
-              #parameters then arrange them in a matrix
+              # model_bi$VCV contém as distribuições a posteriori (com 1000 valores cada) dos
+              # oito parâmetros de variância e covariância (VA1, COVA12, COVA12, VA2, VR1, COVR12, COVR12, VR2).
+              # Aqui obtemos as médias das colunas 1:4 para obter estimativas pontuais dos
+              # parâmetros genéticos e então organizá-los em uma matriz
 
 G<-matrix(G_elements, nrow=2)
 
-#Turn G into the correspoding correlation matrix
+# Transformar G na matriz de correlação correspondente
 (Gcor<-cov2cor(G))
 ```
 

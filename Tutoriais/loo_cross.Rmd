@@ -1,0 +1,435 @@
+---
+title: "Model comparison and Bayesian models"
+description: |
+author: "Diogo Melo"
+date: '2025-02-03'
+output: 
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
+
+# Cross validation and model complexity
+
+In this tutorial we will explore some aspects of Bayesian models and focus on some different methods for model comparison.
+
+First, let's define a class of linear models called polynomial models. The idea is to use different powers of the predictor variables as predictors, leading to non-linear relationships between the predictors and the response. The likelihood of the model is defined as:
+
+\begin{aligned}
+y_i &\sim Normal(\mu_i, \sigma) \\
+\mu_i &= \alpha + \sum_{j=1}^p \beta_j x_i^j 
+\end{aligned}
+
+where $p$ is the degree of the polynomial model.
+
+## Data
+
+We will use a dataset from the rethinking book that relates the brain volume and body weight in different hominids.
+
+```{r setup, echo=TRUE}
+sppnames <- c( "afarensis","africanus","habilis","boisei",
+"rudolfensis","ergaster","sapiens")
+brainvolcc <- c( 438 , 452 , 612, 521, 752, 871, 1350 )
+masskg <- c( 37.0 , 35.5 , 34.5 , 41.5 , 55.5 , 61.0 , 53.5 )
+d <- data.frame( species=sppnames , brain=brainvolcc , mass=masskg )
+
+library(tidyverse)
+library(ggrepel)
+ggplot(d, aes(x=mass, y=brain)) + 
+  geom_point() + 
+  geom_text_repel(aes(label=species)) + 
+  labs(x=expression("body mass (kg)"), 
+       y=expression("brain volume (cm"^3*")")) + 
+  theme_classic()
+```
+
+## Linear model
+
+Let's start by scaling and fitting a linear model to the data. Can you articulate what the priors we are using here are saying about the data?
+For example: the prior on the intercept (a) is centered on the mean brain volume (rescaled) in the data. So it says that the average species with an average body mass has a brain volume with an 89% credible interval from about −1 to 2. 
+
+
+```{r linear_model, eval = FALSE}
+d$mass_s <- scale(d$mass)
+d$brain_s <- d$brain/max(d$brain)
+
+suppressPackageStartupMessages(library(rethinking))
+
+m1 = alist(
+  brain_s ~ dnorm( mu , exp(log_sigma) ),
+  mu <- a + b*mass_s,
+  a ~ dnorm( 0.5 , 1 ),
+  b ~ dnorm( 0 , 10 ),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m1 = quap(m1, data = d)
+
+ggplot(d, aes(x=mass_s, y=brain_s)) + 
+  geom_point() + 
+  geom_abline(intercept = coef(fit_m1)["a"], slope = coef(fit_m1)["b"]) + 
+  geom_text_repel(aes(label=species)) + 
+  labs(x=expression("body mass (z-score)"), 
+       y=expression("brain volume (proportion of max)")) + 
+  theme_classic()
+```
+
+One common option to check model fit is to use the mean squared prediction error, a measure of how different the predictions are to the observed value. We can calculate this quantity for this model by defining a function that calculates the squared residuals and then taking their average.
+
+```{r sum_residuals, eval = FALSE}
+calc_mean_sq_error = function(fit){
+  s <- sim( fit ) # the sim function simulates data from the posterior
+  r <- apply(s,2,mean) - d$brain_s
+  return(mean(r^2))
+}
+calc_mean_sq_error(fit_m1)
+```
+
+This is rarely a good idea, because the sum of squared residuals always decreases as the model complexity increases. This is because the model has more parameters to fit the data. We can see this by fitting a polynomial model with degree 2 (and beyond).
+
+## Polynomial models
+
+```{r polynomial_model, eval = FALSE}
+mass_grid = seq(min(d$mass_s), max(d$mass_s), by = 0.1)
+
+m2 = alist(
+  brain_s ~ dnorm( mu , exp(log_sigma) ),
+  mu <- a + b*mass_s + c*mass_s^2,
+  a ~ dnorm( 0.5 , 1 ),
+  c(b, c) ~ dnorm( 0 , 10 ),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m2 = quap(m2, data=d)
+expected_line_m2 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m2)["a"] + 
+           coef(fit_m2)["b"]*mass_s + 
+           coef(fit_m2)["c"]*mass_s^2)
+
+m3 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- a + b * mass_s + c * mass_s^2 + d * mass_s^3,
+  a ~ dnorm( 0.5 , 1 ),
+  c(b, c, d) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m3 = quap(m3, data = d)
+expected_line_m3 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m3)["a"] + 
+           coef(fit_m3)["b"]*mass_s + 
+           coef(fit_m3)["c"]*mass_s^2 + 
+           coef(fit_m3)["d"]*mass_s^3)
+
+m4 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- a + b * mass_s + c * mass_s^2 + d * mass_s^3 + e * mass_s^4,
+  a ~ dnorm( 0.5 , 1 ),
+  c(b, c, d, e) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 ))
+fit_m4 = quap(m4, data = d)
+expected_line_m4 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m4)["a"] + 
+           coef(fit_m4)["b"]*mass_s + 
+           coef(fit_m4)["c"]*mass_s^2 + 
+           coef(fit_m4)["d"]*mass_s^3 +
+           coef(fit_m4)["e"]*mass_s^4)
+
+m5 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- a + b * mass_s + c * mass_s^2 + d * mass_s^3 + e * mass_s^4 + 
+    f * mass_s^5,
+  a ~ dnorm( 0.5 , 1 ),
+  c(b, c, d, e, f) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 ))
+fit_m5 = quap(m5, data = d)
+expected_line_m5 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m5)["a"] + 
+           coef(fit_m5)["b"]*mass_s + 
+           coef(fit_m5)["c"]*mass_s^2 + 
+           coef(fit_m5)["d"]*mass_s^3 +
+           coef(fit_m5)["e"]*mass_s^4 +
+           coef(fit_m5)["f"]*mass_s^5)
+
+ggplot(d, aes(x=mass_s, y=brain_s)) + 
+  geom_point() + 
+  geom_abline(intercept = coef(fit_m1)["a"], slope = coef(fit_m1)["b"]) +
+  geom_line(data = expected_line_m2, col = 2) +
+  geom_line(data = expected_line_m3, col = 3) + 
+  geom_line(data = expected_line_m4, col = 4) + 
+  geom_line(data = expected_line_m5, col = 5) + 
+  geom_text_repel(aes(label=species)) + 
+  labs(x=expression("body mass (z-score)"), 
+       y=expression("brain volume (prop of max)")) + 
+  theme_classic()
+```
+
+After having fit all there models, lets calculate the mean squared error for each of them. Notice that the mean squared error decreases as the model complexity increases. This is because the model has more parameters to fit the data, and so is capable of overfitting the data. 
+
+```{r, mean_sq_errors, eval = FALSE}
+fit_models = list(fit_m1, fit_m2, fit_m3, fit_m4, fit_m5)
+mean_sq_errors = sapply(fit_models, calc_mean_sq_error)
+mean_sq_errors
+plot(1:5, mean_sq_errors, xlab = "Number of parameters", ylab = "Mean squared prediction error")
+lines(1:5, mean_sq_errors)
+```
+
+## Leave-one-out cross validation
+
+To avoid the problem of overfitting, one option is to use cross validation, where we fit the model to a subset of the data and then predict the remaining data. We then calculate the mean squared error for the prediction of data points not used to fit the model. This is a more robust way to compare models. Here, we will use a leave-one-out cross validation, where we fit the model to all but one data point and then predict the remaining data point. Since the model is fit without the data point we are attempting to predict, it is less likely to be able to overfit it.
+
+```{r loo_cv, eval = FALSE}
+loo_cv = function(m, fit_m){
+  r = numeric(nrow(d))
+  for(i in 1:nrow(d)){
+    d_i = d[-i,]
+    fit = quap(m, data = d_i, start = fit_m@start)
+    s <- sim( fit , d[i,])
+    r[i] <- apply(s, 2, mean, na.rm = T) - d$brain_s[i]
+  }
+  mean(r^2)
+}
+models = list(m1, m2, m3, m4, m5)
+loo_mean_sq_errors = map2_dbl(models, fit_models, loo_cv, .progress = TRUE) 
+
+df = data.frame(model = 1:5, 
+                error = mean_sq_errors, 
+                cv_error = loo_mean_sq_errors) |> 
+                pivot_longer(cols = c(error, cv_error))
+ggplot(df, aes(x = model, y = value, group = name, color = name)) + 
+  geom_point() + 
+  geom_line() + 
+  labs(x = "Number of parameters", y = "Mean squared error") + 
+  theme_classic()
+```
+
+Notice how the mean squared error calculated using cross validation is higher than the one calculated using the whole dataset, especially for the more complex models. This is because the complex models are bad at predicting data points it never saw, and the increased error captures this poor out of sample performance.
+
+One way to reduce this poor performance is to use more skeptical priors for the predictor coefficients. This will make the model less able to use large parameter values and overfit the data. Let's fit the third degree model with a skeptical prior and see the difference. This applies to any type of model, not only polynomial models, and is a key advantage of using Bayesian models. For example, skeptical priors, often called _regularizing priors_, are routinely used to prevent overfitting in neural networks and other complex models. Paradoxically, when properly tuned, these priors can improve our models by making their fit to the data worse! However, if we make our priors too skeptical, too informative, they will make the model incapable of learning anything from the data.
+
+```{r skeptical_prior, eval = FALSE}
+m3_skeptical = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- a + b * mass_s + c * mass_s^2 + d * mass_s^3,
+  a ~ dnorm( 0.5 , 1 ),
+  c(b, c, d) ~ dnorm(0, 0.3), # a more skeptical prior, that does not allow 
+                              # large values for the coefficients
+  log_sigma ~ dnorm( 0 , 1 )
+)
+fit_m3_skeptical = quap(m3_skeptical, data = d)
+expected_line_m3_skeptical = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m3_skeptical)["a"] + 
+           coef(fit_m3_skeptical)["b"]*mass_s + 
+           coef(fit_m3_skeptical)["c"]*mass_s^2 + 
+           coef(fit_m3_skeptical)["d"]*mass_s^3)  
+
+# CV error for both versions of the model
+loo_cv(m3_skeptical, fit_m3_skeptical)
+loo_cv(m3, fit_m3)
+
+ggplot(d, aes(x=mass_s, y=brain_s)) + 
+  geom_point() + 
+  geom_abline(intercept = coef(fit_m1)["a"], slope = coef(fit_m1)["b"]) +
+  geom_line(data = expected_line_m3, col = 1) + 
+  geom_line(data = expected_line_m3_skeptical, col = 2) + 
+  geom_text_repel(aes(label=species)) + 
+  labs(x=expression("body mass (z-score)"), 
+       y=expression("brain volume (prop of max)")) + 
+  theme_classic()
+```
+
+### PSIS-LOO cross validation
+
+This type of cross validation is computationally expensive, because we need to fit the model multiple times. An alternative is to use the Pareto-smoothed importance sampling leave-one-out cross validation (PSIS-LOO-CV), which is a more efficient way to calculate the leave-one-out cross validation. This method is implemented in the [`loo` package](https://cran.r-project.org/web/packages/loo/vignettes/loo2-example.html).
+
+# Comparing models using WAIC
+
+The previous section dealt with the risk of using a too complicated model, which can lead to overfitting and poor predictive performance on new data. In general, scientists tend to prefer simpler models, and with good reason, as they are more interpretable, less prone to overfitting, and easier to work with. This is sometimes summarized as "Occam's razor", which states that the simplest explanation is usually the best one, or, in our context, Models with fewer assumptions are to be preferred. But, in general, we must balance the simplicity of the model with its ability to explain the data, and simply saying that the simplest model is the preferred one gives no guidance as to how we should handle this trade-off between simplicity and accuracy. This is were information theoretical methods come in. 
+
+The most common form of model selection is Stargazing, where we add a bunch of variables to our model and keep only the significant ones (that have some asterisk next to them in the summary() output of the lm() model). The model with only significant variables is best, one imagines, and we should only have significant variables in our models. But this is not the case, p-values can't help with under-fitting and overfitting. Variables that improve prediction are not necessarily significant, and some variables that are significant can be useless for prediction.
+
+A more principled approach is to use information theory. These methods use the probability attributed to each observation of the response variable (given by the likelihood) and a measure of model complexity (i.e., the number of parameters) to estimate which model has a better out of sample predictive performance. See chapter 7 of the Statistical Rethinking book for more details, here we will have just a brief overview. A lighting summary: these methods are based on the idea that we can use the relative entropy between two or more models as a way of estimating which is closer to the unknown, true probability distribution that describes the data we have. This mildly miraculous result was derived by Hirotugu Akaike (赤池弘次, 1927–2009), a Japanese statistician who worked in the 1970s and 1980s. The Akaike Information Criterion (AIC) is an estimator of prediction error of a statistical models for a given dataset. The AIC is defined as:
+
+\[
+AIC = -2 \sum_i \log \left [ p(y_i | \theta) \right ] + 2k
+\]
+
+Let's think about what we are trying to accomplish: a balance between accuracy and complexity. The first term in the AIC is called the _deviance_, which is a measure of how well the model fits the data. If the model attributes high probability to our data, $\sum_i \log [ p(y_i | \theta) ]$ will be big and the deviance will be small. The second term is a penalty for the number of parameters in the model, which is a measure of the complexity of the model. Lower values of AIC means our model should be better at predicting new data.
+The AIC is not a bayesian procedure, and is calculated using the maximum likelihood estimate for the parameters. 
+
+If we want to incorporate uncertainty into our model comparisons, we should use a Bayesian version of this information criteria that instead uses the full posterior distribution of the parameters. This is the Widely Applicable Information Criterion (WAIC). Because WAIC was first proposed by another Japanese statistician, Sumio Watanabe (渡辺澄夫), it is sometimes called the Watanabe-Akaike Information Criterion, conveniently sharing the same acronym. The WAIC is defined using the log point-wise predictive density (lppd), which is the log of the likelihood of the data given the parameters. 
+
+\[
+  \text{lppd} = \sum_i \log \left [ \frac{1}{S} \sum_s p(y_i | \theta_s) \right ]
+\]
+
+This is analogous to the likelihood in the AIC formula, but now we are averaging over the posterior samples of the parameters instead of using a single point estimate. Doing this incorporates uncertainty correctly into the estimation of the lppd.
+
+Finally, the WAIC is defined as:
+
+\[
+  \text{WAIC} = -2 \left [ \text{lppd} - \sum_i \text{var}_{\theta} \log p(y_i|\theta) \right ] 
+\]
+
+The penalty term that appears in place of the number of parameters in the AIC formula is the variance of the log likelihood, and means: “compute the variance in log-probabilities for each observation i, and then sum up these variances to get the total penalty.” Each observation makes an independent contribution to this quantity, and observations whose log likelihood changes more along the posterior are more important. This is usually referred to as $p_{waic}$, and is a measure of the effective number of parameters in the model. This is loosely related to the actual number of parameters, but depends more on the structure of the model. Adding more parameters can actually reduce the effective number of parameters, something that is quite common in mixed and hierarchical models.
+
+## Example of a multiple regression
+
+We will use WAIC to compare linear models with an increasing number of predictors. First, let's simulate some data using the following model:
+
+\[
+\begin{aligned}
+y_i &\sim Normal(\mu_i, 1) \\
+\mu_i &= 0.15 x_{1i} + (-0.4) x_{2i} 
+\end{aligned}
+\] 
+
+```{r sim_data, eval = FALSE}
+set.seed(1)
+n = 100
+x1 = rnorm(n)
+x2 = rnorm(n)
+y = rnorm(n, 0.15 * x1 - 0.4 * x2, 1)
+
+# Let's also add some other unrelated variables
+z1 = rnorm(n)
+z2 = rnorm(n)
+z3 = rnorm(n)
+
+d = data.frame(y = y, x1 = x1, x2 = x2, z1 = z1, z2 = z2, z3 = z3)
+```
+
+First, let's manully calculate the WAIC for a regression with a single predictor:
+
+```{r single_predictor, eval = FALSE}
+m = quap(alist(
+  y ~ dnorm(mu, sigma),
+  mu <- a + b*x1,
+  a ~ dnorm(0, 1),
+  b ~ dnorm(0, 1),
+  sigma ~ dexp(1)
+), data = d)
+
+# Extract the posterior samples
+post <- extract.samples(m, n=1000)
+
+# log-likelihood of each observation i at each sample s from the posterior:
+n_samples <- 1000
+logprob <- sapply( 1:n_samples ,
+    function(s) {
+    mu <- post$a[s] + post$b[s]*d$x1
+    dnorm( d$y , mu , post$sigma[s] , log=TRUE ) # this is the log-likelihood of the data calculated for each posterior sample
+    } )
+
+# posterior average log pointwise predictive density
+# calculated on the log scale
+lppd <- sapply( 1:n , function(i) log_sum_exp(logprob[i,]) - log(n_samples) )
+
+# p_waic_i, the penalty term for each observation
+pWAIC_i <- sapply( 1:n , function(i) var(logprob[i,]) )
+
+# p_waic_i, the effective number of parameters
+pWAIC = sum(pWAIC_i)
+
+# Finally, the WAIC
+-2*( sum(lppd) - pWAIC )
+
+# we can also use the built-in function:
+WAIC(m)
+```
+
+Now, let's define a series of models with an increasing number of predictors and calculate the WAIC for each of them.
+
+```{r multiple_predictors, eval = FALSE}
+models = list(
+  m1 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b*x1,
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m2 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b*x1 + c*x2,
+    a ~ dnorm(0, 1),
+    c(b, c) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m3 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b*x1 + c*x2 + d*z1,
+    a ~ dnorm(0, 1),
+    c(b, c, d) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m4 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b*x1 + c*x2 + d*z1 + e*z2,
+    a ~ dnorm(0, 1),
+    c(b, c, d, e) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m5 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b*x1 + c*x2 + d*z1 + e*z2 + f*z3,
+    a ~ dnorm(0, 1),
+    c(b, c, d, e, f) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  )
+)
+fit_m1 = quap(models$m1, data = d)
+fit_m2 = quap(models$m2, data = d)
+fit_m3 = quap(models$m3, data = d)
+fit_m4 = quap(models$m4, data = d)
+fit_m5 = quap(models$m5, data = d)
+
+waics = sapply(list(m1 = fit_m1, m2 = fit_m2, m3 = fit_m3, m4 = fit_m4, m5.= fit_m5), WAIC)
+waics # notice how the lppd always decrease with model complexity, but it is offset by the penalty term
+
+plot(1:5, waics[1,], xlab = "Number of predictors", ylab = "WAIC")
+lines(1:5, waics[1,])
+
+# the compare function can also be used to see the difference in WAIC
+compare(fit_m1, fit_m2, fit_m3, fit_m4, fit_m5, func = WAIC)
+```
+
+# Strongly regularized priors
+
+This is class of mixture models that attempt to figure out which variables are important for prediction and which are not. The idea is to use a prior that is very skeptical about the importance of the variables, and then let the data tell us which variables are important. This is a form of _automatic variable selection_, and is a very powerful tool. Important variables should get non-zero estimates, while other variables should get estimates close to zero. This is an extreme form of _shrinkage_, where the estimates are pulled towards zero. 
+
+Several methods exist to implement this idea, such as the LASSO, Ridge regression, and Elastic Net. Here, we will use a Bayesian version, called the _horseshoe prior_. For a (potentially large) set of $p$ predictors $\{x_1, x_2, \cdots, x_p\}$, this prior is defined as:
+
+\[
+  \begin{aligned}
+  y &\sim \text{Normal}(\mu, \sigma) \\
+  \mu &= \alpha + \sum_{j=1}^p \beta_j x_j \\
+  \alpha &\sim \text{Normal}(0, 1) \\
+  \beta_j &\sim \text{Normal}(0, \lambda_j \tau) \\
+  \lambda_j &\sim \text{Cauchy}^+(0, 1) \\
+  \tau &\sim \text{Cauchy}^+(0, \tau_0) 
+  \end{aligned}
+\]
+
+The $\lambda_j$ parameters are the _shrinkage parameters_, and they control how much the **individual** $\beta_j$ parameters are pulled towards zero. The $\tau$ parameter is the _global shrinkage parameter_, and it controls how much the **population** of $\beta_j$ parameters are pulled towards zero. The Cauchy distribution is a heavy-tailed distribution, which means that it allows for the possibility of very large values of $\lambda_j$, which in turn allows for the possibility of very large values of $\beta_j$. This is a very flexible prior, and is capable of capturing a wide range of possible relationships between the predictors and the response.
+
+Let's fit a model with the horseshoe prior to the data we simulated before.
+Implementing this model directly in rethinking or Stan requires some special techniques to guarantee that the model will properly explore the posterior distribution, see [Piironen & Vehtari (2017)](https://arxiv.org/abs/1707.01694) or [Betancourt (2018)](https://betanalpha.github.io/assets/case_studies/bayes_sparse_regression.html) for details. Here, we use the implementation in the rstanarm package.
+
+```{r horseshoe_prior, eval = FALSE}
+library(rstanarm)
+library(bayesplot)
+library(ggplot2)
+m_horseshoe = stan_glm(y ~ x1 + x2 + z1 + z2 + z3, data = d, 
+          prior = hs(global_scale = (2/3)/10), 
+          prior_intercept = normal(0, 1), 
+          chains = 4, cores = 4, iter = 2000)
+          
+mcmc_intervals(m_horseshoe) +  
+  geom_point(data = data.frame(y = c(2:6), x = c(0, 0, 0, -0.4, 0.15)), 
+             col =  "red", aes(y = y, x = x)) 
+```
+
+The smaller coefficient of x1 is underestimated (but still in the confidence interval), while the larger coefficient of x2 is correct. This is because the horseshoe prior is very skeptical about the importance of the variables, and so it pulls the estimates towards zero. All the other coefficients are correctly estimated as zero.

@@ -1,11 +1,11 @@
 ---
-title: "Regressão linear simples e multipla"
+title: "Regressão linear simples e múltipla"
 author:
  - "Andrea Sánchez-Tapia"
  - "Paulinha Lemos-Costa"
  - "Sara Mortara"
  - "Diogo Melo"
-date: "2026-05-19"
+date: "2026-09-28"
 output:
     distill::distill_article:
       toc: true
@@ -27,7 +27,7 @@ htmltools::tagList(
   )
 ```
 
-# Simple linear models
+# Modelos lineares simples
 
 A regressão linear impõe ou presume que exista uma relação linear entre uma ou mais variáveis preditoras $x_i$ e uma variável resposta $y$.
 
@@ -67,7 +67,7 @@ O valor do coeficiente beta é dado pela covariância entre X e Y, dividido pela
 
 $$\widehat{\beta}= \frac{Cov(x, y)}{Var(x)} = \frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^{n}(x_i-\bar{x})^2}$$
 
-and 
+e
 
 $$
 \hat{\alpha} = \bar{y} - \hat{\beta}\bar{x} 
@@ -78,15 +78,15 @@ $$
 beta_hat <- sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x)) ^ 2)
 beta_hat
 
-# This is just the ratio of the covariance between x and y and the variance of x
+# Esta é apenas a razão entre a covariância de x e y e a variância de x
 cov(x, y) / var(x)
 
-# Since mu = alpha + beta*x: 
+# Como mu = alpha + beta*x:
 alpha_hat <- mean(y) - beta_hat * mean(x)
 alpha_hat
 ```
 
-Usando esse valor dos parâmetros, podemos incluir a retro-regressão no gráfico que fizemos acima.
+Usando esse valor dos parâmetros, podemos incluir a reta de regressão no gráfico que fizemos acima.
 
 ```{r OLS, fig.asp=1}
 plot(y ~ x, pch = 19)
@@ -340,7 +340,7 @@ str(ratones)
 
 Nosso objetivo é estimar a correlação fenotípica entre um par de variáveis cranianas: o comprimento do osso nasal e o comprimento do palato, dados pelas variáveis NSL_NA e IS_PNS.
 
-```{r  label = distances, echo = FALSE, fig.cap = "Vista ventral e dorsal de um crânio de roedor, com os pontos envolvidos no cálculo das distâncias de interesse circulados em vermelho", out.width = '100%'}
+```{r label = distances, echo = FALSE, fig.cap = "Vista ventral e dorsal de um crânio de roedor, com os pontos envolvidos no cálculo das distâncias de interesse circulados em vermelho", out.width = "100%"}
 knitr::include_graphics("ratones_dists.png")
 ```
 
