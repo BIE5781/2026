@@ -1,0 +1,111 @@
+---
+title: "*BIE5781* - Introdução à modelagem estatística na pesquisa em biologia"
+output:
+  html_document:
+    number_sections: false
+    toc: true
+    theme: yeti
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+# Preliminares
+
+## R
+
+Inicialmente, você deve instalar o **R** no seu computador.
+Você pode encontrá-lo no sítio <http://www.r-project.org>.
+Neste sítio existem instruções (em inglês) para instalá-lo em vários sistemas operacionais diferentes; versões para Windows, Mac OS e Linux estão disponíveis.
+Em suma, vá a um dos espelhos do *Comprehensive R Archive Network* (CRAN), por exemplo <http://brieger.esalq.usp.br/CRAN/>, e siga os links de download e instale o pacote referente ao seu sistema operacional.
+Usuários de Linux provavelmente possuem um gerenciador de pacotes instalado em seu sistema, como por exemplo *apt* ou *dnf*, que também pode ser utilizado para a instalação.
+
+A instalação básica do R no Windows ou macOS providencia uma interface básica para execução de rotinas; no entanto, recomendamos a instalação do **RStudio**, uma interface bastante intuitiva para utilizarmos o R.
+Esta interface pode ser encontrada no sítio <https://posit.co/products/open-source/rstudio> para Windows, macOS ou Linux.
+
+Para cursar a disciplina, é necessário conhecimento básico de programação em R.
+
+# Sobre a disciplina
+
+A disciplina apresenta fundamentos e aplicações da modelagem estatística em pesquisas biológicas, incluindo modelos lineares, inferência por máxima verossimilhança e Bayesiana, diagnóstico e validação de modelos e inferência causal.
+
+**Créditos:** 8  
+**Docentes responsáveis:** 
+    - Diogo Amaral Rebouças de Melo (damelo@ib.usp.br)
+    - Paulo Inácio de Knegt López de Prado (prado@ib.usp.br)
+
+## Horários e local
+
+- Quartas-feiras 10-12h
+- Sextas-feiras 14-16h
+- 30/09 - 27/11
+- Sala 5 do Centro Didático
+
+
+# Cronograma
+
+| Data | Aula | Tópicos | Tutorial | Docente |
+|:--|:--|:--|:--|:--|
+| 30/09 | **1. Fundamentos da modelagem** | Distribuições de probabilidade, $p(y \mid \theta)$, regressão simples e erros Gaussianos |  | Paulo Inácio |
+| 02/10 | **2. Verossimilhança** | Função de verossimilhança, máxima verossimilhança e outras distribuições |  | Paulo Inácio |
+| 07/10 | **3. O modelo linear** | Regressão múltipla, efeitos aditivos, interações e interpretação de coeficientes | [Regressão linear](https://diogro.github.io/evofencom/Tutoriais/modelo_linear.html) | Paulo Inácio |
+| 09/10 | **4. Inferência Bayesiana I** | História, fundamentos e distribuição a priori | Introdução ao *Statistical Rethinking* | Diogo |
+| 14/10 | **5. Inferência Bayesiana II** | Ajuste de modelos, estimadores, quantidades derivadas e integração | Exploração da distribuição a posteriori, simulações e correlações | Diogo |
+| 16/10 | **6. Modelos lineares generalizados I** | Transformações, distribuição lognormal, funções de ligação e heteroscedasticidade | Modelos com diferentes estruturas de erro | Diogo |
+| 21/10 | **7. Modelos lineares generalizados II** | Regressões binomial e de Poisson para dados não contínuos | Modelos binomial e Poisson | Paulo Inácio |
+| 23/10 | **8. Modelos hierárquicos I** | Dependência, *shrinkage*, prioris hierárquicas, penalização e *partial pooling* | Tutorial das ilhas | Diogo |
+| 28/10 | **9. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico | Reprodução de modelo dos macacos | Diogo |
+| 30/10 | **10. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [LOO, WAIC e validação cruzada](https://statistical-modeling.github.io/2025/labs/BayesianStatistics/lab.html) | Paulo Inácio |
+| 04/11 | **11. Pensamento causal I** | Confundimento e critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo |
+| 06/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio |
+| 11/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  |
+| 13/11 | **14. Diagnóstico e fluxo de modelagem** | Simulações preditivas a priori, verificação de modelos e interpretação da posteriori | Estudos de caso com Stan e DHARMa | Paulo Inácio |
+| 18/11 | **15. Modelos mistos contínuos** | Modelos animais, filogenéticos e espaciais | Tutorial de modelo animal | Diogo |
+| 25/11 | **16. Modelos avançados** | Processos geradores explícitos e processos Gaussianos | Equações diferenciais, captura-marcação-recaptura, movimento ou processos Gaussianos | Diogo e Paulo Inácio |
+| 27/11 | **Fechamento** | Segunda discussão dos projetos |  |  |
+
+# Avaliação
+
+A avaliação será feita por meio de três componentes:
+
+- Tutoriais e exercícios práticos em computador (30% da nota): realização dos tutoriais aferida por resposta a questionários, e nota em exercícios práticos de análise de dados.
+-  Atividades colaborativas de aprendizado ativo (20% da nota): avaliação das contribuições ao aprendizado coletivo por meio das intervenções em discussões estruturadas sobre tópicos da matéria e situações-problema. A pontuação considerará fundamentação, pertinência e coerência de argumentação.
+- Trabalho escrito  (50% da nota): relatório científico com pergunta/hipótese bem definida, aplicação pertinente de modelos estatísticos e interpretação adequada de seus resultados.
+
+Cada componente da nota receberá nota de zero a dez, resultante da nota de cada uma das atividades que os compõem. A nota final de zero a dez será calculada como média ponderada pelos pesos de cada componente, e convertida em conceitos pela seguinte escala: nota entre 10 e 8: conceito A; nota menor que 8 até 6: conceito B; nota menor que 6 até 5: conceito C; nota menor que 5: conceito R 
+
+## Objetivos
+
+Ao final da disciplina, espera-se que estudantes sejam capazes de:
+
+- Formular perguntas biológicas como modelos estatísticos para dados quantitativos de estudos experimentais e observacionais.
+- Escolher e avaliar classes de modelos de acordo com o tipo de dado e os objetivos da pesquisa.
+- Ajustar modelos por máxima verossimilhança e inferência Bayesiana, compreendendo os fundamentos de cada abordagem.
+- Diagnosticar violações de pressupostos e propor soluções apropriadas.
+- Avaliar ajuste e capacidade preditiva.
+- Usar fundamentos de inferência causal para construir inferências válidas em estudos biológicos.
+
+
+# Bibliografia
+
+## Básica
+
+- McElreath, R. (2016). Statistical rethinking: A Bayesian course with examples in R and Stan (Vol. 122). Boca Raton, FL: CRC press.
+- Bolker, B. (2008). Ecological Models and Data in R. Princeton, Princeton University Press.
+- Burnham, K. P., & Anderson, D. R. (2002). Model Selection and Multimodel Inference: A Practical-Theoretic Approach, 2nd ed. New York, Springer-Verlag.
+- Gelman, A., Hill, J., & Vehtari, A. (2020). Regression and other stories. Cambridge University Press.
+- Holmes, S & Huber W. (2019). Modern Statistics for Modern Biology, Cambridge University Press. ISBN: 9781108705295.
+
+
+## Complementar
+
+- Edwards, A. W. F. (1972). Likelihood – An Account of the Statistical Concept of Likelihood and its Application to Scientific Inference. New York, Cambridge University Press.
+- Gelman, A., & Hill, J. (2007). Data analysis using regression and multilevel/hierarchical models (Vol. 1, p. 173). Cambridge, Cambridge university press.
+- Gelman, A., Carlin, J. B., Stern, H. S., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). Bayesian Data Analysis, Third Edition. CRC Press.
+- Hilborn, R. & Mangel, M. (1997). The Ecological Detective – Confronting Models with Data. Princeton, Princeton University Press.
+- Jaynes, E. T. (2012). Probability theory (G. L. Bretthorst, Ed.). Cambridge University Press.
+- Lindsey J. K. (2004) Introduction to applied statistics - a modelling approach. 2nd Ed, Oxford, Oxford University Press.
+- Royall, R. M. (2000). Statistical Evidence: A Likelihood Paradigm. London, Chapman and Hall.
+- Royle, J. A. & Dorazio, R. (2008). Hierarchical Modeling And Inference In Ecology: The Analysis Of Data From Populations, Metapopulations And Communities. Oxford, Academic Press.
+- Taper, M. L. & Lele, S. R. (2004). The Nature of Scientific Evidence – Statistical, Philosophical and Empirical Considerations. Chicago, Chicago University Press. 
