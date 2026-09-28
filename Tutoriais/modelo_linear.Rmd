@@ -27,7 +27,7 @@ htmltools::tagList(
   )
 ```
 
-# Simple linear models
+# Regressão linear simples
 
 A regressão linear impõe ou presume que exista uma relação linear entre uma ou mais variáveis preditoras $x_i$ e uma variável resposta $y$.
 
