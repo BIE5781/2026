@@ -1,0 +1,28 @@
+.caption {
+  font-size: 0.7em !important;
+  text-align: left !important;
+  background: ;
+}
+
+.centrar-esquerda .remark-slide-content {
+  display: flex;
+  flex-direction: row;
+}
+
+.pull-left.centralizado {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Container de colunas com centralização vertical perfeita */
+.col-container {
+  display: flex;
+  align-items: center; /* Alinha o conteúdo verticalmente ao centro */
+  justify-content: space-between;
+}
+
+.col-container .col {
+  flex: 1;
+  padding: 0 10px;
+}
