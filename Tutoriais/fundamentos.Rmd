@@ -1,0 +1,426 @@
+---
+title: "Conceitos fundamentais de modelagem estatística"
+author: "PI"
+date: "2026-09-28"
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+---
+
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, echo = TRUE)
+# clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copy code <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copied! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Not copied 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+  )
+```
+
+# Função de Densidade e Probabilidade
+
+É importante ter clara a diferença entre a **função de densidade de
+probabilidade** de uma variável contínua e a **probabilidade**
+dessa variável assumir um valor dentro de um intervalo.
+
+A primeira não é uma probabilidade, e pode ter valores maiores do que
+um. No caso de uma variável normal, isto acontece quando o
+desvio-padrão é baixo.
+
+A função `dnorm` no R retorna o valor da função de densidade da normal
+para um dado valor da variável aleatória. Para uma normal com
+parâmetros $\mu=2$ e $\sigma=0{,}1$ os valores da função de densidade
+para $\mu \pm 1{,}5\sigma$ são:
+
+```{r}
+mu1 <- 2
+sig1 <- 0.1
+mult1 <- 1.5
+valores <- mu1 + mult1*c(-sig1,sig1) 
+dnorm(x = valores, mean = mu1, sd = sig1)
+```
+
+Aplicando a função `curve` à função `dnorm` podemos traçar o gráfico
+da função dentro de um intervalo dado pelos argumentos `from` e
+`to`. Vamos fazer isto para a variável normal definida acima, no
+intervalo $\mu \pm 3\sigma$
+
+```{r}
+curve(dnorm(x, mean = mu1, sd = sig1),
+      from = mu1 - 3*sig1,
+      to = mu1 + 3*sig1, 
+      xlab = "x", ylab = "densidade de probabilidade")
+```
+
+Vamos acrescentar neste gráfico os valores que calculamos acima:
+
+```{r}
+points(valores,dnorm(valores, mu1, sig1),
+       col="red", pch=19, cex=1.5)
+## Segmentos que marcam os valores nos exiso x e y
+segments(x0 = valores[c(1,2,2)],
+         y0=c( 0, 0, dnorm(valores[2], mu1, sig1)),
+         x1 =  c(valores, mult1),
+         y1= dnorm(valores[c(1,2,2)], mean = mu1, sd = sig1),
+         col="red", lty=2)
+
+```
+
+Para uma variável aleatória contínua a probabilidade só pode ser
+definida para **um intervalo**, e corresponde à área sob a curva que
+está delimitada por este intervalo. Vamos criar uma função no R para
+preencher esta área no gráfico da curva normal[^1] :
+
+```{r}
+
+area.norm <- function(from, to, mean, sd, cor="red", shade=1e4,...){
+  len <- (to-from)*shade
+  x <- seq(from,to,length=len)
+  segments(x0 = x,
+           x1 = x,
+           y0 = rep(0,len),
+           y1 = dnorm(x, mean = mean, sd = sd), col = cor)
+}
+
+```
+
+
+E agora aplicá-la para colorir de vermelho a área delimitada por 
+$\mu \pm 1,5\sigma$ no gráfico que criamos:
+
+```{r}
+     area.norm(1.85,2.15,mean=2,sd=0.1)
+```
+
+A área sob uma função é sua **integral**. Podemos calculá-la com a
+função de integração numérica do R `integrate`:
+
+```{r}
+integrate(f = dnorm,
+          lower = valores[1],
+          upper = valores[2] ,
+          mean = mu1, sd = sig1)
+```
+
+A integral de qualquer função de densidade probabilística no intervalo que contém todos os valores da variável aleatória é um. Verifique isto para a normal, integrando-a de **menos infinito** ($-\infty$) a **mais infinito** ($\infty$): 
+
+```{r}
+integrate(dnorm, lower = -Inf, upper = Inf, mean = mu1, sd = sig1)
+integrate(dnorm, lower = Inf, upper = Inf) ## normal padronizada
+```
+
+A integral do limite inferior de uma função de densidade até um certo
+valor é a **função de densidade acumulada**. Para a normal, a
+função no R é `pnorm`. A área entre dois valores pode ser obtida
+subtraindo-se suas probabilidades acumuladas:
+
+```{r, echo = FALSE, eval =TRUE}
+par(mfrow=c(1,3))
+curve(dnorm(x,mean=2,sd=0.1),from=1.7, to=2.3, 
+      xlab="",ylab="",axes="F")
+area.norm(1.7,2.15,mean=2,sd=0.1,cor="black")
+curve(dnorm(x,mean=2,sd=0.1),from=1.7, to=2.3, 
+      xlab="",ylab="",axes="F")
+area.norm(1.7,1.85,mean=2,sd=0.1,cor="black")
+curve(dnorm(x,mean=2,sd=0.1),from=1.7, to=2.3, 
+      xlab="",ylab="",axes="F")
+area.norm(1.85,2.15,mean=2,sd=0.1,cor="black")
+mtext(c("-","="),at=c(0.6,1.6),padj=1.1,cex=8)
+```
+
+
+O que você obtém com o comando:
+```{r}
+    pnorm(valores[2], mean = mu1, sd = sig1) - pnorm(valores[1], mean = mu1, sd = sig1)
+```
+
+A funções no R para calcular probabilidades acumuladas, como a
+`pnorm`, têm o argumento `lower.tail`, que permite calcular a
+probabilidade a partir de um ponto, isto é, da cauda posterior ao
+valor da variável (`lower.tail=FALSE`). Com isto, outra maneira de
+obter a probabilidade para o mesmo intervalo é obter as áreas que
+estão fora do intervalo (ou seja, as duas caudas), e depois subtrair
+um desta área:
+
+```{r}
+## Area da cauda esquerda a excluir
+cauda.esq <- pnorm(valores[1], mu1, sig1)
+## Area da cauda direita a excluir
+cauda.dir <- pnorm(valores[2], mu1, sig1, lower.tail=F)
+1 - (cauda.esq + cauda.dir)
+```
+
+Por fim, o intervalo que nos interesa é simétrico em torno da média. Como a curva
+normal também o é, uma terceira maneira de fazer o cálculo que funciona neste caso é:
+
+```{r}
+## 1 - o dobro da cauda esquerda
+1 - 2*cauda.esq
+## 1 - o dobro da cauda direita
+1 - 2*cauda.dir
+```
+
+# Histograma de Densidade
+
+Para comparar a distribuição de dados com alguma variável aleatória,
+podemos usar um histograma re-escalonado para densidade.
+
+Para exemplificar, as medidas de velocidade da luz dos experimentos de
+Michelson, que estão disponíveis no pacote `MASS`. Para isto, carregue
+o pacote, e dê uma olhada na ajuda deste conjunto de dados:
+
+Primeiro criamos um objeto com os dados de interesse, que são os fustes da caixeta em Chauás:
+```{r}
+library(MASS)
+help(michelson)
+```
+
+E então criamos um fator para as classes de velocidade, com intervalos de 75 km/s:
+
+```{r}
+## Intervalos das classes
+mich.brk <- seq(600, 1175, by=75)
+## Cria fator com a classe de cada medida
+mich.count <- cut(michelson$Speed, breaks = mich.brk)
+```
+
+Um gráfico da tabulação deste fator é um histograma de frequências:
+
+```{r}
+## Cria um vetor com o n de observacoes em cada classe
+tb1 <- table(mich.count) |> as.vector()
+## Volta os nomes das classes
+names(tb1) <- names(table(mich.count))
+barplot(tb1, space=0, xlab = "Velocidade (km/s - 299000)", ylab = "Frequência")
+```
+
+Dividindo-se as frequências de observações em cada classe pelo total
+de medidas temos um histograma de frequências relativas:
+
+```{r}
+tb2 <- tb1/sum(tb1)
+barplot(tb2, space = 0, xlab = "Velocidade (km/s - 299000)", ylab = "Frequencia relativa")
+```
+
+Finalmente, dividindo novamente estes valores pelas amplitude do
+intervalo de classe usado (75 km/s) temos um histograma de densidade:
+
+```{r}
+tb3 <- tb2/75
+barplot(tb3, space = 0, xlab = "Velocidade (km/s - 299000)", ylab = "Densidade")
+```
+
+Neste histograma, a soma das áreas das barras é um. A função `hist`
+tem um argumento lógico `prob` que já cria o histograma com a escala
+de densidade:
+
+```{r}
+hist(michelson$Speed, breaks = mich.brk,
+     prob = TRUE,
+     xlab = "Velocidade (km/s - 299000)",
+     ylab = "Densidade")
+```
+
+Nesta escala podemo sobrepor funções de densidade, como uma Normal:
+
+```{r} 
+## Normal com mu = media amostral e sigma = sd amostral
+dnorm(x, mean = mean(michelson$Speed), sd = sd(michelson$Speed)) |>
+    curve(add = TRUE, col = "blue")
+```
+
+# A Distribuição Normal
+
+## Explorando a Normal
+
+As companhias aéreas norte-americanas garantem que 98% de seus
+passageiros não terão problemas para se acomodar nos assentos da
+classe econômica. Justificam isto com um modelo que descreve a
+distribuição das larguras dos quadris dos homens norte-americanos como
+uma variável normal, com média de 14,4 polegadas, e desvio-padrão de
+1,0 polegada.
+
+Faça um gráfico desta distribuição de probabilidades, passando uma
+função de densidade da normal com estes valores de parâmetros para a
+função `curve`:
+
+```{r}
+## Parametros
+mu2 <- 14.4
+sig2 <- 1
+## Grafico da normal
+dnorm(x, mean = mu2, sd = sig2) |> 
+    curve(from = 8, to = 20, 
+          xlab = "Largura (in)",
+          ylab = "densidade de probabilidade")
+```
+
+Para definir a largura do assento, é preciso saber o limite superior
+do intervalo que contêm 98% da população. Esse é o quantil de 98% da
+distribuição, no caso uma normal com média de 14,4 e desvio-padrão de
+1,0 polegadas.
+
+Calcule o valor deste quantil com o comando: 
+
+```{r}
+(larg <- qnorm(mean = mu2, sd= sig2, p = 0.98))
+```
+
+Este é o valor que delimita 98% da área sob a curva normal. Usando a
+função criada no tutorial anterior podemos visualizar no gráfico a
+área que vai até o quantil calculado acima:
+
+```{r}
+area.norm(8, larg, mean = mu2, sd = sig2)
+```
+
+## Variando os Parâmetros da Normal
+
+Imagine que o desvio-padrão para o exemplo dos quadris
+norte-americanos seja 50% maior. O que deve ocorrer com o quantil de
+98%? Verifique sua expectativa com o comando:
+
+```{r}
+## Desvio padrao 50% maior
+sig3 <- sig2*1.5
+
+qnorm(mu2, sig3, p=0.98)
+```
+
+Crie uma gráfico com a curva normal anterior, e adicione a ele a nova
+curva normal com o desvio-padrão 50% maior. Tente criar seu código
+antes de exibir a resposta abaixo
+
+```{r, code_folding=TRUE}
+## Cria a curva original de novo
+dnorm(x, mu2, sig2) |>
+    curve(from=8, to=20, 
+          xlab="Largura (in)",ylab="densidade de probabilidade")
+## Adiciona nova curva
+dnorm(x, mu2, sig3) |>
+    curve( add = TRUE, col = "blue")
+```
+
+Os parâmetros da distribuição normal correspondem à média e ao
+desvio-padrão. Explore um pouco mais o comportamento da curva com a
+mudança de seus parâmetros. Mudando os valores dos objetos `mu` e
+`sig` no código a seguir você gera novas curvas normais.
+
+
+```{r}
+## Defina aqui dois valores de mu e dois de sigma
+mu <- c(0,1)
+sig <- c(1,2)
+## Isto define a amplitude do grafico
+minimo <- qnorm(0.001, min(mu), max(sig))
+maximo <- qnorm(0.999, max(mu), max(sig))
+## traca as curvas    
+dnorm(x, mu[1], sig[1])|> curve(from = minimo, to = maximo, col = 1)
+dnorm(x, mu[1], sig[2]) |> curve(col = 2, add = TRUE)
+dnorm(x, mu[2], sig[1]) |> curve(col = 3, add = TRUE)
+dnorm(x, mu[2], sig[2]) |> curve(col = 4, add = TRUE)
+legend("topright",
+       legend=c(bquote(paste(mu==.(mu[1])," , ",sigma==.(sig[1]))),
+                bquote(paste(mu==.(mu[1])," , ",sigma==.(sig[2]))),
+                bquote(paste(mu==.(mu[2])," , ",sigma==.(sig[1]))),
+                bquote(paste(mu==.(mu[2])," , ",sigma==.(sig[2])))),
+       lty = 1, col = 1:4, bty="n")
+```
+
+# Teorema Central do Limite
+
+O Teorema Central do Limite (TCL) prova que as médias de amostras
+independentes tomadas de uma mesma distribuição tendem para uma
+distribuição normal. A média desta normal é a mesma da distribuição de
+onde vieram as amostras, e a variância é igual à variância da
+distribuição original, dividida pelo tamanho das amostras.
+
+
+Uma das maneiras de expressar o TCL é que a
+soma ou a média de muitas variáveis aleatórias tende a uma variável
+normal. Esta tendência é válida mesmo para variáveis com distribuições
+muito diferentes da normal e que não tenham os mesmos parâmetros.
+
+Neste tutorial investigaremos se o TCL pode nos ajudar a propor um
+modelo para a riqueza de espécies em um conjunto de áreas. Vamos
+simular um cenário em que a ocorrência de cada espécie é uma variável
+Bernoulli (**1** = presente, **0** = ausente), cujo único parâmetro
+(**p** a probabilidade de ocorrência) varia entre espécies.
+
+Vamos assumir que as probabilidades de ocorrência também são variáveis
+aleatórias. Uma escolha natural é a
+[[https://en.wikipedia.org/wiki/Beta_distribution|variável Beta]], que
+está restrita a valores entre zero e um, e cuja distribuição é muito
+flexível. Abaixo o gráfico da distribuição beta que vamos usar. Os
+parâmetros (chamados "shape1" e "shape2") foram escolhidos para expressar baixa
+probabilidade de ocorrência para a maioria das espécies.
+
+```{r , eval=TRUE, echo=FALSE}
+par(cex.axis = 1.25, cex.lab = 1.25, cex.main=1.5,
+    mar = c(6,7.5,4,2), mgp=c(3.5,1,0),
+    bty = "l", las=1)
+curve(dbeta(x,shape1 = 1, shape2 = 5), 0, 1,
+      xlab="P de ocorrência",
+      ylab="Densidade de Probabilidade",
+      main = "Distribuição beta, s1 = 1, s2 = 5")
+```
+
+Para simular uma metacomunidade com 300 espécies, sorteamos 300
+valores da distribuição beta representada acima:
+
+```{r}
+p.oc <- rbeta(300, shape1 = 1, shape2 = 5)
+```
+
+Em seguida criamos uma função que faz **N** experimentos de Bernoulli,
+tomando um valor **1** com probabilidade de ocorrência sorteada acima
+($P$) e valor $0$ com probabilidade $1-P$:
+
+```{r}
+ocorre <- function(p,N) {
+    sample( c(0,1), size = N, replace = T, prob = c(1-p, p) )
+}
+```
+
+Aplicando com `sapply` esta função às probabilidades de ocorrência sorteadas no passo anterior, obtemos uma matriz com **100** linhas (locais) e **300** colunas (espécies):
+
+```{r}
+matriz <- sapply(p.oc, ocorre, N = 200)
+```
+
+A soma de cada linhas é o número de espécies em cada um dos **100** locais
+
+```{r}
+riquezas <- apply(matriz, 1, sum)
+```
+
+Portanto, a riqueza nesta simulação é a soma de muitas variáveis
+Bernoulli, o que deve convergir para uma distribuição normal. Esta
+distribuição pode ser comparada com a função de densidade de uma normal
+de mesma média e desvio-padrão das riquezas:
+
+```{r}
+hist(riquezas, prob=TRUE, xlab= "N de espécies",
+     ylab = "Densidade de Probabilidade")
+curve(dnorm(x, mean(riquezas), sd(riquezas)),
+      add=T,col="blue")
+```
+
+Avalie também o ajuste a uma normal com o gráfico de quantis teóricos:
+
+```{r}
+qqnorm(riquezas)
+qqline(riquezas)
+```
+
+
+
+
+
+[^1]: compreender o código desta função não é essencial, basta saber que ela preenche a área sob a normal
