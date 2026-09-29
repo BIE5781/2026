@@ -1,5 +1,6 @@
 ---
 title: "*BIE5781* - Introdução à modelagem estatística na pesquisa em biologia"
+lang: pt-BR
 output:
   html_document:
     number_sections: false
@@ -32,8 +33,9 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 
 **Créditos:** 8  
 **Docentes responsáveis:** 
-    - Diogo Amaral Rebouças de Melo (damelo@ib.usp.br)
-    - Paulo Inácio de Knegt López de Prado (prado@ib.usp.br)
+
+- Diogo Amaral Rebouças de Melo (damelo@ib.usp.br)
+- Paulo Inácio de Knegt López de Prado (prado@ib.usp.br)
 
 ## Horários e local
 
@@ -57,7 +59,7 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 | 23/10 | **8. Modelos hierárquicos I** | Dependência, *shrinkage*, prioris hierárquicas, penalização e *partial pooling* | Tutorial das ilhas | Diogo |
 | 28/10 | **9. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico | Reprodução de modelo dos macacos | Diogo |
 | 30/10 | **10. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [LOO, WAIC e validação cruzada](https://statistical-modeling.github.io/2025/labs/BayesianStatistics/lab.html) | Paulo Inácio |
-| 04/11 | **11. Pensamento causal I** | Confundimento e critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo |
+| 04/11 | **11. Pensamento causal I** | Variáveis de confusão e o critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo |
 | 06/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio |
 | 11/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  |
 | 13/11 | **14. Diagnóstico e fluxo de modelagem** | Simulações preditivas a priori, verificação de modelos e interpretação da posteriori | Estudos de caso com Stan e DHARMa | Paulo Inácio |
