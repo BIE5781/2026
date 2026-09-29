@@ -1,9 +1,9 @@
 ---
-title: "Random variables and probability distributions"
-subtitle: "Quantitative Ecology Training Program - Serrapilheira"
+title: "Fundamentos para modelagem estatística"
+subtitle: "Disciplina BIE5781 - IB - USP"
 author: 
   - "PI (Paulo Inácio Prado)"
-date: '29 January 2024'
+date: '30 de setembro de 2026'
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -20,7 +20,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
-options(servr.daemon = TRUE)#para que no bloquee la sesión
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
 knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE)
 library(ggplot2)
 library(ggthemes)
@@ -53,9 +53,9 @@ xaringanExtra::use_tile_view()
 ## clipboard
 htmltools::tagList(
   xaringanExtra::use_clipboard(
-    button_text = "Copy code <i class=\"fa fa-clipboard\"></i>",
-    success_text = "Copied! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
-    error_text = "Not copied 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
   ),
   rmarkdown::html_dependency_font_awesome()
 )
@@ -93,35 +93,35 @@ theme_publication <- function(base_size=14, base_family="helvetica") {
 
 ```
 
-## Key concepts
+## Conceitos
 
-+ Random variables
++ Variáveis aleatórias
 
-+ Probability density functions
++ Funções de densidade de probabilidade
 
-+ Probability distributions as statistical models
++ Distribuições de probabilidade como modelos estatísticos ($p(y \mid \theta)$)
 
-+ The normal probability distribution
++ A distribuição normal de probabilidade
 
-+ Fitting statistical models to data
++ Teorema central do limite
 
-+ Other probability distributions
++ Método dos mínimos quadrados
 
 ---
 
-## Empirical data
+## Um conjunto de dados experimentais
 
 
 .pull-left[
 
-* Collection of *Drosophila melanogaster* populations 18 sites in Australia.
-* Isofemale lines : progeny of single collected females allowed
-  to interbreed 10 generations in the lab.
-* 50 larvae from lines from each population kept at
-  18°C, 25°C, and 29°C to develop (3 replicates).
-* Controlled lab conditions: vials, culture medium, light cycle,
-  temperature, fly density, etc.
-* Measurement of adult flies reared from the vials.
+* Coleta de populações de *Drosophila melanogaster* em 18 locais na Austrália.
+* Linhagens isofêmeas: progênie separadas de cada fêmea coletada,
+  obtida de 10 gerações em laboratório.
+* 50 larvas das linhagens de cada população mantidas a
+  18°C, 25°C e 29°C durante o desenvolvimento (3 réplicas por tratamento).
+* Condições controladas de laboratório: frascos, meio de cultura, fotoperíodo,
+  temperatura, densidade de moscas, etc.
+* Medição das moscas adultas nascidas sob cada tratamento.
 
 ]
 
@@ -139,7 +139,7 @@ Van Heerwaarden & Sgrò, *Evolution* (2011).]
 
 ---
 
-## Empirical data
+## Um conjunto de dados experimentais
 
 
 ```{r drosophila thorax length data}
@@ -157,11 +157,11 @@ dthor.m <-
 
 .pull-left[
 
-* 30 adults picked at random among flies reared at
-  each temperature.
-* The histograms show frequencies of flies in classes of thorax length
-for each population, only for females reared at 25°C.
-* Blue lines are thorax length means from each sample.
+* 30 adultos sorteados entre as moscas criadas em
+  cada temperatura.
+* Os histogramas mostram as frequências de moscas em classes de comprimento do tórax
+para cada população, apenas para fêmeas criadas a 25°C.
+* As linhas azuis são as médias do comprimento do tórax de cada amostra.
 ]
 
 
@@ -176,7 +176,7 @@ p.dros <-
     ggplot(aes(x = Thorax_length)) +
     geom_histogram(bins = 8, alpha =0.3) +
     geom_vline(data = dthor.m, aes(xintercept = th.mean), color = "blue", size = 1.5) +
-    xlab("Thorax length (mm)") +
+    xlab("Comprimento do tórax (mm)") +
     ##geom_density() +
     facet_wrap(~ Population) +
     theme_publication(18)
@@ -188,7 +188,7 @@ p.dros
 
 ---
 
-## Distribution of sample means
+## Distribuição das médias amostrais
 
 .pull-left[
 .center[
@@ -213,9 +213,9 @@ p.dros2 <-
     geom_histogram(binwidth = 0.013, alpha =0.5) +
     geom_rug(col = "blue", size =1.1) +
     xlim(0.97, 1.1) +
-    xlab("Mean thorax length (mm)")+
-    ylab("Count (# of populations)") +
-    ggtitle("Distribution of population means") +
+    xlab("Comprimento médio do tórax (mm)")+
+    ylab("Contagem (nº de populações)") +
+    ggtitle("Distribuição das médias populacionais") +
     theme_publication(18)
 
 p.dros2
@@ -227,20 +227,20 @@ p.dros2
 ---
 
 
-## Random variables
+## Variáveis aleatórias
 
 .pull-left[
 
-* Many values are possible, even for averages of measurements taken
-  exactly in the same way, and under strongly controlled conditions.
+* Muitos valores são possíveis, mesmo para médias de medidas tomadas
+  exatamente da mesma forma e sob condições fortemente controladas.
 
-* Scientific measurements are **random variables**: quantities that
-  are inevitably affected by random events.
+* Medidas científicas são **variáveis aleatórias**: quantidades que
+  são inevitavelmente afetadas por eventos aleatórios.
 
-* How to deal with that? With models that tell us what's the chance of
-observing each possible value of the measurement.
+* Como lidar com isso? Com modelos que nos dizem qual é a chance de
+observar cada valor possível da medida.
 
-* In other words, by building **probability distributions**.
+* Em outras palavras, construindo **distribuições de probabilidade**.
 
 ]
 
@@ -256,18 +256,18 @@ p.dros2
 
 ---
 
-## 1st step: the density scale
+## 1º passo: a escala de densidade
 
 .pull-left[
 
 
-* Let's re-scale the y-axis of this histogram, to make the total area
-  of the histogram equal to one.
-* That is, we express the original frequencies (or counts) in a new
-  scale, such that the sum of the area of the bars is equal to one. We
-  cal this scale **density**
-* This is a linear (a.k.a. proportional) re-scaling, so the shape of the
-  histogram does not change.
+* Vamos reescalonar o eixo y deste histograma para que a área total
+  do histograma seja igual a um.
+* Ou seja, expressamos as frequências (ou contagens) originais em uma nova
+  escala, de modo que a soma das áreas das barras seja igual a um. Chamamos
+  essa escala de **densidade**.
+* Este é um reescalonamento linear (ou seja, proporcional), então a forma do
+  histograma não muda.
 
 ]
 
@@ -281,9 +281,9 @@ p1 <-
     ggplot(aes(th.mean)) +
     geom_histogram(aes(y=after_stat(density)), binwidth = 0.013, alpha =0.5) +
     xlim(0.97, 1.1) +
-    xlab("Mean thorax length (mm)")+
-    ylab("Density") +
-    ggtitle("Distribution of population means") +
+    xlab("Comprimento médio do tórax (mm)")+
+    ylab("Densidade") +
+    ggtitle("Distribuição das médias populacionais") +
     theme_publication(18)
 
 p1 + geom_rug(col = "blue", size =1.1)
@@ -294,15 +294,15 @@ p1 + geom_rug(col = "blue", size =1.1)
 
 ---
 
-## 2nd step: the density function
+## 2º passo: a função de densidade
 
 .pull-left[
 
-* Now let's imagine how to "smooth" the distribution of densities,
-  using a continuous function.
-* Think on this function as a continuous counterpart (or a continuous
-  limit) of the histogram. This is the **density function**
-* The area under the curve of a density function is one.
+* Agora vamos imaginar como "suavizar" a distribuição de densidades,
+  usando uma função contínua.
+* Pense nessa função como a representação contínua (ou um limite
+  contínuo) do histograma. Essa é a **função de densidade**.
+* A área sob a curva de uma função de densidade é igual a um.
 
 ]
 
@@ -323,14 +323,14 @@ p1  + geom_density(color = "blue", size = 1.5)
 ---
 
 
-## Density function: some definitions
+## Função de densidade: algumas definições
 
 .pull-left[
 
-* The density function is a continuous mathematical function $f(x)$ that returns a density
-  value for any value of the measurement $x$.
-* We call the **sample space** ( $\Omega$ ) the set of all values that a
-  random variable can assume.
+* A função de densidade é uma função matemática contínua $f(x)$ que retorna um valor de
+  densidade para qualquer valor da medida $x$.
+* Chamamos de **espaço amostral** ( $\Omega$ ) o conjunto de todos os valores que uma
+  variável aleatória pode assumir.
 
 
 ]
@@ -349,9 +349,9 @@ p2 <-
     ggplot(aes(th.mean)) +
     geom_density(color = "blue", size = 1.5) +
     xlim(0.97, 1.1) +
-    xlab("Mean thorax length (mm)")+
-    ylab("Density") +
-    ##ggtitle("Distribution of population means") +
+    xlab("Comprimento médio do tórax (mm)")+
+    ylab("Densidade") +
+    ##ggtitle("Distribuição das médias populacionais") +
     theme_publication(18)
 
 p2  +
@@ -370,14 +370,14 @@ p2  +
 
 ---
 
-## Density function and probabilities
+## Função de densidade e probabilidades
 
 .pull-left[
 
 
-* The integral of $f(x)$ over the sample space equals one.
+* A integral de $f(x)$ sobre o espaço amostral é igual a um.
 
-* This is a mathematical way to say that the area under $f(x)$ equals one.
+* Essa é uma forma matemática de dizer que a área sob $f(x)$ é igual a um.
 
 ]
 
@@ -397,17 +397,17 @@ p2 +
 
 ---
 
-## Density function and probabilities
+## Função de densidade e probabilidades
 
 .pull-left[
 
 
-* The area under $f(x)$ for any interval $L \leq x \leq U$ is a
-  fraction of the total area under $f(x)$.
+* A área sob $f(x)$ para qualquer intervalo $L \leq x \leq U$ é uma
+  fração da área total sob $f(x)$.
 
-* This area is a mathematical expression of the **probability assigned
-  to a measurement interval**. It is also an integral of the density
-  function:
+* Essa área é uma expressão matemática da **probabilidade atribuída
+  a um intervalo de medidas**. Ela também é uma integral definida da função
+  de densidade:
 
 $$ P(L \leq x \leq U) ~ = ~ \int_L^U f(x) \, dx $$
 
@@ -430,34 +430,34 @@ p2 +
 ---
 
 
-## Probability distributions as models
+## Distribuições de probabilidade como modelos
 
 
-* The density function that we have defined is used to express
-  probabilities of random variables, or a **probability
-  distribution**.
-
---
-
-* It is a model that attributes probabilities to data, that is, to
-  values of a random variable.
+* A função de densidade que definimos é usada para expressar
+  probabilidades de variáveis aleatórias, ou seja, uma **distribuição
+  de probabilidade**.
 
 --
 
-* In our example, the random variable is the mean thorax length that
-  we got from samples of 30 flies.
+* É um modelo que atribui probabilidades aos dados, isto é, aos
+  valores de uma variável aleatória.
 
 --
 
-* With this kind of model we can ask many interesting questions about
-  these sample means, like:
+* No nosso exemplo, a variável aleatória é o comprimento médio do tórax que
+  obtivemos a partir de amostras de 30 moscas.
+
+--
+
+* Com esse tipo de modelo, podemos fazer muitas perguntas interessantes sobre
+  essas médias amostrais, como:
 
 
 ---
 
 class: center, middle
 
-### What's the probability of a mean thorax length of up 1.04 mm?
+### Qual é a probabilidade de um comprimento médio do tórax de até 1,04 mm?
 
 ```{r}
 
@@ -471,7 +471,7 @@ p2 +
 
 class: center, middle
 
-### What's the confidence interval for the mean thorax length?
+### Qual é o intervalo de confiança para o comprimento médio do tórax?
 
 ```{r}
 
@@ -484,7 +484,7 @@ p2 +
     geom_segment(aes(x=0.995, xend = 1.07, y = 26.5, yend = 26.5),
                  arrow = arrow(ends = "both"),
                  col = "red") +
-    annotate("label", x = 1.035, y = 26.5, label = "95% CI", size = 7) 
+    annotate("label", x = 1.035, y = 26.5, label = "IC 95%", size = 7) 
 ```
 
 
@@ -492,7 +492,7 @@ p2 +
 
 class: center, middle
 
-### What's the theoretical expected value for this distribution?
+### Qual é o valor esperado teórico desta distribuição?
 
 
 ```{r}
@@ -506,42 +506,42 @@ p2 +
 
 ---
 
-## Which probability distribution ?
+## Qual distribuição de probabilidade?
 
 
-* Now we know that probability distributions are a nice choice to
-  model random variables. But how to build such a model?
-
---
-
-* There are recipes to do that, but many probability distributions
-  have been already proposed, for a huge variety of data types.
+* Agora sabemos que distribuições de probabilidade são uma boa escolha para
+  modelar variáveis aleatórias. Mas como construir um modelo desses?
 
 --
 
-* In our example, our random variable are sample means. The **Central
-  Limit Theorem** states that sample means will follow a Normal
-  distribution, as the size of the samples increase.
+* Há receitas para isso, mas muitas distribuições de probabilidade
+  já foram propostas, para uma enorme variedade de tipos de dados.
+
+--
+
+* No nosso exemplo, nossa variável aleatória são médias amostrais. O **Teorema
+  Central do Limite** afirma que as médias amostrais seguem uma distribuição
+  Normal à medida que o tamanho das amostras aumenta.
   
 --
 
-* This is one of the most important results in probability theory. We
-  have very good reasons to choose a Normal distribution as our
-  statistical model.
+* Esse é um dos resultados mais importantes da teoria da probabilidade. Temos
+  ótimas razões para escolher a distribuição Normal como nosso
+  modelo estatístico.
 
 ---
 
-## The Normal Distribution
+## A distribuição Normal
 
 .pull-left[
 
-* Created to describe distribution of additive measurement errors.
-* CLT tells us that this is good model for any random variable which is
-a sum of many other random variables.
-* It is a symmetric distribution, always bell-shaped.
-* It has two parameters, that correspond to the mean and standard
-  deviation of the distribution.
-* Its mean and standard deviation  are independent.
+* Criada para descrever a distribuição de erros de medida aditivos.
+* O TCL nos diz que este é um bom modelo para qualquer variável aleatória que seja
+a soma de muitas outras variáveis aleatórias.
+* É uma distribuição simétrica, sempre em forma de sino.
+* Tem dois parâmetros, que correspondem à média e ao desvio-padrão
+  da distribuição.
+* Sua média e seu desvio-padrão são independentes.
 ]
 
 .pull-right[
@@ -556,8 +556,8 @@ ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
                          output = "character"),
              parse = TRUE, size = 6) +
     xlab("x") +
-    ylab("Density") +
-    ggtitle("Normal Probability Density Function") +
+    ylab("Densidade") +
+    ggtitle("Função de densidade de probabilidade Normal") +
     theme_publication(18)
 ```
 
@@ -566,15 +566,15 @@ ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
 ---
 
 
-## Location parameter of the Normal Distribution
+## Parâmetro de posição da distribuição Normal
 
 
 .pull-left[
 
-* The Normal has a **location parameter**, that we will call $\mu$.
-* This parameter corresponds to the mean of the Normal distribution.
-* By changing $\mu$ we change the position of the Normal distribution
-along the x axis, without changing the standard deviation.
+* A Normal tem um **parâmetro de posição**, que chamaremos de $\mu$.
+* Esse parâmetro corresponde à média da distribuição Normal.
+* Ao mudar $\mu$, mudamos a posição da distribuição Normal
+ao longo do eixo x, sem alterar o desvio-padrão.
 ]
 
 .pull-right[
@@ -616,14 +616,14 @@ along the x axis, without changing the standard deviation.
 
 ---
 
-## Scale parameter of the Normal Distribution
+## Parâmetro de escala da distribuição Normal
 
 .pull-left[
 
-* The Normal has a **scale parameter**, that we will call $\sigma$.
-* This parameter corresponds to the standard deviation of the Normal distribution.
-* By changing $\sigma$ we change the spread of the Normal distribution
-around the mean, without changing the mean.
+* A Normal tem um **parâmetro de escala**, que chamaremos de $\sigma$.
+* Esse parâmetro corresponde ao desvio-padrão da distribuição Normal.
+* Ao mudar $\sigma$, mudamos a dispersão da distribuição Normal
+em torno da média, sem alterar a média.
 ]
 
 
@@ -666,18 +666,18 @@ ggplot(df3, aes(x, factor(case_number), height = norm, color = case_number)) +
 
 ---
 
-## Model fitting
+## Ajuste de modelos
 
 .pull-left[
 
-* We have chosen a statistical model for our data
+* Escolhemos um modelo estatístico para nossos dados
 
-* This model has two free parameters, $\mu$ and $\sigma$
+* Esse modelo tem dois parâmetros livres, $\mu$ e $\sigma$
 
-* Which value should we choose for these two parameters?
+* Que valores devemos escolher para esses dois parâmetros?
 
-* Finding good values for parameters of a statistical model means
-  **fitting a model to the data**.
+* Encontrar bons valores para os parâmetros de um modelo estatístico significa
+  **ajustar um modelo aos dados**.
 ]
 
 
@@ -711,20 +711,20 @@ p2 + plot.n(dt.m, sd = dt.sd, linetype = "dashed", color = "blue", size = 0.8)
 ]
 ]
 
+---
 
-
-## Model fitting
+## Ajuste de modelos
 
 .pull-left[
 
-* We fit statistical models by **estimating** the value of parameters,
-  given the data observed.
+* Ajustamos modelos estatísticos **estimando** o valor dos parâmetros,
+  a partir dos dados observados.
 
-* There are many ways to do that. For one of the fitting methods we will
-  use in this course, the estimates for fitting a normal distribution are:
+* Há muitas formas de fazer isso. Em um dos métodos de ajuste que
+  usaremos neste curso, as estimativas para ajustar uma distribuição normal são:
   
-  * The sample mean as an estimate for $\mu$
-  * The sample standard deviation as an estimate for $\sigma$
+  * A média amostral como estimativa de $\mu$
+  * O desvio-padrão amostral como estimativa de $\sigma$
 
 ]
 
@@ -741,16 +741,16 @@ p2  +plot.n(dt.m, sd = dt.sd, color = "red", size = 1.5)
 
 ---
 
-## Some notation
+## Um pouco de notação
 
 
-* Our model: mean thorax length $x$ follows a normal distribution:
+* Nosso modelo: o comprimento médio do tórax $x$ segue uma distribuição normal:
 
 $$ x \, \sim \, \text{Normal}(\mu, \sigma)$$
 
 --
 
-* The estimate of the parameter $\mu$ is the mean of the values of $x$ in the sample:
+* A estimativa do parâmetro $\mu$ é a média dos valores de $x$ na amostra:
 
 $$ \widehat{\mu} \, = \, \bar{x} \, = \, \frac{1}{N} \, \sum_{i=1}^N x_i $$
 
@@ -758,30 +758,29 @@ $$ \widehat{\mu} \, = \, \bar{x} \, = \, \frac{1}{N} \, \sum_{i=1}^N x_i $$
 ---
 
 
-## Some notation
+## Um pouco de notação
 
 
-
-* The estimate of the parameter $\sigma$ is the square root of the variance of the values of $x$ in the sample:
+* A estimativa do parâmetro $\sigma$ é a raiz quadrada da variância dos valores de $x$ na amostra:
 
 $$ \widehat{\sigma} \, = \, \sqrt{s^2} $$
 
-* Where the variance is the mean of the squared deviation from the sample mean:
+* Em que a variância é a média dos desvios quadráticos em relação à média amostral:
 
 $$ s^2 \, = \, \frac{1}{N} \, \sum_{i=1}^N (x_i - \bar{x})^2 $$ 
 
 ---
 
-## Other probability distributions
+## Outras distribuições de probabilidade
 
 .pull-left[
  
-* The normal distribution is widely used, but other distributions
-   suit different random variables better. There are many models to choose.
-* Choosing a probability distribution to describe a given dataset means
-   **making a hypothesis on how your data is generated**.
-* For instance, take the number of kids assigned to male gender in 
-   families of 12 children in Saxony in the XIX century (Geissller, 1889 *apud* Lindsey, 1995, Introductory Statistics).
+* A distribuição normal é muito usada, mas outras distribuições
+   se ajustam melhor a diferentes variáveis aleatórias. Há muitos modelos para escolher.
+* Escolher uma distribuição de probabilidade para descrever um conjunto de dados significa
+   **formular uma hipótese sobre como seus dados são gerados**.
+* Por exemplo, considere o número de crianças às quais foi atribuído o gênero masculino em 
+   famílias de 12 filhos na Saxônia no século XIX (Geisller, 1889 *apud* Lindsey, 1995, Introductory Statistics).
 ]
 
 .pull-right[
@@ -799,9 +798,9 @@ saxony <-
     saxony %>%
         ggplot( aes(x, y)) +
         geom_col() +
-        ggtitle("Frequency of families with 0 to 12 male children") +
-        xlab("N of children assigned to male gender at birth")+
-        ylab("Frequency (N of families)") +
+        ggtitle("Frequência de famílias com 0 a 12 filhos homens") +
+        xlab("Nº de crianças com gênero masculino atribuído ao nascer")+
+        ylab("Frequência (nº de famílias)") +
         theme_publication()
 
 ```
@@ -812,15 +811,15 @@ saxony <-
 
 ---
 
-## A simple model for this data
+## Um modelo simples para esses dados
 
 .pull-left[
 
-1. Each family is an '*essay*' or an '*experiment*' with 12 '*trials*'; 
-2. Each trial (a birth) has only two possible outcomes: male or female gender attributed to the newborn;
-3. Trials are independent: the gender of one newborn does not affect the gender for the next births in the family;
-4. The probability of each outcome at each trial is constant.
-5. These assumptions holds for the **binomial probability distribution**
+1. Cada família é um '*ensaio*' ou um '*experimento*' com 12 '*tentativas*'; 
+2. Cada tentativa (um nascimento) tem apenas dois resultados possíveis: gênero masculino ou feminino atribuído ao recém-nascido;
+3. As tentativas são independentes: o gênero de um recém-nascido não afeta o gênero dos nascimentos seguintes na família;
+4. A probabilidade de cada resultado em cada tentativa é constante.
+5. Essas premissas valem para a **distribuição binomial de probabilidade**
 
 ]
 
@@ -832,9 +831,9 @@ p.sax <-
     saxony %>%
     ggplot( aes(x, yobs)) +
     geom_col() +
-    ggtitle("Proportion of families with 0 to 12 male children") +
-    xlab("N of children assigned to male gender at birth")+
-    ylab("Proportion of families") +
+    ggtitle("Proporção de famílias com 0 a 12 filhos homens") +
+    xlab("Nº de crianças com gênero masculino atribuído ao nascer")+
+    ylab("Proporção de famílias") +
     theme_publication()
 p.sax
 ```
@@ -844,15 +843,15 @@ p.sax
 
 ---
 
-## The binomial probability distribution
+## A distribuição binomial de probabilidade
 
 .pull-left[
 
-* Assigns a probability for discrete values (real numbers, like counts):
+* Atribui uma probabilidade a valores discretos (números inteiros, como contagens):
 $$f(x) = {N\choose x} p^x (1 - p)^{N - x}$$
-  * $N$ : number of trials in each experiment
-  * $p$ : probability of 'success' in each trial
-* $N$ is usually known. To fit a binomial distribution we need only to estimate $p$
+  * $N$ : número de tentativas em cada experimento
+  * $p$ : probabilidade de 'sucesso' em cada tentativa
+* $N$ geralmente é conhecido. Para ajustar uma distribuição binomial, precisamos estimar apenas $p$
 ]
 
 
@@ -877,8 +876,8 @@ ggplot( bin.ex, aes(x, y, label = grupo)) +
     geom_text(x=13.4, y=0.15, size = 6) +
     scale_x_continuous(breaks = 0:12, limits =c(0,13.5)) +
     facet_grid(grupo~.) +
-    xlab("Number of sucesses") +
-    ggtitle("Binomial distribution, N = 12") +
+    xlab("Número de sucessos") +
+    ggtitle("Distribuição binomial, N = 12") +
     theme_publication() +
     theme(strip.background = element_blank(), strip.text.y = element_blank(), 
           strip.placement = "outside", panel.spacing.y = unit(0, "cm")) +
@@ -895,17 +894,17 @@ ggplot( bin.ex, aes(x, y, label = grupo)) +
 
 ---
 
-## Fitting a binomial distribution to data
+## Ajustando uma distribuição binomial aos dados
 
 .pull-left[
 
-* A good estimator of $p$ is the observed proportion of successes
-  among all trials. 
-* In our example there was 38100 
-  children assigned to male gender among a total of 73380 births, 
-  or an observed proportion of 0.519 males.
-* Red dots show the probabilities assigned by the binomial with this
-  estimate, which suggests a gender bias towards males.
+* Um bom estimador de $p$ é a proporção observada de sucessos
+  entre todas as tentativas. 
+* No nosso exemplo, houve 38.100 
+  crianças às quais foi atribuído o gênero masculino, em um total de 73.380 nascimentos, 
+  ou seja, uma proporção observada de 0,519 de meninos.
+* Os pontos vermelhos mostram as probabilidades atribuídas pela binomial com essa
+  estimativa, o que sugere um viés em favor do gênero masculino.
 
 ]
 
@@ -922,30 +921,30 @@ p.sax +  geom_point(aes(y = ypred2), col = "red", size = 3)
 
 ---
 
-## Some other distributions
+## Algumas outras distribuições
 
-### Discrete
+### Discretas
 
-* **Poisson**: count data of independent events at a constant rate (e.g. number of captures of animals in traps)
-* **Negative binomial**: the same, for aggregated events (e.g. number of trees of a given species in forest plots)
-* **Geometric**: number of trials before an event with constant rate happens (e.g. number of years of life)
+* **Poisson**: contagens de eventos independentes a uma taxa constante (ex.: número de capturas de animais em armadilhas)
+* **Binomial negativa**: o mesmo, para eventos agregados (ex.: número de árvores de uma espécie em parcelas florestais)
+* **Geométrica**: número de tentativas antes que ocorra um evento com taxa constante (ex.: número de anos de vida)
 
 
 ---
 
-## Some other distributions
+## Algumas outras distribuições
 
-### Continuous
+### Contínuas
 
-* **Log-normal**: multiplication of many random variables (e.g. population sizes in birth-death dynamics)
-* **Exponential**: continuous time up to an event at constant rate (e.g. failure times of machines, life-spans)
-* **Gamma**, **Weibull** : same as exponential, but event rate as a function of time (e.g. life spans with aging)
-* **Uniform**: equiprobable values (useful as a null model or to generate other distributions)
+* **Log-normal**: produto de muitas variáveis aleatórias (ex.: tamanhos populacionais em dinâmicas de nascimento e morte)
+* **Exponencial**: tempo contínuo até um evento com taxa constante (ex.: tempo até a falha de máquinas, tempo de vida)
+* **Gama**, **Weibull**: como a exponencial, mas com a taxa do evento variando em função do tempo (ex.: tempo de vida com envelhecimento)
+* **Uniforme**: valores equiprováveis (útil como modelo nulo ou para gerar outras distribuições)
 
 ---
 
 
-## Many distributions are related
+## Muitas distribuições são relacionadas entre si
 
 .center[
 
@@ -956,29 +955,29 @@ knitr::include_graphics("distrib_relationships.png")
 
 .right[
 Bolker,2008
-See also (http://www.johndcook.com/distribution_chart.html)
+Veja também (http://www.johndcook.com/distribution_chart.html)
 ]
 
 ---
 
-## Take-home messages
+## Mensagens para levar para casa
 
-1. Probability distributions assign
-   probabilities to each possible value of a measurement.
-
---
-
-2. As such, probability distributions can be conceived as models of
-   the process that generates the data at hand.
+1. Distribuições de probabilidade atribuem
+   probabilidades a cada valor possível de uma medida.
 
 --
 
-3. We fit a statistical model by finding sensible values for the
-   parameters of probability distributions.
+2. Assim, distribuições de probabilidade podem ser concebidas como modelos do
+   processo que gera os dados em questão.
+
+--
+
+3. Ajustamos um modelo estatístico encontrando valores razoáveis para os
+   parâmetros das distribuições de probabilidade.
 
 ---
 
-## References
+## Referências
 
 + Bolker, B.M. 2008 Ecological Models and Data in R. Princeton:
     Princeton University Press.
