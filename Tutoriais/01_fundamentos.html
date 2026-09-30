@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
 
 <head>
   <meta charset="utf-8" />
@@ -101,7 +101,7 @@ code span.wa { color: #5e5e5e; font-style: italic; }
   <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
   <meta property="og:title" content="Conceitos fundamentais de modelagem estatística" />
   <meta property="og:type" content="article" />
-  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale" content="pt-BR" />
 
   <!--  https://dev.twitter.com/cards/types/summary -->
   <meta property="twitter:card" content="summary" />
@@ -111,7 +111,7 @@ code span.wa { color: #5e5e5e; font-style: italic; }
   <!--radix_placeholder_rmarkdown_metadata-->
 
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["Conceitos fundamentais de modelagem estatística"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["PI"]}]}]},{"type":"character","attributes":{},"value":["2026-09-30"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","lang","output"]}},"value":[{"type":"character","attributes":{},"value":["Conceitos fundamentais de modelagem estatística"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["PI"]}]}]},{"type":"character","attributes":{},"value":["2026-09-30"]},{"type":"character","attributes":{},"value":["pt-BR"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   
@@ -2592,7 +2592,7 @@ intervalo <span class="math inline">\(\mu \pm 3\sigma\)</span></p>
 <span>         col<span class="op">=</span><span class="st">&quot;red&quot;</span>, lty<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Para uma variável aleatória contínua a probabilidade só pode ser
+<p>Para uma variável aleatória contínua, a probabilidade só pode ser
 definida para <strong>um intervalo</strong>, e corresponde à área sob a curva que
 está delimitada por este intervalo. Vamos criar uma função no R para
 preencher esta área no gráfico da curva normal<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> :</p>
@@ -2645,7 +2645,7 @@ subtraindo-se suas probabilidades acumuladas:</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span>    <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">pnorm</a></span><span class="op">(</span><span class="va">valores</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, mean <span class="op">=</span> <span class="va">mu1</span>, sd <span class="op">=</span> <span class="va">sig1</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">pnorm</a></span><span class="op">(</span><span class="va">valores</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, mean <span class="op">=</span> <span class="va">mu1</span>, sd <span class="op">=</span> <span class="va">sig1</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>A funções no R para calcular probabilidades acumuladas, como a
+<p>As funções no R para calcular probabilidades acumuladas, como a
 <code>pnorm</code>, têm o argumento <code>lower.tail</code>, que permite calcular a
 probabilidade a partir de um ponto, isto é, da cauda posterior ao
 valor da variável (<code>lower.tail=FALSE</code>). Com isto, outra maneira de
@@ -2661,7 +2661,7 @@ um desta área:</p>
 <span><span class="fl">1</span> <span class="op">-</span> <span class="op">(</span><span class="va">cauda.esq</span> <span class="op">+</span> <span class="va">cauda.dir</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Por fim, o intervalo que nos interesa é simétrico em torno da média. Como a curva
+<p>Por fim, o intervalo que nos interessa é simétrico em torno da média. Como a curva
 normal também o é, uma terceira maneira de fazer o cálculo que funciona neste caso é:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2704,14 +2704,14 @@ o pacote, e dê uma olhada na ajuda deste conjunto de dados:</p>
 </div>
 </div>
 <p>Dividindo-se as frequências de observações em cada classe pelo total
-de medidas temos um histograma de frequências relativas:</p>
+de medidas, temos um histograma de frequências relativas:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">tb2</span> <span class="op">&lt;-</span> <span class="va">tb1</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">tb1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/barplot.html">barplot</a></span><span class="op">(</span><span class="va">tb2</span>, space <span class="op">=</span> <span class="fl">0</span>, xlab <span class="op">=</span> <span class="st">&quot;Velocidade (km/s - 299000)&quot;</span>, ylab <span class="op">=</span> <span class="st">&quot;Frequencia relativa&quot;</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Finalmente, dividindo novamente estes valores pelas amplitude do
+<p>Finalmente, dividindo novamente estes valores pela amplitude do
 intervalo de classe usado (75 km/s) temos um histograma de densidade:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2730,7 +2730,7 @@ de densidade:</p>
 <span>     ylab <span class="op">=</span> <span class="st">&quot;Densidade&quot;</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Nesta escala podemo sobrepor funções de densidade, como uma Normal:</p>
+<p>Nesta escala, podemos sobrepor funções de densidade, como uma Normal:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## Normal com mu = media amostral e sigma = sd amostral</span></span>
@@ -2744,7 +2744,7 @@ de densidade:</p>
 passageiros não terão problemas para se acomodar nos assentos da
 classe econômica. Justificam isto com um modelo que descreve a
 distribuição das larguras dos quadris dos homens norte-americanos como
-uma variável normal, com média de 14,4 polegadas, e desvio-padrão de
+uma variável normal, com média de 14,4 polegadas e desvio-padrão de
 1,0 polegada.</p>
 <p>Faça um gráfico desta distribuição de probabilidades, passando uma
 função de densidade da normal com estes valores de parâmetros para a
@@ -2762,9 +2762,9 @@ função <code>curve</code>:</p>
 </div>
 </div>
 <p>Para definir a largura do assento, é preciso saber o limite superior
-do intervalo que contêm 98% da população. Esse é o quantil de 98% da
+do intervalo que contém 98% da população. Esse é o quantil de 98% da
 distribuição, no caso uma normal com média de 14,4 e desvio-padrão de
-1,0 polegadas.</p>
+1,0 polegada.</p>
 <p>Calcule o valor deste quantil com o comando:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2772,7 +2772,7 @@ distribuição, no caso uma normal com média de 14,4 e desvio-padrão de
 </div>
 </div>
 <p>Este é o valor que delimita 98% da área sob a curva normal. Usando a
-função criada no tutorial anterior podemos visualizar no gráfico a
+função criada no tutorial anterior, podemos visualizar no gráfico a
 área que vai até o quantil calculado acima:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2791,9 +2791,9 @@ norte-americanos seja 50% maior. O que deve ocorrer com o quantil de
 <span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">qnorm</a></span><span class="op">(</span><span class="va">mu2</span>, <span class="va">sig3</span>, p<span class="op">=</span><span class="fl">0.98</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Crie uma gráfico com a curva normal anterior, e adicione a ele a nova
+<p>Crie um gráfico com a curva normal anterior e adicione a ele a nova
 curva normal com o desvio-padrão 50% maior. Tente criar seu código
-antes de exibir a resposta abaixo</p>
+antes de exibir a resposta abaixo:</p>
 <div class="layout-chunk" data-layout="l-body">
 <details>
 <summary>
@@ -2813,7 +2813,7 @@ Show code
 <p>Os parâmetros da distribuição normal correspondem à média e ao
 desvio-padrão. Explore um pouco mais o comportamento da curva com a
 mudança de seus parâmetros. Mudando os valores dos objetos <code>mu</code> e
-<code>sig</code> no código a seguir você gera novas curvas normais.</p>
+<code>sig</code> no código a seguir, você gera novas curvas normais.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## Defina aqui dois valores de mu e dois de sigma</span></span>
@@ -2844,19 +2844,19 @@ onde vieram as amostras, e a variância é igual à variância da
 distribuição original, dividida pelo tamanho das amostras.</p>
 <p>Vamos usar o TCL para investigar um caso fictício. Segundo um <a href="https://desciclopedia.org/wiki/Instituto_de_Bioci%C3%AAncias_da_Universidade_de_S%C3%A3o_Paulo#Ecologia">antigo verbete da Desciclopédia sobre o departamento de ecologia do IB-USP</a>:</p>
 <blockquote>
-<p>“Esse departamento é conhecido por avaliar os graduandos com o famoso”método da escada”. Os professores amassam todas as provas e fazem pequenas bolas com elas, arremessando-as escada acima. Dependendo do degrau que a bolinha de papel parar, eles atribuem uma nota.”</p>
+<p>“Esse departamento é conhecido por avaliar os graduandos com o famoso”método da escada”. Os professores amassam todas as provas e fazem pequenas bolas com elas, arremessando-as escada acima. Dependendo do degrau em que a bolinha de papel parar, eles atribuem uma nota.”</p>
 </blockquote>
-<p>Vamos supor que em uma turma de 60 estudantes de Eco I a nota média da
+<p>Vamos supor que, em uma turma de 60 estudantes de Eco I a nota média da
 primeira prova foi 4,25. Vamos usar o TCL para testar se este
 resultado veio do método descrito no verbete. Para isso, vamos assumir
-que cada degrau é um ponto na eescala de zero a 10, e que a
-probabilidade das bolinhas cairem em todos os degraus é a mesma. Sob esta premissa, podemos simular 60 notas com este comando:</p>
+que cada degrau é um ponto na escala de zero a 10, e que a
+probabilidade das bolinhas caírem em todos os degraus é a mesma. Sob esta premissa, podemos simular 60 notas com este comando:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">notas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span><span class="op">(</span><span class="fl">0</span><span class="op">:</span><span class="fl">10</span>, size <span class="op">=</span> <span class="fl">60</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>E a média de notas seria</p>
+<p>E a média de notas seria:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">notas</span><span class="op">)</span></span></code></pre>
@@ -2868,7 +2868,7 @@ probabilidade das bolinhas cairem em todos os degraus é a mesma. Sob esta premi
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html">hist</a></span><span class="op">(</span><span class="va">notas</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Agora vamos repetir esta simulação 1000 vezes, como se fossem 1000 turmas. Guardamos a média de cada truma:</p>
+<p>Agora vamos repetir esta simulação 1000 vezes, como se fossem 1000 turmas. Guardamos a média de cada turma:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## vetor para guardar as medias</span></span>
@@ -2890,9 +2890,9 @@ uniforme de valores de zero a dez. A nota de cada turma é uma média de cada um
 A distribuição das médias das mil turmas, portanto, deve se
 aproximar de uma distribuição normal.</p>
 <h2 id="comparando-com-as-expectativas-teóricas">Comparando com as expectativas teóricas</h2>
-<p>De acordo com o TCL, a distribuição das médias amostrais deve ter a mesma média da distribuição que gerou os valores aamostrados. A média teórica da distribuição uniforme que usamos é simplesmente o ponto médio entre o valor mínimo e máximo da distribuição:</p>
+<p>De acordo com o TCL, a distribuição das médias amostrais deve ter a mesma média da distribuição que gerou os valores amostrados. A média teórica da distribuição uniforme que usamos é simplesmente o ponto médio entre o valor mínimo e máximo da distribuição:</p>
 <p><span class="math display">\[E[X] = \frac{\text{max}-\text{min}}{2} ~= ~ \frac{10-0}{2}\]</span></p>
-<p>Você pode adicionar oa histograma a média dos valores simulados e estes valor teórico esperado pelo TCL</p>
+<p>Você pode adicionar os histograma a média dos valores simulados e este valor teórico esperado pelo TCL:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">medias</span><span class="op">)</span>, col<span class="op">=</span><span class="st">&quot;blue&quot;</span><span class="op">)</span></span>
@@ -2901,9 +2901,9 @@ aproximar de uma distribuição normal.</p>
 </div>
 <p>Também se deduz do TCL que a variância da distribuição normal das médias
 deve ser igual à variância da distribuição que gerou os dados,
-divididos pelo número de observações. A variância teórica da distribuição uniforme é:</p>
+dividida pelo número de observações. A variância teórica da distribuição uniforme é:</p>
 <p><span class="math display">\[\operatorname{Var}(X) = \frac{(\text{max} - \text{min} + 1)^2 - 1}{12}\]</span></p>
-<p>A partir desta expressão, calcule a variância esperada para distribuição das médias segundo o TCL, e compare com variância nas simulações. tente fazer seu próprio código antes de exibir a solução abaixo.</p>
+<p>A partir desta expressão, calcule a variância esperada para a distribuição das médias segundo o TCL e compare com a variância nas simulações. Tente fazer seu próprio código antes de exibir a solução abaixo.</p>
 <div class="layout-chunk" data-layout="l-body">
 <details>
 <summary>
@@ -2919,19 +2919,19 @@ Show code
 </div>
 </details>
 </div>
-<p>Como parece que com um tamanho amostral de 60 o TCL já aproxima bem a
+<p>Como parece que, com um tamanho amostral de 60, o TCL já aproxima bem a
 distribuição das médias das turmas, podemos usar a normal esperada
 pelo TCL como um modelo estatístico. Use esta distribuição normal para
 prever a probabilidade de que uma turma tenha uma nota média igual ou
 menor que 4,25, como foi “observado” em nosso exemplo hipotético.</p>
-<p><strong>Dica:</strong> você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição nornal prevista pelo TCL para este caso.</p>
+<p><strong>Dica:</strong> você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição normal prevista pelo TCL para este caso.</p>
 <p><strong>Desafio</strong>: o que esta probabilidade nos informa sobre a hipótese que está na Desciclopédia?</p>
 <h1 id="o-método-dos-mínimos-quadrados">O método dos mínimos quadrados</h1>
 <h2 id="o-problema">O problema</h2>
 <p>Em 1791, Assembleia Nacional Francesa definiu o metro como um décimo
 de milionésimo da distância do equador ao polo norte.</p>
 <p>Ninguém, é claro, poderia medir essa distância diretamente. Entre 1792
-e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediram
+e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediu
 por triangulação um trecho do meridiano de Paris, de Dunquerque até Barcelona,
 cobrindo cerca de 10 graus de latitude. O desafio seguinte foi usar
 essas medidas para <strong>estimar</strong> a distância total do equador ao polo.</p>
@@ -3036,8 +3036,7 @@ reta no fulcro, só precisamos escolher a inclinação <span class="math inline"
 fica determinado por:</p>
 <p><span class="math display">\[ a \, = \, \bar{y} - b \, \bar{x} \]</span></p>
 <p>Imagine a reta como uma gangorra apoiada no fulcro. Ao girá-la, alguns
-resíduos diminuem e outros aumentam. A seguir você vai baixar e usar um app em shiny que permite fazer isso e ver,
-a cada posição, o que acontece com a soma dos quadrados.</p>
+resíduos diminuem e outros aumentam. A seguir, você vai baixar e usar um app em shiny que permite fazer isso e ver, a cada posição, o que acontece com a soma dos quadrados.</p>
 <h2 id="como-usar-o-app">Como usar o app</h2>
 <ol type="1">
 <li>O app está no repositório separado <a href="https://github.com/BIE5781/ShinyApps">BIE5781/ShinyApps</a>, na pasta <code>OLS</code>.</li>

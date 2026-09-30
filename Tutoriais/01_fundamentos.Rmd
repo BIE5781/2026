@@ -2,6 +2,7 @@
 title: "Conceitos fundamentais de modelagem estatística"
 author: "PI"
 date: "2026-09-30"
+lang: "pt-BR"
 output:
     distill::distill_article:
       toc: true
@@ -73,7 +74,7 @@ segments(x0 = valores[c(1,2,2)],
 
 ```
 
-Para uma variável aleatória contínua a probabilidade só pode ser
+Para uma variável aleatória contínua, a probabilidade só pode ser
 definida para **um intervalo**, e corresponde à área sob a curva que
 está delimitada por este intervalo. Vamos criar uma função no R para
 preencher esta área no gráfico da curva normal[^1] :
@@ -141,7 +142,7 @@ O que você obtém com o comando:
     pnorm(valores[2], mean = mu1, sd = sig1) - pnorm(valores[1], mean = mu1, sd = sig1)
 ```
 
-A funções no R para calcular probabilidades acumuladas, como a
+As funções no R para calcular probabilidades acumuladas, como a
 `pnorm`, têm o argumento `lower.tail`, que permite calcular a
 probabilidade a partir de um ponto, isto é, da cauda posterior ao
 valor da variável (`lower.tail=FALSE`). Com isto, outra maneira de
@@ -157,7 +158,7 @@ cauda.dir <- pnorm(valores[2], mu1, sig1, lower.tail=F)
 1 - (cauda.esq + cauda.dir)
 ```
 
-Por fim, o intervalo que nos interesa é simétrico em torno da média. Como a curva
+Por fim, o intervalo que nos interessa é simétrico em torno da média. Como a curva
 normal também o é, uma terceira maneira de fazer o cálculo que funciona neste caso é:
 
 ```{r}
@@ -203,14 +204,14 @@ barplot(tb1, space=0, xlab = "Velocidade (km/s - 299000)", ylab = "Frequência")
 ```
 
 Dividindo-se as frequências de observações em cada classe pelo total
-de medidas temos um histograma de frequências relativas:
+de medidas, temos um histograma de frequências relativas:
 
 ```{r}
 tb2 <- tb1/sum(tb1)
 barplot(tb2, space = 0, xlab = "Velocidade (km/s - 299000)", ylab = "Frequencia relativa")
 ```
 
-Finalmente, dividindo novamente estes valores pelas amplitude do
+Finalmente, dividindo novamente estes valores pela amplitude do
 intervalo de classe usado (75 km/s) temos um histograma de densidade:
 
 ```{r}
@@ -229,7 +230,7 @@ hist(michelson$Speed, breaks = mich.brk,
      ylab = "Densidade")
 ```
 
-Nesta escala podemo sobrepor funções de densidade, como uma Normal:
+Nesta escala, podemos sobrepor funções de densidade, como uma Normal:
 
 ```{r} 
 ## Normal com mu = media amostral e sigma = sd amostral
@@ -245,7 +246,7 @@ As companhias aéreas norte-americanas garantem que 98% de seus
 passageiros não terão problemas para se acomodar nos assentos da
 classe econômica. Justificam isto com um modelo que descreve a
 distribuição das larguras dos quadris dos homens norte-americanos como
-uma variável normal, com média de 14,4 polegadas, e desvio-padrão de
+uma variável normal, com média de 14,4 polegadas e desvio-padrão de
 1,0 polegada.
 
 Faça um gráfico desta distribuição de probabilidades, passando uma
@@ -264,9 +265,9 @@ dnorm(x, mean = mu2, sd = sig2) |>
 ```
 
 Para definir a largura do assento, é preciso saber o limite superior
-do intervalo que contêm 98% da população. Esse é o quantil de 98% da
+do intervalo que contém 98% da população. Esse é o quantil de 98% da
 distribuição, no caso uma normal com média de 14,4 e desvio-padrão de
-1,0 polegadas.
+1,0 polegada.
 
 Calcule o valor deste quantil com o comando: 
 
@@ -275,7 +276,7 @@ Calcule o valor deste quantil com o comando:
 ```
 
 Este é o valor que delimita 98% da área sob a curva normal. Usando a
-função criada no tutorial anterior podemos visualizar no gráfico a
+função criada no tutorial anterior, podemos visualizar no gráfico a
 área que vai até o quantil calculado acima:
 
 ```{r}
@@ -295,9 +296,9 @@ sig3 <- sig2*1.5
 qnorm(mu2, sig3, p=0.98)
 ```
 
-Crie uma gráfico com a curva normal anterior, e adicione a ele a nova
+Crie um gráfico com a curva normal anterior e adicione a ele a nova
 curva normal com o desvio-padrão 50% maior. Tente criar seu código
-antes de exibir a resposta abaixo
+antes de exibir a resposta abaixo:
 
 ```{r, code_folding=TRUE}
 ## Cria a curva original de novo
@@ -312,7 +313,7 @@ dnorm(x, mu2, sig3) |>
 Os parâmetros da distribuição normal correspondem à média e ao
 desvio-padrão. Explore um pouco mais o comportamento da curva com a
 mudança de seus parâmetros. Mudando os valores dos objetos `mu` e
-`sig` no código a seguir você gera novas curvas normais.
+`sig` no código a seguir, você gera novas curvas normais.
 
 
 ```{r}
@@ -347,19 +348,19 @@ distribuição original, dividida pelo tamanho das amostras.
 
 Vamos usar o TCL para investigar um caso fictício. Segundo um [antigo verbete da Desciclopédia sobre o departamento de ecologia do IB-USP](https://desciclopedia.org/wiki/Instituto_de_Bioci%C3%AAncias_da_Universidade_de_S%C3%A3o_Paulo#Ecologia):
 
-> "Esse departamento é conhecido por avaliar os graduandos com o famoso "método da escada". Os professores amassam todas as provas e fazem pequenas bolas com elas, arremessando-as escada acima. Dependendo do degrau que a bolinha de papel parar, eles atribuem uma nota."
+> "Esse departamento é conhecido por avaliar os graduandos com o famoso "método da escada". Os professores amassam todas as provas e fazem pequenas bolas com elas, arremessando-as escada acima. Dependendo do degrau em que a bolinha de papel parar, eles atribuem uma nota."
 
-Vamos supor que em uma turma de 60 estudantes de Eco I a nota média da
+Vamos supor que, em uma turma de 60 estudantes de Eco I a nota média da
 primeira prova foi 4,25. Vamos usar o TCL para testar se este
 resultado veio do método descrito no verbete. Para isso, vamos assumir
-que cada degrau é um ponto na eescala de zero a 10, e que a
-probabilidade das bolinhas cairem em todos os degraus é a mesma. Sob esta premissa, podemos simular 60 notas com este comando:
+que cada degrau é um ponto na escala de zero a 10, e que a
+probabilidade das bolinhas caírem em todos os degraus é a mesma. Sob esta premissa, podemos simular 60 notas com este comando:
 
 
 ```{r }
 notas <- sample(0:10, size = 60, replace = TRUE)
 ```
-E a média de notas seria
+E a média de notas seria:
 
 ```{r }
 mean(notas)
@@ -371,7 +372,7 @@ Veja que o histograma destas notas mostra uma distribuição muito diferente da 
 ```{r }
 hist(notas)
 ```
-Agora vamos repetir esta simulação 1000 vezes, como se fossem 1000 turmas. Guardamos a média de cada truma:
+Agora vamos repetir esta simulação 1000 vezes, como se fossem 1000 turmas. Guardamos a média de cada turma:
 
 
 ```{r }
@@ -395,11 +396,11 @@ aproximar de uma distribuição normal.
 
 ## Comparando com as expectativas teóricas
 
-De acordo com o TCL, a distribuição das médias amostrais deve ter a mesma média da distribuição que gerou os valores aamostrados. A média teórica da distribuição uniforme que usamos é simplesmente o ponto médio entre o valor mínimo e máximo da distribuição:
+De acordo com o TCL, a distribuição das médias amostrais deve ter a mesma média da distribuição que gerou os valores amostrados. A média teórica da distribuição uniforme que usamos é simplesmente o ponto médio entre o valor mínimo e máximo da distribuição:
 
 $$E[X] = \frac{\text{max}-\text{min}}{2} ~= ~ \frac{10-0}{2}$$
 
-Você pode adicionar oa histograma a média dos valores simulados e estes valor teórico esperado pelo TCL
+Você pode adicionar os histograma a média dos valores simulados e este valor teórico esperado pelo TCL:
 
 
 ```{r }
@@ -409,11 +410,11 @@ abline(v = 5, col="red")
 
 Também se deduz do TCL que a variância da distribuição normal das médias
 deve ser igual à variância da distribuição que gerou os dados,
-divididos pelo número de observações. A variância teórica da distribuição uniforme é:
+dividida pelo número de observações. A variância teórica da distribuição uniforme é:
 
 $$\operatorname{Var}(X) = \frac{(\text{max} - \text{min} + 1)^2 - 1}{12}$$
 
-A partir desta expressão, calcule a variância esperada para distribuição das médias segundo o TCL, e compare com variância nas simulações. tente fazer seu próprio código antes de exibir a solução abaixo.
+A partir desta expressão, calcule a variância esperada para a distribuição das médias segundo o TCL e compare com a variância nas simulações. Tente fazer seu próprio código antes de exibir a solução abaixo.
 
 ```{r code_folding=TRUE}
 ## Variancia teorica da uniforme
@@ -424,13 +425,13 @@ v.TCL <- v.unif/60
 var(medias) - v.norm
 ```
 
-Como parece que com um tamanho amostral de 60 o TCL já aproxima bem a
+Como parece que, com um tamanho amostral de 60, o TCL já aproxima bem a
 distribuição das médias das turmas, podemos usar a normal esperada
 pelo TCL como um modelo estatístico. Use esta distribuição normal para
 prever a probabilidade de que uma turma tenha uma nota média igual ou
 menor que 4,25, como foi "observado" em nosso exemplo hipotético.
 
-**Dica:** você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição nornal prevista pelo TCL para este caso.
+**Dica:** você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição normal prevista pelo TCL para este caso.
 
 **Desafio**: o que esta probabilidade nos informa sobre a hipótese que está na Desciclopédia?
 
@@ -441,7 +442,7 @@ Em 1791, Assembleia Nacional Francesa definiu o metro como um décimo
 de milionésimo da distância do equador ao polo norte.
 
 Ninguém, é claro, poderia medir essa distância diretamente. Entre 1792
-e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediram
+e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediu
 por triangulação um trecho do meridiano de Paris, de Dunquerque até Barcelona,
 cobrindo cerca de 10 graus de latitude. O desafio seguinte foi usar
 essas medidas para **estimar** a distância total do equador ao polo.
@@ -482,7 +483,7 @@ $x$ ($\text{sen}^2$ da latitude do ponto médio).
 ```{r dados, eval=TRUE, echo=FALSE}
 if(!require(tidyverse)) {install.packages(tidyverse); library(tidyverse)}
 tab1 <-
-    read.csv("Stigler_99_tab_17_1.csv") |>
+    read.csv("https://raw.githubusercontent.com/BIE5781/ShinyApps/refs/heads/main/OLS/Stigler_99_tab_17_1.csv") |>
     mutate(
         deg = as.numeric(str_extract(Midpoint, "^\\d+")),
         min = as.numeric(str_extract(Midpoint, "(?<=°|◦)\\s*\\d+")),
@@ -526,8 +527,7 @@ fica determinado por:
 $$ a \, = \, \bar{y} - b \, \bar{x} $$
 
 Imagine a reta como uma gangorra apoiada no fulcro. Ao girá-la, alguns
-resíduos diminuem e outros aumentam. A seguir você vai baixar e usar um app em shiny que permite fazer isso e ver,
-a cada posição, o que acontece com a soma dos quadrados.
+resíduos diminuem e outros aumentam. A seguir, você vai baixar e usar um app em shiny que permite fazer isso e ver, a cada posição, o que acontece com a soma dos quadrados.
 
 ## Como usar o app
 
@@ -575,7 +575,5 @@ Para explorar o app:
    equador ao polo e o metro que resultaria dela. Compare o metro
    estimado com o metro atual: a diferença é mostrada em metros e em
    milímetros.
-
-
 
 [^1]: compreender o código desta função não é essencial, basta saber que ela preenche a área sob a normal
