@@ -480,6 +480,7 @@ deles, calculamos $y$ (o comprimento de um grau, em módulos) e
 $x$ ($\text{sen}^2$ da latitude do ponto médio).
 
 ```{r dados, eval=TRUE, echo=FALSE}
+if(!require(tidyverse)) {install.packages(tidyverse); library(tidyverse)}
 tab1 <-
     read.csv("Stigler_99_tab_17_1.csv") |>
     mutate(
@@ -530,13 +531,12 @@ a cada posição, o que acontece com a soma dos quadrados.
 
 ## Como usar o app
 
-1. Baixe e salve em seu computador  [o arquivo do app](app_ls.R) e o [arquivo com os dados](Stigler_99_tab_17_1.csv).
-2. Se ainda não tiver o pacote `shyny` instalado, instale-o e em seguida carregue-o
-3. Para abrir o app, coloque os arquivos `app.R` e
-`Stigler_99_tab_17_1.csv` na mesma pasta e execute, no R:
+1. O app está no repositório separado [BIE5781/ShinyApps](https://github.com/BIE5781/ShinyApps), na pasta `OLS`.
+2. No R, execute o código abaixo com conexão à internet. Ele carrega o pacote `shiny` e inicia o app diretamente do GitHub; não é necessário baixar nem colocar arquivos do app em uma pasta local.
 
 ```{r, echo = TRUE, eval = FALSE}
-shiny::runApp("caminho/para/a/pasta")
+if(!require(shiny)){install.packages("shiny"); library(shiny)}
+runGitHub("ShinyApps", "BIE5781", subdir = "OLS")
 ```
 
 A tela tem duas partes:
