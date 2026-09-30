@@ -94,8 +94,8 @@ code span.wa { color: #5e5e5e; font-style: italic; }
 
 
   <!--  https://schema.org/Article -->
-  <meta property="article:published" itemprop="datePublished" content="2026-09-28" />
-  <meta property="article:created" itemprop="dateCreated" content="2026-09-28" />
+  <meta property="article:published" itemprop="datePublished" content="2026-09-30" />
+  <meta property="article:created" itemprop="dateCreated" content="2026-09-30" />
   <meta name="article:author" content="PI" />
 
   <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
@@ -111,7 +111,7 @@ code span.wa { color: #5e5e5e; font-style: italic; }
   <!--radix_placeholder_rmarkdown_metadata-->
 
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["Conceitos fundamentais de modelagem estatística"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["PI"]}]}]},{"type":"character","attributes":{},"value":["2026-09-28"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["Conceitos fundamentais de modelagem estatística"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["PI"]}]}]},{"type":"character","attributes":{},"value":["2026-09-30"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   
@@ -2494,7 +2494,7 @@ distill-header .nav a {
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"Conceitos fundamentais de modelagem estatística","authors":[{"author":"PI","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2026-09-28T00:00:00.000-03:00","citationText":"PI, 2026"}
+{"title":"Conceitos fundamentais de modelagem estatística","authors":[{"author":"PI","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2026-09-30T00:00:00.000-03:00","citationText":"PI, 2026"}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -2515,7 +2515,7 @@ distill-header .nav a {
   
   PI
   
-<br />2026-09-28
+<br />2026-09-30
 </div>
 
 <div class="d-article">
@@ -2533,6 +2533,13 @@ distill-header .nav a {
 <li><a href="#teorema-central-do-limite" id="toc-teorema-central-do-limite">Teorema Central do Limite</a>
 <ul>
 <li><a href="#comparando-com-as-expectativas-teóricas" id="toc-comparando-com-as-expectativas-teóricas">Comparando com as expectativas teóricas</a></li>
+</ul></li>
+<li><a href="#o-método-dos-mínimos-quadrados" id="toc-o-método-dos-mínimos-quadrados">O método dos mínimos quadrados</a>
+<ul>
+<li><a href="#o-problema" id="toc-o-problema">O problema</a></li>
+<li><a href="#os-dados" id="toc-os-dados">Os dados</a></li>
+<li><a href="#uma-reta-que-passa-pelo-fulcro" id="toc-uma-reta-que-passa-pelo-fulcro">Uma reta que passa pelo fulcro</a></li>
+<li><a href="#como-usar-o-app" id="toc-como-usar-o-app">Como usar o app</a></li>
 </ul></li>
 </ul>
 </nav>
@@ -2919,6 +2926,162 @@ prever a probabilidade de que uma turma tenha uma nota média igual ou
 menor que 4,25, como foi “observado” em nosso exemplo hipotético.</p>
 <p><strong>Dica:</strong> você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição nornal prevista pelo TCL para este caso.</p>
 <p><strong>Desafio</strong>: o que esta probabilidade nos informa sobre a hipótese que está na Desciclopédia?</p>
+<h1 id="o-método-dos-mínimos-quadrados">O método dos mínimos quadrados</h1>
+<h2 id="o-problema">O problema</h2>
+<p>Em 1791, Assembleia Nacional Francesa definiu o metro como um décimo
+de milionésimo da distância do equador ao polo norte.</p>
+<p>Ninguém, é claro, poderia medir essa distância diretamente. Entre 1792
+e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediram
+por triangulação um trecho do meridiano de Paris, de Dunquerque até Barcelona,
+cobrindo cerca de 10 graus de latitude. O desafio seguinte foi usar
+essas medidas para <strong>estimar</strong> a distância total do equador ao polo.</p>
+<p>Se a Terra fosse uma esfera perfeita, bastaria medir o comprimento de um
+grau de latitude em qualquer lugar e multiplicar por 90. Mas a Terra é
+achatada nos polos, e por isso o comprimento de um grau de meridiano
+aumenta à medida que nos afastamos do equador. Para um elipsoide pouco
+achatado, esse comprimento é muito bem aproximado por uma função linear
+do quadrado do seno da latitude <span class="math inline">\(\phi\)</span>:</p>
+<p><span class="math display">\[ y \, = \, a + b \, x, \qquad \text{em que} \quad x = \text{sen}^2 \phi \]</span></p>
+<p>Nesse modelo:</p>
+<ul>
+<li><span class="math inline">\(y\)</span> é o comprimento de um grau de meridiano na latitude <span class="math inline">\(\phi\)</span>;</li>
+<li><span class="math inline">\(a\)</span> é o comprimento de um grau no equador, onde <span class="math inline">\(x = 0\)</span>;</li>
+<li><span class="math inline">\(b\)</span> é quanto um grau é mais longo no polo do que no equador, onde <span class="math inline">\(x = 1\)</span>.</li>
+</ul>
+<p>Como o valor médio de <span class="math inline">\(\text{sen}^2 \phi\)</span> entre o equador e o polo é
+<span class="math inline">\(1/2\)</span>, a distância total do equador ao polo é:</p>
+<p><span class="math display">\[ D \, = \, 90 \left( a + \frac{b}{2} \right) \]</span></p>
+<p>Assim, estimar o metro se reduz a um problema estatístico: <strong>encontrar
+os valores de <span class="math inline">\(a\)</span> e <span class="math inline">\(b\)</span> que melhor descrevem as medidas</strong>. Foi usando
+exatamente esses dados que Adrien-Marie Legendre apresentou, em 1805, o
+método dos mínimos quadrados.</p>
+<h2 id="os-dados">Os dados</h2>
+<p>A tabela abaixo traz os quatro arcos medidos pela missão Delambre-Méchain
+(Stigler, 1999, tabela 17.1). Para cada arco, temos o comprimento em
+módulos, a amplitude em graus e a latitude do ponto médio. A partir
+deles, calculamos <span class="math inline">\(y\)</span> (o comprimento de um grau, em módulos) e
+<span class="math inline">\(x\)</span> (<span class="math inline">\(\text{sen}^2\)</span> da latitude do ponto médio).</p>
+<div class="layout-chunk" data-layout="l-body">
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 21%" />
+<col style="width: 17%" />
+<col style="width: 23%" />
+<col style="width: 6%" />
+<col style="width: 8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Arco</th>
+<th style="text-align: right;">Comprimento (módulos)</th>
+<th style="text-align: right;">Amplitude (graus)</th>
+<th style="text-align: left;">Latitude do ponto médio</th>
+<th style="text-align: right;">x</th>
+<th style="text-align: right;">y</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Dunkirk a Pantheon</td>
+<td style="text-align: right;">62.472,59</td>
+<td style="text-align: right;">2,18910</td>
+<td style="text-align: left;">49° 56’ 30”</td>
+<td style="text-align: right;">0,5858</td>
+<td style="text-align: right;">28.538,0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Pantheon a Evaux</td>
+<td style="text-align: right;">76.145,74</td>
+<td style="text-align: right;">2,66868</td>
+<td style="text-align: left;">47° 30’ 46”</td>
+<td style="text-align: right;">0,5438</td>
+<td style="text-align: right;">28.533,1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Evaux a Carcassonne</td>
+<td style="text-align: right;">84.424,55</td>
+<td style="text-align: right;">2,96336</td>
+<td style="text-align: left;">44° 41’ 48”</td>
+<td style="text-align: right;">0,4947</td>
+<td style="text-align: right;">28.489,5</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Carcassonne a Barcelona</td>
+<td style="text-align: right;">52.749,48</td>
+<td style="text-align: right;">1,85266</td>
+<td style="text-align: left;">42° 17’ 20”</td>
+<td style="text-align: right;">0,4528</td>
+<td style="text-align: right;">28.472,3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>O <strong>módulo</strong> era a unidade de trabalho da expedição e equivale a duas
+toesas. Uma toesa mede cerca de 1,949 m, então um módulo mede cerca de
+3,898 m.</p>
+<h2 id="uma-reta-que-passa-pelo-fulcro">Uma reta que passa pelo fulcro</h2>
+<p>Com quatro pontos que não estão perfeitamente alinhados, nenhuma reta
+passa por todos eles. Qualquer reta que escolhermos vai deixar
+<strong>resíduos</strong>: diferenças entre o valor observado de <span class="math inline">\(y\)</span> e o valor
+previsto pela reta. Precisamos de um critério para dizer qual reta é
+a melhor.</p>
+<p>O método dos mínimos quadrados escolhe a reta que torna mínima a
+<strong>soma dos quadrados dos resíduos</strong>:</p>
+<p><span class="math display">\[ SQR \, = \, \sum_{i=1}^{n} \left( y_i - a - b \, x_i \right)^2 \]</span></p>
+<p>Uma propriedade útil desse método é que a reta de mínimos quadrados
+sempre passa pelo ponto <span class="math inline">\((\bar{x}, \bar{y})\)</span>, formado pela média de <span class="math inline">\(x\)</span> e
+pela média de <span class="math inline">\(y\)</span>. Vamos chamar esse ponto de <strong>fulcro</strong>. Se fixarmos a
+reta no fulcro, só precisamos escolher a inclinação <span class="math inline">\(b\)</span>. O intercepto
+fica determinado por:</p>
+<p><span class="math display">\[ a \, = \, \bar{y} - b \, \bar{x} \]</span></p>
+<p>Imagine a reta como uma gangorra apoiada no fulcro. Ao girá-la, alguns
+resíduos diminuem e outros aumentam. A seguir você vai baixar e usar um app em shiny que permite fazer isso e ver,
+a cada posição, o que acontece com a soma dos quadrados.</p>
+<h2 id="como-usar-o-app">Como usar o app</h2>
+<ol type="1">
+<li>Baixe e salve em seu computador <a href="app_ls.R">o arquivo do app</a> e o <a href="Stigler_99_tab_17_1.csv">arquivo com os dados</a>.</li>
+<li>Se ainda não tiver o pacote <code>shyny</code> instalado, instale-o e em seguida carregue-o</li>
+<li>Para abrir o app, coloque os arquivos <code>app.R</code> e
+<code>Stigler_99_tab_17_1.csv</code> na mesma pasta e execute, no R:</li>
+</ol>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html">runApp</a></span><span class="op">(</span><span class="st">&quot;caminho/para/a/pasta&quot;</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>A tela tem duas partes:</p>
+<ul>
+<li><p><strong>O gráfico</strong>, à direita, mostra os quatro arcos (pontos pretos), o
+fulcro (X azul) e a reta atual (linha azul). As linhas vermelhas
+tracejadas são os resíduos: a distância vertical entre cada ponto e
+a reta.</p></li>
+<li><p><strong>O painel de controle</strong>, à esquerda, tem o controle deslizante da
+inclinação <span class="math inline">\(b\)</span>. Abaixo dele aparecem a soma dos quadrados dos
+resíduos, a equação da reta e as previsões do modelo: a distância do
+equador ao polo e o comprimento do metro estimado com essa reta.</p></li>
+</ul>
+<p>Para explorar o app:</p>
+<ol type="1">
+<li><p><strong>Comece pela reta horizontal</strong> (<span class="math inline">\(b = 0\)</span>), que é a posição inicial.
+Ela supõe que um grau de meridiano tem o mesmo comprimento em
+qualquer latitude, como numa Terra esférica. Anote a soma dos
+quadrados.</p></li>
+<li><p><strong>Gire a reta</strong> arrastando o controle deslizante. Observe como os
+resíduos mudam de tamanho e de sinal, e como a soma dos quadrados
+responde. Você também pode apertar o botão de play, abaixo do
+controle, para girar a reta automaticamente.</p></li>
+<li><p><strong>Procure a inclinação que torna a soma dos quadrados a menor
+possível.</strong> Essa é a sua estimativa de mínimos quadrados para <span class="math inline">\(b\)</span>.</p></li>
+<li><p><strong>Confira sua resposta</strong> marcando a opção <em>“Mostrar a soma dos
+quadrados para cada inclinação”</em>. Um segundo gráfico mostra a soma
+dos quadrados para todas as inclinações possíveis, com um ponto
+vermelho na inclinação que você escolheu.</p></li>
+<li><p><strong>Veja as previsões.</strong> Para cada reta, o app calcula a distância do
+equador ao polo e o metro que resultaria dela. Compare o metro
+estimado com o metro atual: a diferença é mostrada em metros e em
+milímetros.</p></li>
+</ol>
 <section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>

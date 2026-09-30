@@ -1,7 +1,7 @@
 ---
 title: "Conceitos fundamentais de modelagem estatística"
 author: "PI"
-date: "2026-09-28"
+date: "2026-09-30"
 output:
     distill::distill_article:
       toc: true
@@ -11,6 +11,7 @@ output:
 
 ```{r setup, echo=FALSE}
 library(rmarkdown)
+library(knitr)
 knitr::opts_chunk$set(eval = FALSE, echo = TRUE)
 # clipboard
 htmltools::tagList(
@@ -432,5 +433,149 @@ menor que 4,25, como foi "observado" em nosso exemplo hipotético.
 **Dica:** você vai precisar descobrir a probabilidade acumulada até 4,25 da distribuição nornal prevista pelo TCL para este caso.
 
 **Desafio**: o que esta probabilidade nos informa sobre a hipótese que está na Desciclopédia?
+
+# O método dos mínimos quadrados
+## O problema
+
+Em 1791, Assembleia Nacional Francesa definiu o metro como um décimo
+de milionésimo da distância do equador ao polo norte.
+
+Ninguém, é claro, poderia medir essa distância diretamente. Entre 1792
+e 1798, uma missão liderada pelos astrônomos Jean-Baptiste Delambre e Pierre Méchain mediram
+por triangulação um trecho do meridiano de Paris, de Dunquerque até Barcelona,
+cobrindo cerca de 10 graus de latitude. O desafio seguinte foi usar
+essas medidas para **estimar** a distância total do equador ao polo.
+
+Se a Terra fosse uma esfera perfeita, bastaria medir o comprimento de um
+grau de latitude em qualquer lugar e multiplicar por 90. Mas a Terra é
+achatada nos polos, e por isso o comprimento de um grau de meridiano
+aumenta à medida que nos afastamos do equador. Para um elipsoide pouco
+achatado, esse comprimento é muito bem aproximado por uma função linear
+do quadrado do seno da latitude $\phi$:
+
+$$ y \, = \, a + b \, x, \qquad \text{em que} \quad x = \text{sen}^2 \phi $$
+
+Nesse modelo:
+
+* $y$ é o comprimento de um grau de meridiano na latitude $\phi$;
+* $a$ é o comprimento de um grau no equador, onde $x = 0$;
+* $b$ é quanto um grau é mais longo no polo do que no equador, onde $x = 1$.
+
+Como o valor médio de $\text{sen}^2 \phi$ entre o equador e o polo é
+$1/2$, a distância total do equador ao polo é:
+
+$$ D \, = \, 90 \left( a + \frac{b}{2} \right) $$
+
+Assim, estimar o metro se reduz a um problema estatístico: **encontrar
+os valores de $a$ e $b$ que melhor descrevem as medidas**. Foi usando
+exatamente esses dados que Adrien-Marie Legendre apresentou, em 1805, o
+método dos mínimos quadrados.
+
+## Os dados
+
+A tabela abaixo traz os quatro arcos medidos pela missão Delambre-Méchain
+(Stigler, 1999, tabela 17.1). Para cada arco, temos o comprimento em
+módulos, a amplitude em graus e a latitude do ponto médio. A partir
+deles, calculamos $y$ (o comprimento de um grau, em módulos) e
+$x$ ($\text{sen}^2$ da latitude do ponto médio).
+
+```{r dados, eval=TRUE, echo=FALSE}
+tab1 <-
+    read.csv("Stigler_99_tab_17_1.csv") |>
+    mutate(
+        deg = as.numeric(str_extract(Midpoint, "^\\d+")),
+        min = as.numeric(str_extract(Midpoint, "(?<=°|◦)\\s*\\d+")),
+        sec = as.numeric(str_extract(Midpoint, "(?<=′|'|´)\\s*\\d+")),
+        decimal_deg = deg + (min / 60) + (sec / 3600),
+        Radians = decimal_deg * (pi / 180)) |>
+    select(-deg, -min, -sec, -decimal_deg) |>
+    mutate(y = Modules/Degrees, x = (sin(Radians))^2)
+
+tab1 |>
+    select(X, Modules, Degrees, Midpoint, x, y) |>
+    kable(col.names = c("Arco", "Comprimento (módulos)", "Amplitude (graus)",
+                        "Latitude do ponto médio", "x", "y"),
+          digits = c(0, 2, 5, 0, 4, 1),
+          format.args = list(big.mark = ".", decimal.mark = ","))
+```
+
+O **módulo** era a unidade de trabalho da expedição e equivale a duas
+toesas. Uma toesa mede cerca de 1,949 m, então um módulo mede cerca de
+3,898 m.
+
+## Uma reta que passa pelo fulcro
+
+Com quatro pontos que não estão perfeitamente alinhados, nenhuma reta
+passa por todos eles. Qualquer reta que escolhermos vai deixar
+**resíduos**: diferenças entre o valor observado de $y$ e o valor
+previsto pela reta. Precisamos de um critério para dizer qual reta é
+a melhor.
+
+O método dos mínimos quadrados escolhe a reta que torna mínima a
+**soma dos quadrados dos resíduos**:
+
+$$ SQR \, = \, \sum_{i=1}^{n} \left( y_i - a - b \, x_i \right)^2 $$
+
+Uma propriedade útil desse método é que a reta de mínimos quadrados
+sempre passa pelo ponto $(\bar{x}, \bar{y})$, formado pela média de $x$ e
+pela média de $y$. Vamos chamar esse ponto de **fulcro**. Se fixarmos a
+reta no fulcro, só precisamos escolher a inclinação $b$. O intercepto
+fica determinado por:
+
+$$ a \, = \, \bar{y} - b \, \bar{x} $$
+
+Imagine a reta como uma gangorra apoiada no fulcro. Ao girá-la, alguns
+resíduos diminuem e outros aumentam. A seguir você vai baixar e usar um app em shiny que permite fazer isso e ver,
+a cada posição, o que acontece com a soma dos quadrados.
+
+## Como usar o app
+
+1. Baixe e salve em seu computador  [o arquivo do app](app_ls.R) e o [arquivo com os dados](Stigler_99_tab_17_1.csv).
+2. Se ainda não tiver o pacote `shyny` instalado, instale-o e em seguida carregue-o
+3. Para abrir o app, coloque os arquivos `app.R` e
+`Stigler_99_tab_17_1.csv` na mesma pasta e execute, no R:
+
+```{r, echo = TRUE, eval = FALSE}
+shiny::runApp("caminho/para/a/pasta")
+```
+
+A tela tem duas partes:
+
+* **O gráfico**, à direita, mostra os quatro arcos (pontos pretos), o
+  fulcro (X azul) e a reta atual (linha azul). As linhas vermelhas
+  tracejadas são os resíduos: a distância vertical entre cada ponto e
+  a reta.
+
+* **O painel de controle**, à esquerda, tem o controle deslizante da
+  inclinação $b$. Abaixo dele aparecem a soma dos quadrados dos
+  resíduos, a equação da reta e as previsões do modelo: a distância do
+  equador ao polo e o comprimento do metro estimado com essa reta.
+
+Para explorar o app:
+
+1. **Comece pela reta horizontal** ($b = 0$), que é a posição inicial.
+   Ela supõe que um grau de meridiano tem o mesmo comprimento em
+   qualquer latitude, como numa Terra esférica. Anote a soma dos
+   quadrados.
+
+2. **Gire a reta** arrastando o controle deslizante. Observe como os
+   resíduos mudam de tamanho e de sinal, e como a soma dos quadrados
+   responde. Você também pode apertar o botão de play, abaixo do
+   controle, para girar a reta automaticamente.
+
+3. **Procure a inclinação que torna a soma dos quadrados a menor
+   possível.** Essa é a sua estimativa de mínimos quadrados para $b$.
+
+4. **Confira sua resposta** marcando a opção *"Mostrar a soma dos
+   quadrados para cada inclinação"*. Um segundo gráfico mostra a soma
+   dos quadrados para todas as inclinações possíveis, com um ponto
+   vermelho na inclinação que você escolheu.
+
+5. **Veja as previsões.** Para cada reta, o app calcula a distância do
+   equador ao polo e o metro que resultaria dela. Compare o metro
+   estimado com o metro atual: a diferença é mostrada em metros e em
+   milímetros.
+
+
 
 [^1]: compreender o código desta função não é essencial, basta saber que ela preenche a área sob a normal
