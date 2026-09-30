@@ -49,7 +49,7 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 
 | Data | Aula | Tópicos | Tutorial | Docente |
 |:--|:--|:--|:--|:--|
-| 30/09 | **1. Fundamentos da modelagem** | Distribuições de probabilidade, $p(y \mid \theta)$, regressão simples e erros Gaussianos |  | Paulo Inácio |
+| 30/09 | [**1. Fundamentos da modelagem**](Aulas/Aula_01_fundamentos.html) | Distribuições de probabilidade, $p(y \mid \theta)$, regressão simples e erros Gaussianos |[Distribuição normal](Tutoriais/01_fundamentos.html)  | Paulo Inácio |
 | 02/10 | **2. Verossimilhança** | Função de verossimilhança, máxima verossimilhança e outras distribuições |  | Paulo Inácio |
 | 07/10 | **3. O modelo linear** | Regressão múltipla, efeitos aditivos, interações e interpretação de coeficientes | [Regressão linear](Tutoriais/modelo_linear.html) | Paulo Inácio |
 | 09/10 | **4. Inferência Bayesiana I** | História, fundamentos e distribuição a priori | Introdução ao *Statistical Rethinking* | Diogo |
