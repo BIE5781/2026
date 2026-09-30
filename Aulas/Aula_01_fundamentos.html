@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Fundamentos para modelagem estatística</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI (Paulo Inácio Prado)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="estilo_pi.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Fundamentos para modelagem estatística
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI (Paulo Inácio Prado)
+]
+.date[
+### 30 de setembro de 2026
+]
+
+---
+
+
+
+
+
+
+## Conceitos
+
++ Variáveis aleatórias
+
++ Funções de densidade de probabilidade
+
++ Distribuições de probabilidade como modelos estatísticos (`\(p(y \mid \theta)\)`)
+
++ A distribuição normal de probabilidade
+
++ Teorema central do limite
+
++ Método dos mínimos quadrados
+
+
+---
+class: inverse, middle
+
+.col-container[
+.col[
+# Métodos dos mínimos quadrados - um pouco de história
+]
+
+.col[
+.center[
+&lt;img src="Stigler_1986_cover.png" style="width: 60%; max-width: 500px; border-radius: 4px;" /&gt;
+
+[Joseph Stigler,1999](https://archive.org/details/historyofstatist00stig)
+]
+]
+]
+
+---
+
+## O problema: combinação de observações 
+
+.pull-left[
+
+* A partir do séc XVII: ciência europeia acumula  medidas astronômicas e geodésicas
+
+* Sécs XVII-XVIII: 
+  * medidas repetidas nunca são iguais, mas a sua combinação reduz o erro
+  * medidas sob diferentes condições também podem ser combinadas
+  * diferentes maneiras de combinar (p.ex, média, minimizar erros absolutos)
+
+
+]
+
+.pull-right[
+.center[
+
+&lt;img src="Kilometre_definition_wikipedia.png" alt="" width="75%" style="display: block; margin: auto;" /&gt;
+]
+
+.right[
+
+[Wikipedia: história do metro](https://en.wikipedia.org/wiki/History_of_the_metre)]
+
+]
+
+---
+
+## Um exemplo: definição do metro
+
+.pull-left[
+
+* **1791**: Assembleia Nacional Francesa define o metro como um décimo de milionésimo da distância do equador ao polo norte
+
+* **1792-1798**: missão Delambre &amp; Méchain mede quatro subseções de arco ao longo do  meridiano de Paris, entre Durkink e Barcelona.
+
+* Medidas de cada subseção necessárias para os cálculos: comprimento em unidades lineares (*Module*) e em graus, e coordenadas do ponto médio. 
+
+]
+
+.pull-right[
+.center[
+
+&lt;img src="Paris_meridian_Stigler_Fig.17_1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+.right[
+
+Stigler, 1986, 1999]
+
+]
+
+
+---
+
+## Cálculos
+
+.pull-left[
+
+Dados das medidas das subseções do arco:
+
+* razão entre comprimento em *Modules* e em graus : `\(y = S/d\)`
+* o quadrado do seno das coordenadas centrais : `\(x = \sin^2 L\)`
+
+Usamos os coeficientes da aproximação linear `\(y = a + b x\)` para calcular distância do equador ao polo norte com:
+
+`$$Q = 90 (a + b/2)$$`
+
+Problema: combinar as medidas para obter a melhor estimativa de `\(a\)` e `\(b\)`.
+]
+
+.pull-right[
+.center[
+
+&lt;img src="Stigler_1999_tab17_1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+.right[
+
+Stigler, 1999]
+
+]
+
+---
+
+## Erros
+
+
+.center[### a = 28220.94 , b = 541.26
+
+
+|Subseção                |       x|        y| Previsto|  Erro|
+|:-----------------------|-------:|--------:|--------:|-----:|
+|Dunkirk a Pantheon      | 0.58582| 28538.02| 28538.02|  0.00|
+|Pantheon a Evaux        | 0.54380| 28533.11| 28515.28| 17.83|
+|Evaux a Carcassonne     | 0.49471| 28489.47| 28488.71|  0.76|
+|Carcassonne a Barcelona | 0.45275| 28472.29| 28466.00|  6.29|
+]
+
+---
+
+## Erros
+
+.center[### a = 28227.16 , b = 562.61
+
+
+|Subseção                |       x|        y| Previsto|   Erro|
+|:-----------------------|-------:|--------:|--------:|------:|
+|Dunkirk a Pantheon      | 0.58582| 28538.02| 28556.75| -18.73|
+|Pantheon a Evaux        | 0.54380| 28533.11| 28533.11|   0.00|
+|Evaux a Carcassonne     | 0.49471| 28489.47| 28505.49| -16.02|
+|Carcassonne a Barcelona | 0.45275| 28472.29| 28481.89|  -9.59|
+]
+
+
+---
+
+## Soma dos quadrados dos erros
+
+.center[### a = 28227.16 , b = 562.61
+
+
+|Subseção                |x      |y        |Previsto |Erro   |  Erro²|
+|:-----------------------|:------|:--------|:--------|:------|------:|
+|Dunkirk a Pantheon      |0.5858 |28538.02 |28556.75 |-18.73 | 350.70|
+|Pantheon a Evaux        |0.5438 |28533.11 |28533.11 |0      |   0.00|
+|Evaux a Carcassonne     |0.4947 |28489.47 |28505.49 |-16.02 | 256.67|
+|Carcassonne a Barcelona |0.4528 |28472.29 |28481.89 |-9.59  |  92.00|
+|Total                   |       |         |         |       | 699.37|
+]
+
+
+---
+
+## Soma dos quadrados dos erros
+
+.center[### a = 28227.16 , b = 541.26
+
+
+|Subseção                |x      |y        |Previsto |Erro  |  Erro²|
+|:-----------------------|:------|:--------|:--------|:-----|------:|
+|Dunkirk a Pantheon      |0.5858 |28538.02 |28544.25 |-6.22 |  38.70|
+|Pantheon a Evaux        |0.5438 |28533.11 |28521.5  |11.61 | 134.76|
+|Evaux a Carcassonne     |0.4947 |28489.47 |28494.93 |-5.46 |  29.82|
+|Carcassonne a Barcelona |0.4528 |28472.29 |28472.22 |0.07  |   0.01|
+|Total                   |       |         |         |      | 203.29|
+]
+
+---
+
+## Método dos mínimos quadrados (1805)
+
+.pull-left[
+.center[
+
+&lt;img src="Legendre.jpg" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+
+Adrien-Marie Legendre (1752-1883), &lt;br&gt;  único retrato conhecido, [Wikipedia](https://en.wikipedia.org/wiki/Adrien-Marie_Legendre)
+]
+
+]
+
+.pull-right[
+.center[
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-9-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+]
+]
+
+
+---
+
+## ... que levou à distribuição Normal (1809)
+
+.pull-left[
+.center[
+
+&lt;img src="Carl_Friedrich_Gauss.jpg" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+
+Carl Friedrich Gauss (1777-1855), &lt;br&gt; [Wikipedia](https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss)
+]
+
+]
+
+.pull-right[
+.center[
+&lt;img src="reglin_classica.png" alt="" width="75%" style="display: block; margin: auto;" /&gt;
+]
+]
+
+---
+
+## ... que levou ao teorema do limite central (1812)
+
+.pull-left[
+.center[
+
+&lt;img src="Pierre-Simon_Laplace.jpg" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+
+Pierre Simon Laplace (1749-1827) ([Wikipedia](https://en.wikipedia.org/wiki/Pierre-Simon_Laplace))
+]
+
+]
+
+.pull-right[
+&lt;iframe 
+  src="https://commons.wikimedia.org/wiki/File:Galton_box.webm?embedplayer=true" 
+  width="100%" 
+  height="450" 
+  frameborder="0" 
+  allowfullscreen&gt;
+&lt;/iframe&gt;
+Tabuleiro de Galton (1873) ([Wikipedia](https://pt.wikipedia.org/wiki/Tabuleiro_de_Galton)) 
+]
+
+---
+
+## Somos todos ogros
+
+.pull-left[
+
+1. Se você não está entendendo tudo, é porque está prestando atenção.
+
+2. "Síndrome do impostor" muitas vezes é reconhecimento da complexidade de um tema, o que não é pouco.
+
+3. O aprendizado é gradual: cada etapa de entendimento é valiosa em si e porque é necessária para as seguintes.
+]
+
+
+.pull-right[
+.center[
+&lt;img src="ogre.jpg" alt="" width="75%" style="display: block; margin: auto;" /&gt;
+]
+]
+
+---
+class: inverse, middle
+
+.col-container[
+.col[
+# Conceitos e definições
+]
+
+.col[
+.center[
+&lt;img src="definitions_xkcd.png" style="width: 90%; max-width: 500px; border-radius: 4px;" /&gt;
+
+["Planet definitions", xkcd](https://xkcd.com/3063/)
+]
+]
+]
+
+---
+## Um conjunto de dados experimentais
+
+
+.pull-left[
+
+* Coleta de populações de *Drosophila melanogaster* em 18 locais na Austrália.
+* Linhagens isofêmeas: progênie separadas de cada fêmea coletada,
+  obtida de 10 gerações em laboratório.
+* 50 larvas das linhagens de cada população mantidas a
+  18°C, 25°C e 29°C durante o desenvolvimento (3 réplicas por tratamento).
+* Condições controladas de laboratório: frascos, meio de cultura, fotoperíodo,
+  temperatura, densidade de moscas, etc.
+* Medição das moscas adultas nascidas sob cada tratamento.
+
+]
+
+.pull-right[
+.center[
+
+![](drosophila_culture.png)
+]
+
+.right[
+
+Van Heerwaarden &amp; Sgrò, *Evolution* (2011).]
+
+]
+
+---
+
+## Um conjunto de dados experimentais
+
+
+
+
+.pull-left[
+
+* 30 adultos sorteados entre as moscas criadas em
+  cada temperatura.
+* Os histogramas mostram as frequências de moscas em classes de comprimento do tórax
+para cada população, apenas para fêmeas criadas a 25°C.
+* As linhas azuis são as médias do comprimento do tórax de cada amostra.
+]
+
+
+.pull-right[
+.center[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/drosophila pops histogram-1.png" alt="" width="85%" /&gt;
+]
+]
+
+---
+
+## Distribuição das médias amostrais
+
+.pull-left[
+.center[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-14-1.png" alt="" width="85%" /&gt;
+]
+]
+
+.pull-right[
+.center[
+
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/drosophila-mean-hist-1.png" alt="" width="85%" /&gt;
+
+]]
+
+
+---
+
+
+## Variáveis aleatórias
+
+.pull-left[
+
+* Muitos valores são possíveis, mesmo para médias de medidas tomadas
+  exatamente da mesma forma e sob condições fortemente controladas.
+
+* Medidas científicas são **variáveis aleatórias**: quantidades que
+  são inevitavelmente afetadas por eventos aleatórios.
+
+* Como lidar com isso? Com modelos que nos dizem qual é a chance de
+observar cada valor possível da medida.
+
+* Em outras palavras, construindo **distribuições de probabilidade**.
+
+]
+
+.pull-right[
+.center[
+
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-15-1.png" alt="" width="85%" /&gt;
+
+]]
+
+---
+
+## 1º passo: a escala de densidade
+
+.pull-left[
+
+
+* Vamos reescalonar o eixo y deste histograma para que a área total
+  do histograma seja igual a um.
+* Ou seja, expressamos as frequências (ou contagens) originais em uma nova
+  escala, de modo que a soma das áreas das barras seja igual a um. Chamamos
+  essa escala de **densidade**.
+* Este é um reescalonamento linear (ou seja, proporcional), então a forma do
+  histograma não muda.
+
+]
+
+.pull-right[
+.center[
+
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-16-1.png" alt="" width="85%" /&gt;
+
+]]
+
+---
+
+## 2º passo: a função de densidade
+
+.pull-left[
+
+* Agora vamos imaginar como "suavizar" a distribuição de densidades,
+  usando uma função contínua.
+* Pense nessa função como a representação contínua (ou um limite
+  contínuo) do histograma. Essa é a **função de densidade**.
+* A área sob a curva de uma função de densidade é igual a um.
+
+]
+
+
+.pull-right[
+.center[
+
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-17-1.png" alt="" width="85%" /&gt;
+
+]]
+
+
+---
+
+
+## Função de densidade: algumas definições
+
+.pull-left[
+
+* A função de densidade é uma função matemática contínua `\(f(x)\)` que retorna um valor de
+  densidade para qualquer valor da medida `\(x\)`.
+* Chamamos de **espaço amostral** ( `\(\Omega\)` ) o conjunto de todos os valores que uma
+  variável aleatória pode assumir.
+
+
+]
+
+
+.pull-right[
+.center[
+
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-18-1.png" alt="" width="85%" /&gt;
+
+]]
+
+
+---
+
+## Função de densidade e probabilidades
+
+.pull-left[
+
+
+* A integral de `\(f(x)\)` sobre o espaço amostral é igual a um.
+
+* Essa é uma forma matemática de dizer que a área sob `\(f(x)\)` é igual a um.
+
+]
+
+.pull-right[
+.center[
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-19-1.png" alt="" width="85%" /&gt;
+]]
+
+---
+
+## Função de densidade e probabilidades
+
+.pull-left[
+
+
+* A área sob `\(f(x)\)` para qualquer intervalo `\(L \leq x \leq U\)` é uma
+  fração da área total sob `\(f(x)\)`.
+
+* Essa área é uma expressão matemática da **probabilidade atribuída
+  a um intervalo de medidas**. Ela também é uma integral definida da função
+  de densidade:
+
+$$ P(L \leq x \leq U) ~ = ~ \int_L^U f(x) \, dx $$
+
+]
+
+.pull-right[
+.center[
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-20-1.png" alt="" width="85%" /&gt;
+]]
+
+---
+
+
+## Distribuições de probabilidade como modelos
+
+
+* A função de densidade que definimos é usada para expressar
+  probabilidades de variáveis aleatórias, ou seja, uma **distribuição
+  de probabilidade**.
+
+--
+
+* É um modelo que atribui probabilidades aos dados, isto é, aos
+  valores de uma variável aleatória.
+
+--
+
+* No nosso exemplo, a variável aleatória é o comprimento médio do tórax que
+  obtivemos a partir de amostras de 30 moscas.
+
+--
+
+* Com esse tipo de modelo, podemos fazer muitas perguntas interessantes sobre
+  essas médias amostrais, como:
+
+
+---
+
+class: center, middle
+
+### Qual é a probabilidade de um comprimento médio do tórax de até 1,04 mm?
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-21-1.png" alt="" width="40%" /&gt;
+
+---
+
+class: center, middle
+
+### Qual é o intervalo de confiança para o comprimento médio do tórax?
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/unnamed-chunk-22-1.png" alt="" width="40%" /&gt;
+
+
+---
+
+
+## Qual distribuição de probabilidade?
+
+
+* Agora sabemos que distribuições de probabilidade são uma boa escolha para
+  modelar variáveis aleatórias. Mas como construir um modelo desses?
+
+--
+
+* Há receitas para isso, mas muitas distribuições de probabilidade
+  já foram propostas, para uma enorme variedade de tipos de dados.
+
+--
+
+* No nosso exemplo, nossa variável aleatória são médias amostrais. O **Teorema
+  Central do Limite** afirma que as médias amostrais seguem uma distribuição
+  Normal à medida que o tamanho das amostras aumenta.
+  
+--
+
+* Esse é um dos resultados mais importantes da teoria da probabilidade. Temos
+  ótimas razões para escolher a distribuição Normal como nosso
+  modelo estatístico.
+
+---
+
+## A distribuição Normal
+
+.pull-left[
+
+* Criada para descrever a distribuição de erros de medida aditivos.
+* O TCL nos diz que este é um bom modelo para qualquer variável aleatória que seja
+a soma de muitas outras variáveis aleatórias (como médias amostrais).
+* É uma distribuição simétrica, sempre em forma de sino.
+* Tem dois parâmetros, que correspondem à média e ao desvio-padrão
+  da distribuição.
+* Sua média e seu desvio-padrão são independentes.
+]
+
+.pull-right[
+.center[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/normal-curve-1.png" alt="" width="85%" /&gt;
+
+]]
+
+---
+
+
+## Parâmetro de posição da distribuição Normal
+
+
+.pull-left[
+
+* A Normal tem um **parâmetro de posição**, que chamaremos de `\(\mu\)`.
+* Esse parâmetro corresponde à média da distribuição Normal.
+* Ao mudar `\(\mu\)`, mudamos a posição da distribuição Normal
+ao longo do eixo x, sem alterar o desvio-padrão.
+]
+
+.pull-right[
+.center[
+	&lt;img src="Aula_01_fundamentos_files/figure-html/normal-location-1.png" alt="" width="85%" /&gt;
+]
+]
+
+---
+
+## Parâmetro de escala da distribuição Normal
+
+.pull-left[
+
+* A Normal tem um **parâmetro de escala**, que chamaremos de `\(\sigma\)`.
+* Esse parâmetro corresponde ao desvio-padrão da distribuição Normal.
+* Ao mudar `\(\sigma\)`, mudamos a dispersão da distribuição Normal
+em torno da média, sem alterar a média.
+]
+
+
+.pull-right[
+.center[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/normal-scale-1.png" alt="" width="85%" /&gt;
+]]
+
+---
+
+## O modelo de regressão linear
+
+.pull-left[
+
+* Agora vamos examinar a distribuição das médias nas três temperaturas
+
+* Para cada temperatura, temos 18 médias, das medidas de 30 indivíduos de cada população de origem
+
+* Queremos um modelo que combine essas medidas repetidas para cada tratamento para estimar o melhor possível qual o tamanho médio sob cada temperatura.
+]
+
+.pull-right[
+&lt;img src="Aula_01_fundamentos_files/figure-html/empirical-means-by-temperature-1.png" alt="" width="85%" /&gt;
+]
+
+---
+
+## O modelo de regressão linear
+
+.pull-left[
+
+* Temos boas razões para assumir que 
+  o comprimento médio do tórax em cada tratamento tende a uma distribuição normal.
+
+* Vamos começar com um modelo simples: o comprimento médio do tórax das populações é uma
+  função linear da temperatura: `\(\mu = a + b X\)`
+
+* O que buscamos, então, são valores de `\(a\)` e `\(b\)` que resultem na
+  previsão com menor erro possível do comprimento do tórax para cada
+  temperatura.
+
+
+
+]
+
+.pull-right[
+&lt;img src="Aula_01_fundamentos_files/figure-html/empirical-means-normal-fit-1.png" alt="" width="85%" /&gt;
+]
+
+---
+
+## Ajuste do modelo
+
+.pull-left[
+
+* Assim, podemo usar o método dos mínimos quadrados para combinar
+  todas as medidas que temos e encontrar os valores de `\(a\)` e `\(b\)` que
+  minimizam o erro de previsão.
+
+* Ajustar um modelo estatístico nada mais é que encontrar valores de
+  seus parâmetros adequados para descrever os dados.
+
+* No método de mínimos quadrados, esta adequabilidade é expressa pela
+  soma dos quadrados dos resíduos.
+
+]
+
+.pull-right[
+&lt;img src="Aula_01_fundamentos_files/figure-html/empirical-means-regression-1.png" alt="" width="85%" /&gt;
+]
+
+---
+
+## Ajuste do modelo
+
+.pull-left[
+
+* Assim, podemo usar o método dos mínimos quadrados para combinar
+  todas as medidas que temos e encontrar os valores de `\(a\)` e `\(b\)` que
+  minimizam o erro de previsão.
+
+* Ajustar um modelo estatístico nada mais é que encontrar valores de
+  seus parâmetros adequados para descrever os dados.
+
+* No método de mínimos quadrados, esta adequabilidade é expressa pela
+  soma dos quadrados dos resíduos.
+
+]
+
+.pull-right[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/empirical-means-scatter-1.png" alt="" width="85%" /&gt;
+
+]
+
+---
+
+## Ajuste no R
+
+.pull-left[
+
+
+``` r
+&gt; m1 &lt;- lm(th.mean ~ Temperature, 
++          data = dthor.mt)
+&gt; plot(th.mean ~ Temperature, 
++      data = dthor.mt,
++      xlab = "Temperatura",
++      ylab = "Comprimento tórax (mm)")
+&gt; abline(m1, col = "blue")
+```
+
+
+]
+
+.pull-right[
+
+&lt;img src="Aula_01_fundamentos_files/figure-html/grafico-lm-1.png" alt="" width="85%" /&gt;
+
+]
+
+---
+
+## Um pouco de notação
+
+
+* Nosso modelo: o comprimento médio do tórax `\(y\)` segue uma distribuição normal:
+
+$$ y \, \sim \, \text{Normal}(\mu, \sigma)$$
+
+--
+
+* Sendo que a média desta distribuição é uma função linear da temperatura `\(x\)`
+
+$$ \mu = a + b x$$
+
+
+--
+
+* E o desvio-padrão desta distribuição é constante 
+
+---
+
+## Um pouco de notação
+
+* A notação `\(y \sim \text{Normal}(\mu, \sigma)\)` nos lembra que nosso modelo é uma distribuição de probabilidades.
+
+--
+
+* Desta maneira, nosso modelo atribui probabilidades a cada valor de `\(y\)`
+
+--
+
+* Isto vale para qualquer modelo estatístico. Todos eles utilizam alguma distribuição de probabilidades para atribuir probabilidades a observações.
+
+--
+
+* Podemos expressar isto como `\(p(y_i \mid \theta)\)` (a probabilidade
+  `\(p\)` que o modelo atribui a cada observação `\(y_i\)`, considerando os
+  valores de seus parâmetros `\(\theta\)`.
+
+---
+
+## Um pouco de notação
+
+Como na distribuição normal a média é independente do desvio padrão, uma notação alternativa do nosso modelo é a seguinte:
+
+* O comprimento do tórax é uma função linear da temperatura, mais um erro de distribuição normal com média zero e desvio-padrão constante:
+
+`$$\begin{eqnarray*}
+        y &amp; = &amp; a + b x \ + \ \epsilon,   \\ \\
+        \epsilon &amp; \sim &amp; \text{Normal}(\mu = 0, \ \sigma)   
+      \end{eqnarray*}$$`
+
+---
+
+
+## Mensagens para levar para casa
+
+1. Distribuições de probabilidade atribuem
+   probabilidades a cada valor possível de uma medida.
+
+--
+
+2. Assim, distribuições de probabilidade podem ser concebidas como modelos do
+   processo que gera os dados em questão.
+
+--
+
+3. Ajustamos um modelo estatístico encontrando valores razoáveis para os
+   parâmetros das distribuições de probabilidade.
+
+--
+
+4. O método dos mínimos quadrados é uma maneira de encontrar estes valores razoáveis, se supomos que as observações têm uma distribuição normal
+
+--
+5. Esta premissa de normalidade é razoável quando as observações resultam de soma de muitas variáveis aleatórias.
+
+---
+
+## Referências
+
++ Bolker, B.M. 2008 Ecological Models and Data in R. Princeton:
+    Princeton University Press.
+
++ Gotelli, N.J., Ellison, A.M., Ellison, S.E., 2004. A Primer of
+  Ecological Statistics. Sinauer Associates Publishers.
+
++ McElreath, R., 2018. Statistical Rethinking: A Bayesian Course with
+  Examples in R and Stan, 2nd ed. CRC Press.
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

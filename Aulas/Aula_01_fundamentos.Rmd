@@ -21,16 +21,21 @@ editor_options:
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 options(servr.daemon = TRUE)#para que não bloqueie a sessão
-knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%")
+library(xaringanthemer)
 library(ggplot2)
 library(ggthemes)
 library(dplyr)
 library(tidyr)
+library(stringr)
 library(latex2exp)
 library(ggridges)
 library(viridis)
 library(knitr)
 library(kableExtra)
+library(janitor)
+library(wesanderson)
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
@@ -90,7 +95,7 @@ theme_publication <- function(base_size=14, base_family="helvetica") {
                 ))
     
 }
-
+cor <- wes_palette("Rushmore1") #("FantasticFox1")
 ```
 
 ## Conceitos
@@ -107,8 +112,327 @@ theme_publication <- function(base_size=14, base_family="helvetica") {
 
 + Método dos mínimos quadrados
 
+
+---
+class: inverse, middle
+
+.col-container[
+.col[
+# Métodos dos mínimos quadrados - um pouco de história
+]
+
+.col[
+.center[
+<img src="Stigler_1986_cover.png" style="width: 60%; max-width: 500px; border-radius: 4px;" />
+
+[Joseph Stigler,1999](https://archive.org/details/historyofstatist00stig)
+]
+]
+]
+
 ---
 
+## O problema: combinação de observações 
+
+.pull-left[
+
+* A partir do séc XVII: ciência europeia acumula  medidas astronômicas e geodésicas
+
+* Sécs XVII-XVIII: 
+  * medidas repetidas nunca são iguais, mas a sua combinação reduz o erro
+  * medidas sob diferentes condições também podem ser combinadas
+  * diferentes maneiras de combinar (p.ex, média, minimizar erros absolutos)
+
+
+]
+
+.pull-right[
+.center[
+
+```{r, echo=FALSE, out.width="75%", fig.align="center"}
+knitr::include_graphics("Kilometre_definition_wikipedia.png")
+```
+]
+
+.right[
+
+[Wikipedia: história do metro](https://en.wikipedia.org/wiki/History_of_the_metre)]
+
+]
+
+---
+
+## Um exemplo: definição do metro
+
+.pull-left[
+
+* **1791**: Assembleia Nacional Francesa define o metro como um décimo de milionésimo da distância do equador ao polo norte
+
+* **1792-1798**: missão Delambre & Méchain mede quatro subseções de arco ao longo do  meridiano de Paris, entre Durkink e Barcelona.
+
+* Medidas de cada subseção necessárias para os cálculos: comprimento em unidades lineares (*Module*) e em graus, e coordenadas do ponto médio. 
+
+]
+
+.pull-right[
+.center[
+
+```{r, echo=FALSE, out.width="100%", fig.align="center"}
+knitr::include_graphics(c("Paris_meridian_Stigler_Fig.17_1.png"))
+```
+]
+
+.right[
+
+Stigler, 1986, 1999]
+
+]
+
+
+---
+
+## Cálculos
+
+.pull-left[
+
+Dados das medidas das subseções do arco:
+
+* razão entre comprimento em *Modules* e em graus : $y = S/d$
+* o quadrado do seno das coordenadas centrais : $x = \sin^2 L$
+
+Usamos os coeficientes da aproximação linear $y = a + b x$ para calcular distância do equador ao polo norte com:
+
+$$Q = 90 (a + b/2)$$
+
+Problema: combinar as medidas para obter a melhor estimativa de $a$ e $b$.
+]
+
+.pull-right[
+.center[
+
+```{r, echo=FALSE, out.width="100%", fig.align="center"}
+knitr::include_graphics(c("Stigler_1999_tab17_1.png"))
+```
+]
+
+.right[
+
+Stigler, 1999]
+
+]
+
+---
+
+## Erros
+
+```{r calculos-metro, echo=FALSE}
+tab1 <-
+    read.csv("Stigler_99_tab_17_1.csv") |>
+    mutate(
+        deg = as.numeric(str_extract(Midpoint, "^\\d+")),
+        min = as.numeric(str_extract(Midpoint, "(?<=°|◦)\\s*\\d+")),
+        sec = as.numeric(str_extract(Midpoint, "(?<=′|'|´)\\s*\\d+")),
+        decimal_deg = deg + (min / 60) + (sec / 3600),
+        Radians = decimal_deg * (pi / 180)) |>
+    select(-deg, -min, -sec, -decimal_deg) |>
+    mutate(y = Modules/Degrees, x = (sin(Radians))^2) |>
+    select(X, x, y) |>
+    rename(Subseção=X)
+## Calcula previstos e erros com dif coeficientes
+f1 <- function(a = 28227.16205, b= 541.2639353, kab=TRUE, ms=TRUE, tot=TRUE){
+    y <- mutate(tab1, Previsto = a+b*x, Erro = y - Previsto)
+    if(ms){
+        y <- mutate(y, ms = Erro^2)
+    }
+    if(tot)
+        y <- mutate(y, x=round(x,4), y = round(y,2), Previsto=round(Previsto,2),
+                    Erro = round(Erro,2), ms=round(ms,2)) |>
+            adorn_totals(where = "row", fill="", select=ms)
+    if(kab){
+        nomes <- names(y)
+        nomes <- gsub("ms", "Erro²", nomes)
+        names(y) <- nomes
+        ##y <- kable(y, digits = c(1,5,2,2,2,2), caption=paste0("a = ",round(a,1)," , b = ", round(b,1)))
+        y <- kable(y, digits = c(1,5,2,2,2,2))
+    }
+    return(y)
+    }
+tab1a <- f1(kab=FALSE, ms=FALSE, tot = FALSE)
+a <- 28227.16205
+b <- 541.2639353
+a2 <- a + tab1a[1,5]
+b2 <- (tab1a[2,3]-a)/tab1a[2,2]
+```
+.center[### a = `r format(round(a2, 2), scientific = FALSE)` , b = `r round(b,2)`
+
+```{r echo=FALSE}
+f1(a2, b, ms=FALSE, tot = FALSE)
+```
+]
+
+---
+
+## Erros
+
+.center[### a = `r format(round(a, 2), scientific = FALSE)` , b = `r round(b2,2)`
+
+```{r echo=FALSE}
+f1(a, b2, ms=FALSE, tot = FALSE)
+```
+]
+
+
+---
+
+## Soma dos quadrados dos erros
+
+.center[### a = `r format(round(a, 2), scientific = FALSE)` , b = `r round(b2,2)`
+
+```{r echo=FALSE}
+f1(a, b2)
+```
+]
+
+
+---
+
+## Soma dos quadrados dos erros
+
+.center[### a = `r format(round(a, 2), scientific = FALSE)` , b = `r round(b,2)`
+
+```{r echo=FALSE}
+f1(a, b)
+```
+]
+
+---
+
+## Método dos mínimos quadrados (1805)
+
+.pull-left[
+.center[
+
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
+knitr::include_graphics("Legendre.jpg")
+```
+
+Adrien-Marie Legendre (1752-1883), <br>  único retrato conhecido, [Wikipedia](https://en.wikipedia.org/wiki/Adrien-Marie_Legendre)
+]
+
+]
+
+.pull-right[
+.center[
+```{r out.width="85%", fig.align="center"}
+
+y1 <- tab1$y
+x1 <- tab1$x
+lm1 <- lm(y1 ~ x1)
+prev <- predict(lm1)
+par(bg = NA)
+plot(y1 ~ x1, bty = "l", cex = 1.5, col = cor[3],
+     #xaxt="n", yaxt="n",
+     xlab = "x", ylab = "y",
+     pch = 19, cex.axis = 1.5, cex.lab = 1.5, ylim = c(28450, 28550))
+segments(x0 = x1, x1 = x1, y0 = y1, y1 = prev, lty = 2, lwd = 2)
+abline(lm1, lwd = 3, col = cor[2], cex = 2)
+
+```
+]
+]
+
+
+---
+
+## ... que levou à distribuição Normal (1809)
+
+.pull-left[
+.center[
+
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
+knitr::include_graphics("Carl_Friedrich_Gauss.jpg")
+```
+
+Carl Friedrich Gauss (1777-1855), <br> [Wikipedia](https://en.wikipedia.org/wiki/Carl_Friedrich_Gauss)
+]
+
+]
+
+.pull-right[
+.center[
+```{r, echo=FALSE, out.width="75%", fig.align="center"}
+knitr::include_graphics("reglin_classica.png")
+```
+]
+]
+
+---
+
+## ... que levou ao teorema do limite central (1812)
+
+.pull-left[
+.center[
+
+```{r, echo=FALSE, out.width="50%", fig.align="center"}
+knitr::include_graphics("Pierre-Simon_Laplace.jpg")
+```
+
+Pierre Simon Laplace (1749-1827) ([Wikipedia](https://en.wikipedia.org/wiki/Pierre-Simon_Laplace))
+]
+
+]
+
+.pull-right[
+<iframe 
+  src="https://commons.wikimedia.org/wiki/File:Galton_box.webm?embedplayer=true" 
+  width="100%" 
+  height="450" 
+  frameborder="0" 
+  allowfullscreen>
+</iframe>
+Tabuleiro de Galton (1873) ([Wikipedia](https://pt.wikipedia.org/wiki/Tabuleiro_de_Galton)) 
+]
+
+---
+
+## Somos todos ogros
+
+.pull-left[
+
+1. Se você não está entendendo tudo, é porque está prestando atenção.
+
+2. "Síndrome do impostor" muitas vezes é reconhecimento da complexidade de um tema, o que não é pouco.
+
+3. O aprendizado é gradual: cada etapa de entendimento é valiosa em si e porque é necessária para as seguintes.
+]
+
+
+.pull-right[
+.center[
+```{r, echo=FALSE, out.width="75%", fig.align="center"}
+knitr::include_graphics("ogre.jpg")
+```
+]
+]
+
+---
+class: inverse, middle
+
+.col-container[
+.col[
+# Conceitos e definições
+]
+
+.col[
+.center[
+<img src="definitions_xkcd.png" style="width: 90%; max-width: 500px; border-radius: 4px;" />
+
+["Planet definitions", xkcd](https://xkcd.com/3063/)
+]
+]
+]
+
+---
 ## Um conjunto de dados experimentais
 
 
@@ -459,8 +783,7 @@ class: center, middle
 
 ### Qual é a probabilidade de um comprimento médio do tórax de até 1,04 mm?
 
-```{r}
-
+```{r, out.width="40%"}
 p2 +
     geom_ribbon(aes(x=x, ymin=0, ymax =y),
                 data = filter(tmp, x>0.96&x<1.04),
@@ -473,8 +796,7 @@ class: center, middle
 
 ### Qual é o intervalo de confiança para o comprimento médio do tórax?
 
-```{r}
-
+```{r, out.width="40%"}
 p2 +
     geom_ribbon(aes(x=x, ymin=0, ymax =y),
                 data = filter(tmp, x>0.995&x<1.07),
@@ -490,21 +812,6 @@ p2 +
 
 ---
 
-class: center, middle
-
-### Qual é o valor esperado teórico desta distribuição?
-
-
-```{r}
-th.m <- mean(dthor.m$th.mean)
-p2 +
-    geom_vline(xintercept = th.m, col = "red", linetype = "dashed", size = 1.1) +
-    geom_segment(aes(x = th.m + 0.002, xend=1.068, y= 12.5, yend = 15), arrow = arrow()) +
-    annotate("label", x = 1.087, y = 15, label = TeX(r"($\int x \cdot f(x) \;  dx)", output = "character"),
-             parse = TRUE, size = 7)
-```
-
----
 
 ## Qual distribuição de probabilidade?
 
@@ -537,7 +844,7 @@ p2 +
 
 * Criada para descrever a distribuição de erros de medida aditivos.
 * O TCL nos diz que este é um bom modelo para qualquer variável aleatória que seja
-a soma de muitas outras variáveis aleatórias.
+a soma de muitas outras variáveis aleatórias (como médias amostrais).
 * É uma distribuição simétrica, sempre em forma de sino.
 * Tem dois parâmetros, que correspondem à média e ao desvio-padrão
   da distribuição.
@@ -666,299 +973,316 @@ ggplot(df3, aes(x, factor(case_number), height = norm, color = case_number)) +
 
 ---
 
-## Ajuste de modelos
+## O modelo de regressão linear
 
 .pull-left[
 
-* Escolhemos um modelo estatístico para nossos dados
+* Agora vamos examinar a distribuição das médias nas três temperaturas
 
-* Esse modelo tem dois parâmetros livres, $\mu$ e $\sigma$
+* Para cada temperatura, temos 18 médias, das medidas de 30 indivíduos de cada população de origem
 
-* Que valores devemos escolher para esses dois parâmetros?
-
-* Encontrar bons valores para os parâmetros de um modelo estatístico significa
-  **ajustar um modelo aos dados**.
+* Queremos um modelo que combine essas medidas repetidas para cada tratamento para estimar o melhor possível qual o tamanho médio sob cada temperatura.
 ]
-
 
 .pull-right[
-.center[
+```{r empirical-means-by-temperature}
+## Médias do comprimento do tórax das fêmeas, por população e temperatura
+dthor.mt <-
+    dthor |>
+    filter(Sex == "female") |>
+    group_by(Temperature, Population) |>
+    summarise(th.mean = mean(Thorax_length, na.rm = TRUE), .groups = "drop") |>
+    mutate(temp = factor(Temperature, levels = c(18, 25, 29)))
+## Histogramas calculados manualmente (em escala de densidade)
+bw <- 0.012     # largura das classes
+origem <- 0.95  # ponto de partida das classes
+hist.mt <-
+    dthor.mt |>
+    mutate(i = floor((th.mean - origem) / bw)) |>
+    count(temp, i) |>
+    reframe(bin = (min(i) - 1):(max(i) + 1),          # classes vazias nas pontas
+            n = coalesce(n[match(bin, i)], 0L),
+            .by = temp) |>
+    mutate(dens = n / (sum(n) * bw), .by = temp)
+## Contorno em "escada": borda esquerda e direita de cada classe
+passos.mt <-
+    bind_rows(
+        mutate(hist.mt, x = origem + bin * bw,       ordem = 1),
+        mutate(hist.mt, x = origem + (bin + 1) * bw, ordem = 2)
+    ) |>
+    arrange(temp, bin, ordem) |>
+    rename(height = dens)
+## Altura máxima dos histogramas, em graus Celsius no eixo da temperatura
+largura.max <- 3
+esc.hist <- largura.max / max(passos.mt$height)
 
-```{r fitting-normal}
-
-dt.m <- mean(dthor.m$th.mean)
-dt.sd <- sd(dthor.m$th.mean)
-
-plot.n <- function(mean, sd, ...)
-    stat_function(fun = dnorm,
-                  args = list(mean = mean, sd = sd),
-                  xlim = c(mean - 3*sd, mean + 3*sd), ...)
-
-p2 <-
-    p1 +
-    xlim(0.9, 1.15) +
-    plot.n(dt.m-0.08, sd = dt.sd + 0.01, linetype = "dashed", color = "blue", size = 0.8) +
-    plot.n(dt.m-0.02, sd = dt.sd + 0.05, linetype = "dashed", color = "blue", size = 0.8) +
-    plot.n(dt.m, sd = dt.sd/2, linetype = "dashed", color = "blue", size = 0.8) +
-    plot.n(dt.m + 0.08, sd = dt.sd*1.1, linetype = "dashed", color = "blue", size = 0.8) +
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank())
-
-p2 + plot.n(dt.m, sd = dt.sd, linetype = "dashed", color = "blue", size = 0.8)
-    
+ggplot(passos.mt, aes(x = x, y = as.numeric(as.character(temp)),
+                      height = height, fill = temp, color = temp)) +
+    geom_ridgeline(scale = esc.hist, alpha = 0.5) +
+    scale_y_continuous(breaks = c(18, 25, 29)) +
+    xlab("Comprimento médio do tórax (mm)") +
+    ylab("Temperatura (°C)") +
+    coord_flip(xlim = c(0.92, 1.14), ylim = c(17, 33)) +
+    theme_publication(18) +
+    theme(legend.position = "none")
 ```
-
-]
 ]
 
 ---
 
-## Ajuste de modelos
+## O modelo de regressão linear
 
 .pull-left[
 
-* Ajustamos modelos estatísticos **estimando** o valor dos parâmetros,
-  a partir dos dados observados.
+* Temos boas razões para assumir que 
+  o comprimento médio do tórax em cada tratamento tende a uma distribuição normal.
 
-* Há muitas formas de fazer isso. Em um dos métodos de ajuste que
-  usaremos neste curso, as estimativas para ajustar uma distribuição normal são:
-  
-  * A média amostral como estimativa de $\mu$
-  * O desvio-padrão amostral como estimativa de $\sigma$
+* Vamos começar com um modelo simples: o comprimento médio do tórax das populações é uma
+  função linear da temperatura: $\mu = a + b X$
+
+* O que buscamos, então, são valores de $a$ e $b$ que resultem na
+  previsão com menor erro possível do comprimento do tórax para cada
+  temperatura.
+
+
 
 ]
 
 .pull-right[
-.center[
+```{r empirical-means-normal-fit}
+## Histogramas calculados manualmente (em escala de densidade)
+bw <- 0.012     # largura das classes
+origem <- 0.95  # equivalente ao boundary
 
-```{r fitting-normal_right_one}
-p2  +plot.n(dt.m, sd = dt.sd, color = "red", size = 1.5)
+hist.mt <-
+    dthor.mt |>
+    mutate(i = floor((th.mean - origem) / bw)) |>
+    count(temp, i) |>
+    reframe(bin = (min(i) - 1):(max(i) + 1),          # classes vazias nas pontas
+            n = coalesce(n[match(bin, i)], 0L),
+            .by = temp) |>
+    mutate(dens = n / (sum(n) * bw), .by = temp)
+
+## Contorno em "escada": borda esquerda e direita de cada classe
+passos.mt <-
+    bind_rows(
+        mutate(hist.mt, x = origem + bin * bw,       ordem = 1),
+        mutate(hist.mt, x = origem + (bin + 1) * bw, ordem = 2)
+    ) |>
+    arrange(temp, bin, ordem) |>
+    rename(height = dens)
+
+## Curvas normais: média de cada temperatura, desvio-padrão médio
+param.mt <-
+    dthor.mt |>
+    summarise(media = mean(th.mean), dp = sd(th.mean), .by = temp)
+dp.medio <- mean(param.mt$dp)
+
+curvas.mt <-
+    param.mt |>
+    reframe(x = seq(media - 3 * dp.medio, media + 3 * dp.medio, length.out = 200),
+            height = dnorm(x, media, dp.medio),
+            .by = temp)
+
+## Mesmo fator de escala para histogramas e curvas
+esc <- 0.5 / max(c(passos.mt$height, curvas.mt$height))
+## Altura máxima de cada histograma, em graus Celsius no eixo da temperatura
+largura.max <- 3
+esc <- largura.max / max(c(passos.mt$height, curvas.mt$height))
+
+ggplot(mapping = aes(x = x, y = as.numeric(as.character(temp)), height = height)) +
+    geom_ridgeline(data = passos.mt, aes(fill = temp, color = temp),
+                   scale = esc, alpha = 0.5) +
+    geom_ridgeline(data = curvas.mt, aes(color = temp),
+                   fill = NA, scale = esc, linewidth = 1.2) +
+    scale_y_continuous(breaks = c(18, 25, 29)) +
+    xlab("Comprimento médio do tórax (mm)") +
+    ylab("Temperatura (°C)") +
+    coord_flip(xlim = c(0.92, 1.14), ylim = c(17, 33)) +
+    theme_publication(18) +
+    theme(legend.position = "none")
+```
+]
+
+---
+
+## Ajuste do modelo
+
+.pull-left[
+
+* Assim, podemo usar o método dos mínimos quadrados para combinar
+  todas as medidas que temos e encontrar os valores de $a$ e $b$ que
+  minimizam o erro de previsão.
+
+* Ajustar um modelo estatístico nada mais é que encontrar valores de
+  seus parâmetros adequados para descrever os dados.
+
+* No método de mínimos quadrados, esta adequabilidade é expressa pela
+  soma dos quadrados dos resíduos.
+
+]
+
+.pull-right[
+```{r empirical-means-regression}
+## Regressão linear das médias populacionais em função da temperatura
+mod.mt <- lm(th.mean ~ Temperature, data = dthor.mt)
+
+reta.mt <- data.frame(Temperature = seq(18, 32, length.out = 100))
+reta.mt$pred <- predict(mod.mt, newdata = reta.mt)
+
+ggplot(mapping = aes(x = x, y = as.numeric(as.character(temp)), height = height)) +
+    geom_ridgeline(data = passos.mt, aes(fill = temp, color = temp),
+                   scale = esc, alpha = 0.5) +
+    geom_ridgeline(data = curvas.mt, aes(color = temp),
+                   fill = NA, scale = esc, linewidth = 1.2) +
+    geom_line(data = reta.mt, aes(x = pred, y = Temperature),
+              inherit.aes = FALSE, linewidth = 1.2) +
+    scale_y_continuous(breaks = c(18, 25, 29)) +
+    xlab("Comprimento médio do tórax (mm)") +
+    ylab("Temperatura (°C)") +
+    coord_flip(xlim = c(0.92, 1.14), ylim = c(17, 33)) +
+    theme_publication(18) +
+    theme(legend.position = "none")
+```
+]
+
+---
+
+## Ajuste do modelo
+
+.pull-left[
+
+* Assim, podemo usar o método dos mínimos quadrados para combinar
+  todas as medidas que temos e encontrar os valores de $a$ e $b$ que
+  minimizam o erro de previsão.
+
+* Ajustar um modelo estatístico nada mais é que encontrar valores de
+  seus parâmetros adequados para descrever os dados.
+
+* No método de mínimos quadrados, esta adequabilidade é expressa pela
+  soma dos quadrados dos resíduos.
+
+]
+
+.pull-right[
+
+```{r empirical-means-scatter}
+## Regressão linear das médias populacionais em função da temperatura
+mod.mt <- lm(th.mean ~ Temperature, data = dthor.mt)
+
+## Previsões ao longo de todo o eixo, marcando o trecho com dados
+reta.mt <- data.frame(Temperature = seq(17, 33, length.out = 200))
+reta.mt$pred <- predict(mod.mt, newdata = reta.mt)
+reta.mt$trecho <- ifelse(reta.mt$Temperature < 18, "abaixo",
+                  ifelse(reta.mt$Temperature > 29, "acima", "dados"))
+
+ggplot(mapping = aes(x = x, y = as.numeric(as.character(temp)), height = height)) +
+    ## Curvas normais
+    geom_ridgeline(data = curvas.mt, aes(color = temp, fill = temp),
+                   scale = esc, alpha = 0.15, linewidth = 1.2) +
+    ## Médias populacionais, com jitter na temperatura
+    geom_point(data = dthor.mt,
+               aes(x = th.mean, y = Temperature, color = temp),
+               inherit.aes = FALSE, size = 3, alpha = 0.7,
+               position = position_jitter(width = 0, height = 0.4, seed = 42)) +
+    ## Reta de regressão (tracejada fora da faixa dos dados)
+    geom_line(data = reta.mt,
+              aes(x = pred, y = Temperature, group = trecho,
+                  linetype = trecho == "dados"),
+              inherit.aes = FALSE, linewidth = 1.2) +
+    scale_linetype_manual(values = c("TRUE" = "solid", "FALSE" = "dashed")) +
+    scale_y_continuous(breaks = c(18, 25, 29)) +
+    xlab("Comprimento médio do tórax (mm)") +
+    ylab("Temperatura (°C)") +
+    coord_flip(xlim = c(0.92, 1.14), ylim = c(17, 33)) +
+    theme_publication(18) +
+    theme(legend.position = "none")
 ```
 
 ]
+
+---
+
+## Ajuste no R
+
+.pull-left[
+
+```{r ajuste-lm, echo = TRUE, eval = FALSE}
+m1 <- lm(th.mean ~ Temperature, 
+         data = dthor.mt)
+plot(th.mean ~ Temperature, 
+     data = dthor.mt,
+     xlab = "Temperatura",
+     ylab = "Comprimento tórax (mm)")
+abline(m1, col = "blue")
+```
+
+
 ]
 
+.pull-right[
+
+```{r grafico-lm, eval=TRUE, echo=FALSE, ref.label="ajuste-lm"}
+
+```
+
+]
 
 ---
 
 ## Um pouco de notação
 
 
-* Nosso modelo: o comprimento médio do tórax $x$ segue uma distribuição normal:
+* Nosso modelo: o comprimento médio do tórax $y$ segue uma distribuição normal:
 
-$$ x \, \sim \, \text{Normal}(\mu, \sigma)$$
+$$ y \, \sim \, \text{Normal}(\mu, \sigma)$$
 
 --
 
-* A estimativa do parâmetro $\mu$ é a média dos valores de $x$ na amostra:
+* Sendo que a média desta distribuição é uma função linear da temperatura $x$
 
-$$ \widehat{\mu} \, = \, \bar{x} \, = \, \frac{1}{N} \, \sum_{i=1}^N x_i $$
+$$ \mu = a + b x$$
 
+
+--
+
+* E o desvio-padrão desta distribuição é constante 
 
 ---
-
 
 ## Um pouco de notação
 
+* A notação $y \sim \text{Normal}(\mu, \sigma)$ nos lembra que nosso modelo é uma distribuição de probabilidades.
 
-* A estimativa do parâmetro $\sigma$ é a raiz quadrada da variância dos valores de $x$ na amostra:
+--
 
-$$ \widehat{\sigma} \, = \, \sqrt{s^2} $$
+* Desta maneira, nosso modelo atribui probabilidades a cada valor de $y$
 
-* Em que a variância é a média dos desvios quadráticos em relação à média amostral:
+--
 
-$$ s^2 \, = \, \frac{1}{N} \, \sum_{i=1}^N (x_i - \bar{x})^2 $$ 
+* Isto vale para qualquer modelo estatístico. Todos eles utilizam alguma distribuição de probabilidades para atribuir probabilidades a observações.
 
----
+--
 
-## Outras distribuições de probabilidade
-
-.pull-left[
- 
-* A distribuição normal é muito usada, mas outras distribuições
-   se ajustam melhor a diferentes variáveis aleatórias. Há muitos modelos para escolher.
-* Escolher uma distribuição de probabilidade para descrever um conjunto de dados significa
-   **formular uma hipótese sobre como seus dados são gerados**.
-* Por exemplo, considere o número de crianças às quais foi atribuído o gênero masculino em 
-   famílias de 12 filhos na Saxônia no século XIX (Geisller, 1889 *apud* Lindsey, 1995, Introductory Statistics).
-]
-
-.pull-right[
-.center[
-```{r saxony-data}
-
-saxony <-
-    data.frame(
-        x = 0:12,
-        y = c(3, 24, 104, 286, 670, 1033, 1343, 1112, 829, 478, 181, 45, 7)) %>%
-    mutate(yobs = y/sum(y),
-           ypred =  dbinom(x, size = 12, prob = 0.5),
-           ypred2 = dbinom(x, size = 12, prob = sum(x*y)/(12*sum(y))))
-
-    saxony %>%
-        ggplot( aes(x, y)) +
-        geom_col() +
-        ggtitle("Frequência de famílias com 0 a 12 filhos homens") +
-        xlab("Nº de crianças com gênero masculino atribuído ao nascer")+
-        ylab("Frequência (nº de famílias)") +
-        theme_publication()
-
-```
-]
-
-
-]
+* Podemos expressar isto como $p(y_i \mid \theta)$ (a probabilidade
+  $p$ que o modelo atribui a cada observação $y_i$, considerando os
+  valores de seus parâmetros $\theta$.
 
 ---
 
-## Um modelo simples para esses dados
+## Um pouco de notação
 
-.pull-left[
+Como na distribuição normal a média é independente do desvio padrão, uma notação alternativa do nosso modelo é a seguinte:
 
-1. Cada família é um '*ensaio*' ou um '*experimento*' com 12 '*tentativas*'; 
-2. Cada tentativa (um nascimento) tem apenas dois resultados possíveis: gênero masculino ou feminino atribuído ao recém-nascido;
-3. As tentativas são independentes: o gênero de um recém-nascido não afeta o gênero dos nascimentos seguintes na família;
-4. A probabilidade de cada resultado em cada tentativa é constante.
-5. Essas premissas valem para a **distribuição binomial de probabilidade**
+* O comprimento do tórax é uma função linear da temperatura, mais um erro de distribuição normal com média zero e desvio-padrão constante:
 
-]
-
-.pull-right[
-.center[
-
-```{r }
-p.sax <-
-    saxony %>%
-    ggplot( aes(x, yobs)) +
-    geom_col() +
-    ggtitle("Proporção de famílias com 0 a 12 filhos homens") +
-    xlab("Nº de crianças com gênero masculino atribuído ao nascer")+
-    ylab("Proporção de famílias") +
-    theme_publication()
-p.sax
-```
-
-]
-]
+$$\begin{eqnarray*}
+        y & = & a + b x \ + \ \epsilon,   \\ \\
+        \epsilon & \sim & \text{Normal}(\mu = 0, \ \sigma)   
+      \end{eqnarray*}$$
 
 ---
 
-## A distribuição binomial de probabilidade
-
-.pull-left[
-
-* Atribui uma probabilidade a valores discretos (números inteiros, como contagens):
-$$f(x) = {N\choose x} p^x (1 - p)^{N - x}$$
-  * $N$ : número de tentativas em cada experimento
-  * $p$ : probabilidade de 'sucesso' em cada tentativa
-* $N$ geralmente é conhecido. Para ajustar uma distribuição binomial, precisamos estimar apenas $p$
-]
-
-
-.pull-right[
-.center[
-
-```{r }
-
-bin.ex <-
-    data.frame(
-        x = rep(0:12, 5),
-        grupo = factor(rep(c("p = 0.1","p = 0.3","p = 0.5","p = 0.7","p = 0.9"), each =13)),
-        y = c(dbinom(0:12, size = 12, prob = 0.10),
-              dbinom(0:12, size = 12, prob = 0.30),
-              dbinom(0:12, size = 12, prob = 0.50),
-              dbinom(0:12, size = 12, prob = 0.70),
-              dbinom(0:12, size = 12, prob = 0.90))
-        )
-
-ggplot( bin.ex, aes(x, y, label = grupo)) +
-    geom_col(aes(fill=grupo)) +
-    geom_text(x=13.4, y=0.15, size = 6) +
-    scale_x_continuous(breaks = 0:12, limits =c(0,13.5)) +
-    facet_grid(grupo~.) +
-    xlab("Número de sucessos") +
-    ggtitle("Distribuição binomial, N = 12") +
-    theme_publication() +
-    theme(strip.background = element_blank(), strip.text.y = element_blank(), 
-          strip.placement = "outside", panel.spacing.y = unit(0, "cm")) +
-    theme(legend.position = "none",
-              axis.line.y = element_blank(),
-              axis.text.y = element_blank(),
-              axis.ticks.y = element_blank(),
-              axis.title.y = element_blank()
-              )
-
-```
-
-]]
-
----
-
-## Ajustando uma distribuição binomial aos dados
-
-.pull-left[
-
-* Um bom estimador de $p$ é a proporção observada de sucessos
-  entre todas as tentativas. 
-* No nosso exemplo, houve 38.100 
-  crianças às quais foi atribuído o gênero masculino, em um total de 73.380 nascimentos, 
-  ou seja, uma proporção observada de 0,519 de meninos.
-* Os pontos vermelhos mostram as probabilidades atribuídas pela binomial com essa
-  estimativa, o que sugere um viés em favor do gênero masculino.
-
-]
-
-.pull-right[
-.center[
-
-```{r }
-p.sax +  geom_point(aes(y = ypred2), col = "red", size = 3)
-
-```
-
-]
-]
-
----
-
-## Algumas outras distribuições
-
-### Discretas
-
-* **Poisson**: contagens de eventos independentes a uma taxa constante (ex.: número de capturas de animais em armadilhas)
-* **Binomial negativa**: o mesmo, para eventos agregados (ex.: número de árvores de uma espécie em parcelas florestais)
-* **Geométrica**: número de tentativas antes que ocorra um evento com taxa constante (ex.: número de anos de vida)
-
-
----
-
-## Algumas outras distribuições
-
-### Contínuas
-
-* **Log-normal**: produto de muitas variáveis aleatórias (ex.: tamanhos populacionais em dinâmicas de nascimento e morte)
-* **Exponencial**: tempo contínuo até um evento com taxa constante (ex.: tempo até a falha de máquinas, tempo de vida)
-* **Gama**, **Weibull**: como a exponencial, mas com a taxa do evento variando em função do tempo (ex.: tempo de vida com envelhecimento)
-* **Uniforme**: valores equiprováveis (útil como modelo nulo ou para gerar outras distribuições)
-
----
-
-
-## Muitas distribuições são relacionadas entre si
-
-.center[
-
-```{r, echo=FALSE, out.width="70%",}
-knitr::include_graphics("distrib_relationships.png")
-```
-]
-
-.right[
-Bolker,2008
-Veja também (http://www.johndcook.com/distribution_chart.html)
-]
-
----
 
 ## Mensagens para levar para casa
 
@@ -974,6 +1298,13 @@ Veja também (http://www.johndcook.com/distribution_chart.html)
 
 3. Ajustamos um modelo estatístico encontrando valores razoáveis para os
    parâmetros das distribuições de probabilidade.
+
+--
+
+4. O método dos mínimos quadrados é uma maneira de encontrar estes valores razoáveis, se supomos que as observações têm uma distribuição normal
+
+--
+5. Esta premissa de normalidade é razoável quando as observações resultam de soma de muitas variáveis aleatórias.
 
 ---
 
