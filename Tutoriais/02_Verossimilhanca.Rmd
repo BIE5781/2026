@@ -30,7 +30,7 @@ htmltools::tagList(
 Neste roteiro, usaremos um conjunto de dados com o número de espécies de
 formigas registradas em fragmentos de vegetação de diferentes tamanhos
 na Califórnia (Suarez et al. 1998). Usaremos esses dados para ajustar
-um modelo para a relação entre a àrea de cada fragmento e o número de espećies amostradas neles.
+um modelo para a relação entre a área de cada fragmento e o número de espécies amostradas neles.
 
 Carregue os pacotes necessários e os dados, que estão disponíveis no
 material suplementar de Ohyama *et al.* (2021):
@@ -46,7 +46,7 @@ library(bbmle)
 raw <- read.csv("https://github.com/piLaboratory/bie5781/raw/master/data/jbi14149-sup-0003-appendixs3.csv")
 ## Seleciona dados do estudo de Suarez et al
 suarez <- raw[raw$Study_ID=="23", c("Island_area", "Species.Richness")]
-``` 
+```
 
 ## Ajuste de modelos
 
@@ -75,7 +75,7 @@ De fato, a relação espécie-área parece linear em escala logarítmica:
 
 ```{r sxa plot,  eval=TRUE}
 plot(Species.Richness ~ Island_area, data= suarez,
-     xlab = "área do fragmento (m2)", ylab = "Número de espécies", log="xy")
+     xlab = "Área do fragmento (m2)", ylab = "Número de espécies", log="xy")
 ```
 
 Usaremos o método da máxima verossimilhança (MV) para ajustar o modelo
@@ -91,20 +91,20 @@ negativa**. Lembrando que a função de **verossimilhança** é o produto
 das probabilidades atribuídas pelo modelo a cada observação, dados
 valores dos parâmetros:
 
-$$\mathcal{L}_y(\theta)~ = ~\prod_i=1^i=n p(y_i \mid \theta)$$
+$$\mathcal{L}_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)$$
 
-A função de **log-verossimilhança negativa** é igual o negativo do
-logarítimo deste produto:
+A função de **log-verossimilhança negativa** é igual ao negativo do
+logaritmo desse produto:
 
-L_y(\theta) ~=~ -\sum_i=1^i=n p(y_i \mid \theta)$$
+$$L_y(\theta) ~=~ -\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
 
-Usamos o logaritimo porque a função de verossimilhança é um produto de
+Usamos o logaritmo porque a função de verossimilhança é um produto de
 densidades probabilísticas, que em geral são números menores que
-um. Como algumas dezenas este observações, esse produto fica tão
+um[^6]. Com algumas dezenas de observações, esse produto fica tão
 próximo de zero que os computadores em geral não têm precisão para
-lidar com eles. Quando calculamos o logaritimo de um número positivo
+lidar com ele. Quando calculamos o logaritmo de um número positivo
 mas próximo de zero, temos um número de magnitude trabalhável. Por
-exemplo, confira o logarítimo de um trilionésimo:
+exemplo, confira o logaritmo de um trilionésimo:
 
 
 ```{r }
@@ -112,9 +112,9 @@ log(1e-12)
 ```
 
 Essa transformação tem outras vantagens de cálculo. O logaritmo
-de um produto se torna uma soma, que o que é conveniente[^4]. Além
-disso, as rotinas computacionais de otimização em geral buscam (ou se
-dão melhor) com mínimos de funções e não com máximos. Por isso
+de um produto se torna uma soma, o que é conveniente[^4]. Além
+disso, as rotinas computacionais de otimização em geral buscam mínimos de
+funções (ou se dão melhor com eles), e não máximos. Por isso
 multiplicamos o valor da log-verossimilhança por menos um
 ($-1$), e o seu máximo torna-se um mínimo. 
 
@@ -159,12 +159,12 @@ de ajuda de `mle2` e também na
 
 Execute a otimização e guarde o ajuste em um objeto chamado `ml1`. Note
 que a função de otimização necessita de **valores iniciais** dos
-parâmetros a partir do quais começa a investigar diferentes
+parâmetros a partir dos quais começa a investigar diferentes
 combinações de valores, até encontrar o mínimo da função (se tudo der
 certo!). Estes valores iniciais são fornecidos como uma lista, que usa
 os nomes dos parâmetros definidos na função de log-verossimilhança
-negativa. Como esta é uma otimização que sabemos que é simples,
-chutamos valores quaisquer. Mas em muitos casos usar é importante usar bons valores
+negativa. Como sabemos que esta otimização é simples, chutamos
+valores quaisquer. Mas, em muitos casos, é importante usar bons valores
 iniciais, e há algumas maneiras de buscar chutes educados.
 
 ```{r, eval = TRUE }
@@ -217,14 +217,14 @@ par(mfrow=c(1,1))
 ```
 
 Cada gráfico mostra um perfil de log-verossimilhança negativa para um
-parâmetro. Este perfil aproxima a relação da log-verossimilhança
-negativa e este parâmetro, escalonada para ter mínimo em zero. Com
+parâmetro. Esse perfil mostra a relação entre a log-verossimilhança
+negativa e esse parâmetro, escalonada para ter mínimo em zero. Com
 isto, podemos avaliar o quanto os dados sustentam diferentes valores
 deste parâmetro, mantidos os demais no melhor valor possível.
 
 A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
 muito usada é que os valores dos parâmetros que resultam em um valor de
-verossimilhança abaixo desse limite são igualmente plausíveis. Com este critério[^5],
+log-verossimilhança negativa abaixo desse limite são igualmente plausíveis. Com este critério[^5],
 definimos um **intervalo de plausibilidade** para as MLE. A função
 `likelregions` retorna os limites do intervalo de plausibilidade:
 
@@ -280,16 +280,16 @@ Você pode verificar isso:
 ml1.yhat <- ml1.cf[1] + ml1.cf[2]*log(suarez$Island_area)
 ## resíduos
 ml1.res <- log(suarez$Species.Richness) - ml1.yhat
-## Média dos quadrados dos resíduos
+## Raiz da média dos quadrados dos resíduos
 sqrt( sum (ml1.res^2) / nrow(suarez) )
 ## compare com a MLE
 ml1.cf[3]
 ```
 
-O método de MQ estima $\sigma$ com uma correção de viés para amostras
-pequenas ($n-2$):
+O método de MQ estima a variância da normal do modelo ($\sigma^2$) com
+uma correção de viés para amostras pequenas ($n-2$):
 
-$$\hat{\sigma}=\sqrt{\frac{\sum(y_i-\hat{y})^2}{n-2}}$$
+$$\hat{\sigma^2}=\frac{\sum(y_i-\hat{y})^2}{n-2}$$
 
 O que você também pode verificar:
 
@@ -299,10 +299,10 @@ O que você também pode verificar:
 ls1.yhat <- ls1.cf[1] + ls1.cf[2]*log(suarez$Island_area)
 ## resíduos
 ls1.res <- log(suarez$Species.Richness) - ls1.yhat
-## Média dos quadrados dos resíduos
-sqrt( sum (ls1.res^2) / (nrow(suarez)-2) )
+## Raiz da soma dos quadrados dos resíduos dividida por n-2
+sum (ls1.res^2) / (nrow(suarez)-2) 
 ## compare com o valor estimado pelo ajuste
-summary(ls1)$sigma
+summary(ls1)$sigma^2
 ```
 
 # Propriedades dos MLE
@@ -312,7 +312,7 @@ Sob certas premissas[^2], os estimadores de máxima verossimilhança têm vária
 demonstrar essas propriedades das MLE, vamos fazer algumas simulações
 no R, com os seguintes passos:
 
-1. Geramos um grande número de amostras de uma distribuição conhecida, com valores conhecidos dos parâmetros;
+1. geramos um grande número de amostras de uma distribuição conhecida, com valores conhecidos dos parâmetros;
 2. obtemos as MLE para cada uma das amostras simuladas;
 3. construímos gráficos da distribuição das MLE para analisar o seu comportamento.
 
@@ -365,7 +365,7 @@ parâmetro.
 
 Mais precisamente, a probabilidade de as estimativas
 estarem a uma certa distância do valor real fica cada vez menor com o
-aumento da amostra. Isto é a **consistência assintótica**.
+aumento da amostra. É isso que chamamos de **consistência**.
 
 ## Eficiência assintótica
 
@@ -461,13 +461,13 @@ Já na primeira parte deste tutorial, tivemos que traduzir essa descrição para
 
 1. Escrever uma função que retorna a log-verossimilhança negativa (`LL1`), que então passamos a um otimizador. 
 
-2. Ajustar o modelo com a função `lm` , que usa a sintaxe de modelos do R (`lm(log(Species.Richness) ~ log(Island_area), data= suarez`)
- 
- O pacote **rethinking** (McElreath 2020) permite especificar o modelo no R 
-exatamente como na notação que usamos nas aulas. O  pacote se encarrega de
+2. Ajustar o modelo com a função `lm` , que usa a sintaxe de modelos do R (`lm(log(Species.Richness) ~ log(Island_area), data = suarez)`)
+
+O pacote **rethinking** (McElreath 2020) permite especificar o modelo no R
+exatamente como na notação que usamos nas aulas. O pacote se encarrega de
 montar a função de verossimilhança e de otimizá-la.
 
-### Instalação
+## Instalação
 
 O rethinking não está no CRAN. Para instalá-lo a partir do GitHub:
 
@@ -479,7 +479,7 @@ devtools::install_github("rmcelreath/rethinking")
 Algumas funções do pacote, como `ulam`, dependem do Stan, mas a função
 que usaremos aqui (`quap`) funciona sem ele.
 
-### Especificação do modelo
+## Especificação do modelo
 
 Primeiro, carregue o pacote e prepare uma tabela apenas com as
 variáveis do modelo, já na escala logarítmica:
@@ -518,7 +518,7 @@ tabela de dados (`lnS` e `lnA`) são as **variáveis**. Os que são
 definidos por `<-` (`mu`) são **quantidades derivadas**. Todos os
 demais (`b0`, `b1` e `sigma`) são os **parâmetros** a serem estimados.
 
-### Ajuste do modelo
+## Ajuste do modelo
 
 O ajuste é feito com a função `quap`, que procura os valores dos
 parâmetros que maximizam a verossimilhança, usando as mesmas rotinas
@@ -536,11 +536,12 @@ O resumo do ajuste é obtido com a função `precis`:
 precis(ml1.r, prob = 0.95)
 ```
 
-Compare as estimativas com as que obtivemos com o `mle2`:
+Compare as estimativas com as que obtivemos com o `mle2` e com o `lm`:
 
 ```{r}
 coef(ml1.r)
 ml1.cf
+ls1.cf
 ```
 
 As estimativas devem ser praticamente iguais, pois os três ajustes
@@ -551,7 +552,7 @@ Os intervalos mostrados por `precis` não são, porém, os intervalos de
 plausibilidade que obtivemos com os perfis de verossimilhança. A função
 `quap` aproxima a superfície de log-verossimilhança em torno do máximo
 por uma função quadrática, o que equivale a supor que a distribuição
-das estimativas é Normal (lembre-se da propridade de normalidade assintótica
+das estimativas é Normal (lembre-se da propriedade de normalidade assintótica
 dos MLE, que vimos na seção anterior). Os intervalos são calculados a partir dessa aproximação. Por
 isso, eles podem diferir dos intervalos calculados com `likelregions`,
 principalmente quando a amostra é pequena ou quando o perfil de
@@ -562,7 +563,7 @@ precis(ml1.r, prob = 0.95)
 likelregions(ml1.p)
 ```
 
-### Evitando valores negativos de $\sigma$
+## Evitando valores negativos de $\sigma$
 
 O desvio-padrão $\sigma$ só pode assumir valores positivos, mas a
 rotina de otimização não sabe disso. Se ela tentar valores negativos
@@ -584,7 +585,7 @@ exp(coef(ml1.r2)["log_sigma"])
 Pela propriedade de invariância dos MLE, a exponencial da estimativa de
 $\log \sigma$ é a estimativa de máxima verossimilhança de $\sigma$.
 
-### Spoiler: ajustes bayesianos
+## Spoiler: ajustes bayesianos
 
 O pacote rethinking foi criado para o ensino de estatística bayesiana,
 e a função `quap` também ajusta modelos bayesianos. Veremos esses
@@ -597,7 +598,7 @@ consideramos plausível cada valor do parâmetro antes de olhar para os
 dados. O resultado do ajuste combina essas duas fontes de informação:
 a plausibilidade de cada valor dos parâmetros depois de olhar para os
 dados é proporcional à verossimilhança multiplicada pela distribuição a
-priori [^3].
+priori[^3].
 
 Agora imagine que consideramos **todos os valores dos parâmetros
 igualmente prováveis** antes de olhar para os dados. Nesse caso, a
@@ -609,8 +610,8 @@ maximizam a verossimilhança, ou seja, os MLE.
 É exatamente isso que acontece quando não indicamos distribuições a
 priori no modelo: a função `quap` trata todos os valores dos parâmetros
 como igualmente prováveis e encontra os mesmos valores que obtivemos
-com o `mle2`. Nestee caso, é obrigatório fornecer os valores
-iniciais com o argumento `start` para a função `quad`.
+com o `mle2`. Nesse caso, é obrigatório fornecer os valores
+iniciais com o argumento `start` para a função `quap`.
 
 
 
@@ -631,12 +632,18 @@ iniciais com o argumento `start` para a função `quad`.
 
   
 
-[^2]: Stigler (2007) faz uma análise histórica aprofundada do método de máxima verossimilhança e dos MLEs. Umas das conclusões é que as propriedades dos MLEs não são totalmente generalizáveis. Ainda assim, aplicam-e para uma ampla classe de modelos, e seguem muito úteis por isto. 
+[^2]: Stigler (2007) faz uma análise histórica aprofundada do método de máxima verossimilhança e dos MLEs. Uma das conclusões é que as propriedades dos MLEs não são totalmente generalizáveis. Ainda assim, aplicam-se a uma ampla classe de modelos, e por isso continuam muito úteis. 
 
-[^3]: Não se preocupe se não entender isto ainda. explicaremos nas próximas aulas.
+[^3]: Não se preocupe se não entender isso ainda. Explicaremos nas próximas aulas.
 
-[^4]: Por esta propriedade, logarítimos foram muito usados para cálculos multiplicativos, antes que houvesse calculadoras. 
+[^4]: Por essa propriedade, logaritmos foram muito usados para cálculos multiplicativos, antes que houvesse calculadoras. 
 
-[^5]: este critério de diferença de até 2 das log-verossimilhanças é
-    abritrário. A princípio não há nenhum problema em usar outra, seja
-    menor (mais rigoroso) ou maior (mais permissivo), desde que explique.
+[^5]: Este critério de diferença de até 2 unidades de log-verossimilhança é
+    arbitrário. A princípio, não há nenhum problema em usar outro, seja
+    menor (mais rigoroso) ou maior (mais permissivo), desde que ele seja explicitado.
+
+[^6]: As probabilidades sempre são menores ou iguais a um. Densidades
+    probabilísticas podem ser maiores do que um. Mas mesmos nestes
+    casos um produto de muitos números acima d eum pode resultar em um
+    número muito grande, o que também é um problema para cálculos com
+    computador.
