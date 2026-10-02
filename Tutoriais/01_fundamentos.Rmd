@@ -493,7 +493,7 @@ tab1 <-
     select(-deg, -min, -sec, -decimal_deg) |>
     mutate(y = Modules/Degrees, x = (sin(Radians))^2)
 
-tab1 |>
+tab1 |> 
     select(X, Modules, Degrees, Midpoint, x, y) |>
     kable(col.names = c("Arco", "Comprimento (módulos)", "Amplitude (graus)",
                         "Latitude do ponto médio", "x", "y"),
