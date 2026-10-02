@@ -23,7 +23,7 @@ htmltools::tagList(
   )
 ```
 
-# Ajsute de regressão linear simples por máxima verossimilhança
+# Ajuste de regressão linear simples por máxima verossimilhança
 
 ## Preparação
 
