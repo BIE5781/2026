@@ -1,0 +1,589 @@
+---
+title: "Ajustes de modelo por máxima verossimilhança"
+author:
+ - "Paulo Inácio Prado"
+date: "2026-10-02"
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+---
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, fig.asp = 1)
+# clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+  )
+```
+
+# Ajsute de regressão linear simples por máxima verossimilhança
+
+## Preparação
+
+Neste roteiro, usaremos um conjunto de dados com o número de espécies de
+formigas registradas em fragmentos de vegetação de diferentes tamanhos
+na Califórnia (Suarez et al. 1998). Usaremos esses dados para ajustar
+diferentes modelos para a relação espécie-área.
+
+Carregue os pacotes necessários e os dados, que estão disponíveis no
+material suplementar de Ohyama *et al.* (2021):
+
+
+```{r, eval = TRUE }
+library(sads)
+library(bbmle)
+```
+
+```{r, eval=TRUE }
+## todos os conjuntos de dados compilados por Ohyama et al
+raw <- read.csv("https://github.com/piLaboratory/bie5781/raw/master/data/jbi14149-sup-0003-appendixs3.csv")
+## dados de Suarez et al
+suarez <- raw[raw$Study_ID=="23", c("Island_area", "Species.Richness")]
+``` 
+
+## Ajuste de modelos
+
+Um dos primeiros modelos propostos para descrever a relação entre a
+área de uma ilha ou de um fragmento de hábitat ($A$) e o número de
+espécies que essa área abriga ($S$) é a função potência:
+
+$$ S \, = \, \alpha A^{\beta_1}$$
+
+Tomando o logaritmo dos dois lados dessa equação, temos uma função linear:
+
+$$ \ln S \, = \, \beta_0 + \beta_1 \ln A $$
+
+Em que $\beta_0= \ln \alpha$. Assim, podemos avaliar se esse modelo
+se aproxima da relação observada com uma regressão linear simples:
+
+$$
+\begin{align}
+\ln S_i &\sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = \beta_{0} + \beta_1 \ln A_i
+\end{align}
+$$
+
+De fato, a relação espécie-área parece linear em escala logarítmica:
+
+
+```{r sxa plot,  eval=TRUE}
+plot(Species.Richness ~ Island_area, data= suarez,
+     xlab = "área do fragmento (m2)", ylab = "Número de espécies", log="xy")
+```
+
+Usaremos o método da máxima verossimilhança (MV) para ajustar o modelo
+de regressão linear aos dados e, depois, compararemos os resultados com
+o ajuste por mínimos quadrados (MQ). 
+
+
+### Método da máxima verossimilhança
+
+#### Definindo a função de log-verossimilhança no R
+
+Para fazer o ajuste por MV, usaremos uma rotina computacional de
+otimização para encontrar os valores dos parâmetros $\beta_0$, $\beta_1$
+e $\sigma$ associados ao valor mínimo da **função de log-verossimilhança
+negativa** $L_y$. Começamos criando uma função no R que calcula essa
+função para os dados:
+
+
+```{r log-lik linear, eval = TRUE}
+LL1 <- function(beta0, beta1, sigma){
+    mu <- beta0 + beta1*log(suarez$Island_area)
+    -sum( dnorm(x = log(suarez$Species.Richness), mean = mu, sd = sigma, log=TRUE) )
+    }
+```
+
+O comando acima cria um objeto da classe `function` que tem como
+argumentos os três parâmetros do modelo linear. A primeira linha da
+função calcula o valor esperado $\mu$, usando quaisquer valores de
+$\{\beta_0,\beta_1\}$ que você fornecer à função. A segunda linha calcula
+o valor da função de densidade normal para cada valor de $\ln S$, toma
+o logaritmo dessas densidades e soma todos eles. Por exemplo, a
+log-verossimilhança negativa desse modelo para esses dados, usando
+$\beta_0 = 1, \beta_1 = 1$ e $\sigma = 1$, é
+
+
+```{r , eval=TRUE}
+LL1(beta0 = 1, beta1 = 1, sigma =1)
+```
+
+#### Encontrando o mínimo da função de log-verossimilhança
+
+Agora chamamos uma rotina de otimização para minimizar a função
+definida acima. Usaremos a função `mle2`, do pacote *bbmle*, que serve
+de interface para as rotinas de otimização. A função `mle2` do R foi
+adaptada ao problema específico de minimizar computacionalmente funções
+de log-verossimilhança negativa. Você encontra mais detalhes na página
+de ajuda de `mle2` e também na
+[vinheta do pacote bbmle](https://cran.r-project.org/web/packages/bbmle/vignettes/mle2.pdf).
+
+Rode a otimização e guarde o ajuste em um objeto chamado `ml1`:
+
+```{r, eval = TRUE }
+ml1 <- mle2(LL1, start = list(beta0 = 0, beta1 = 0.1, sigma = 0.5))
+```
+
+Esse objeto tem os métodos usuais das classes de modelos estatísticos
+ajustados no R. Por exemplo, você obtém um resumo do ajuste com:
+
+
+```{r}
+summary(ml1)
+```
+
+Os valores estimados dos parâmetros são as estimativas de máxima
+verossimilhança (**MLE**). Guarde-as em um objeto separado:
+
+
+```{r}
+ml1.cf <- coef(ml1)
+```
+
+E então você pode usar essas estimativas para desenhar a reta de
+regressão ajustada:
+
+
+```{r }
+plot(log(Species.Richness) ~ log(Island_area), data= suarez,
+     xlab = "ln área do fragmento (m2)", ylab = "ln Número de espécies")
+abline(coef = ml1.cf, col ="blue")
+```
+
+### Inferência: perfis de verossimilhança
+
+Quão precisas são as MLE que obtivemos com esse ajuste? Podemos
+verificar isso com **perfis de verossimilhança**. Para modelos
+ajustados com a função `mle2`, o pacote
+[sads](https://cran.r-project.org/web/packages/sads/index.html) tem a
+função `plotprofmle`, que desenha esses perfis:
+
+
+```{r}
+ml1.p <- profile(ml1, alpha =0.05) ## calcula o perfil
+## Uma janela gráfica para 3 gráficos
+par(mfrow = c(1,3))
+## Os gráficos
+plotprofmle(ml1.p, ylim = c(0,3))
+```
+
+O gráfico mostra a log-verossimilhança negativa reescalonada para ter
+mínimo em zero. A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
+muito usada é que os valores dos parâmetros que resultam em um valor de
+verossimilhança abaixo desse limite são igualmente plausíveis. Com isso,
+definimos um **intervalo de plausibilidade** para as MLE. A função
+`likelregions` retorna os limites do intervalo de plausibilidade:
+
+
+```{r }
+likelregions(ml1.p)
+```
+
+O parâmetro de importância teórica é o coeficiente da potência,
+$\beta_1$. O intervalo de plausibilidade é parecido com a faixa de
+valores desse coeficiente registrada em outros sistemas de fragmentos
+continentais (veja, por exemplo, a Fig. 2 de Ohyama et al 2021).
+
+
+
+###  Método dos mínimos quadrados
+
+O método dos mínimos quadrados (MQ) é a solução de máxima
+verossimilhança para uma regressão linear Gaussiana simples. Você pode
+verificar isso ajustando o mesmo modelo com a função `lm`
+
+```{r }
+## Ajusta o mesmo modelo por MQ
+ls1 <- lm(log(Species.Richness) ~ log(Island_area), data= suarez)
+```
+e então comparando os coeficientes dos dois ajustes:
+
+
+```{r }
+(ls1.cf <- coef(ls1)) # MQ
+ml1.cf[1:2]
+```
+
+Em casos simples como esse, os limites do intervalo de confiança
+frequentista também ficam próximos dos limites do intervalo de
+plausibilidade:
+
+```{r }
+confint(ls1)
+likelregions(ml1.p)
+```
+
+Há, porém, uma diferença sistemática. A MLE do parâmetro $\sigma$ é a
+raiz quadrada da média dos quadrados dos resíduos:
+
+$$\hat{\sigma}=\sqrt{\frac{\sum(y_i-\hat{y})^2}{n}}$$
+
+Você pode verificar isso:
+
+
+```{r}
+## valores previstos:
+ml1.yhat <- ml1.cf[1] + ml1.cf[2]*log(suarez$Island_area)
+## resíduos
+ml1.res <- log(suarez$Species.Richness) - ml1.yhat
+## Média dos quadrados dos resíduos
+sqrt( sum (ml1.res^2) / nrow(suarez) )
+## compare com a MLE
+ml1.cf[3]
+```
+
+O método de MQ estima $\sigma$ com uma correção de viés para amostras
+pequenas ($n-2$):
+
+$$\hat{\sigma}=\sqrt{\frac{\sum(y_i-\hat{y})^2}{n-2}}$$
+
+O que você também pode verificar:
+
+
+```{r }
+## valores previstos:
+ls1.yhat <- ls1.cf[1] + ls1.cf[2]*log(suarez$Island_area)
+## resíduos
+ls1.res <- log(suarez$Species.Richness) - ls1.yhat
+## Média dos quadrados dos resíduos
+sqrt( sum (ls1.res^2) / (nrow(suarez)-2) )
+## compare com o valor estimado pelo ajuste
+summary(ls1)$sigma
+```
+
+# Propriedades dos MLE
+
+Sob certas premissas[^2], os estimadores de máxima verossimilhança têm várias propriedades de um
+[estimador](http://en.wikipedia.org/wiki/Estimator) ideal. Para
+demonstrar essas propriedades das MLE, vamos fazer algumas simulações
+no R, com os seguintes passos:
+
+1. geramos um grande número de amostras de uma distribuição conhecida, com valores conhecidos dos parâmetros;
+2. obtemos as MLE para cada uma das amostras simuladas;
+3. construímos gráficos da distribuição das MLE para analisar o seu comportamento.
+
+## Consistência
+
+A [consistência](http://en.wikipedia.org/wiki/Consistent_estimator) é
+a propriedade de convergir em probabilidade para o valor do parâmetro
+com o aumento da amostra. Para verificar a consistência, utilizaremos
+a MLE do desvio-padrão da Gaussiana, que é sabidamente enviesada:
+
+$$ \widehat{s} = \left[  \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \right] ^{(1/2)} $$
+
+Primeiramente, criaremos uma função para obter essa MLE:
+
+```{r}
+sd.mle = function(x)  sqrt( (1/length(x)) * sum( (x - mean(x))^2 ) )
+```
+
+Esse estimador será aplicado a amostras de tamanhos crescentes da
+distribuição Gaussiana com média 100 e desvio-padrão 5.
+
+Gerando a distribuição das MLE para amostras de tamanho 10:
+
+```{r}
+samp10 = sort(rep(1:1000, 10))                      # identificador das 1000 amostras de tamanho 10
+vals10 = rnorm(1000*10, mean=100, sd=5)             # valores das observações
+dens10 = density( tapply(vals10, samp10, sd.mle) )  # obtendo a MLE para cada amostra e a densidade empírica
+dens10$y = dens10$y/ max(dens10$y)                  # convertendo o valor de densidade para valor relativo ao máximo
+plot( dens10, type="l", xlab="Valor estimado",
+        ylab="Densidade" ,main="")                  # gráfico da distribuição das MLE
+abline(v = 5, col="red", lwd=2 )                    # posição do valor do parâmetro no gráfico
+```
+
+Note que a distribuição das MLE das amostras de tamanho 10 não é
+simétrica e não parece centrada no valor do parâmetro.
+
+Gerando a distribuição das MLE para amostras de tamanho 100:
+
+```{r}
+samp100 = sort(rep(1:1000, 100))
+vals100 = rnorm(1000*100, mean=100, sd=5)
+dens100 = density( tapply(vals100, samp100, sd.mle) )
+dens100$y = dens100$y/ max(dens100$y)
+lines( dens100, col="blue" )
+```
+
+Note que as MLE das amostras de tamanho 100 já têm distribuição
+simétrica, e o ponto central se aproxima bastante do valor do
+parâmetro. 
+
+Mais precisamente, a probabilidade de as estimativas
+estarem a uma certa distância do valor real fica cada vez menor com o
+aumento da amostra. Isto é a **consistência assintótica**.
+
+## Eficiência assintótica
+
+A [eficiência assintótica](http://en.wikipedia.org/wiki/Efficient_estimator)
+afirma que as MLE terão a menor variância possível à medida que o
+tamanho da amostra aumenta.
+
+Vamos comparar a variância das MLE do desvio-padrão obtidas acima
+(nossa função `sd.mle`) com a dos valores do estimador tradicional,
+calculados para as mesmas amostras (a função `sd` do R):
+
+```{r}
+## Amostras de tamanho 10
+var( tapply(vals10, samp10, sd.mle) )
+var( tapply(vals10, samp10, sd) )
+## Amostras de tamanho 100
+var( tapply(vals100, samp100, sd.mle) )
+var( tapply(vals100, samp100, sd) )
+```
+
+## Normalidade assintótica
+
+Esta é a propriedade de
+[normalidade assintótica](http://en.wikipedia.org/wiki/Asymptotic_normality),
+que garante que a distribuição das MLE^[Esta é a distribuição teórica
+das MLE que seriam obtidas se os dados fossem coletados e o modelo
+ajustado a eles muitas vezes.] se aproxima de uma distribuição normal
+com o aumento do tamanho da amostra. Ela pode ser entendida como uma
+extensão do Teorema Central do Limite para todas as MLE.
+
+A melhor forma de investigar a aproximação assintótica da distribuição
+Gaussiana é com o gráfico quantil-quantil:
+
+```{r}
+par(mfrow=c(2,1))
+qqnorm( tapply(vals10, samp10, sd.mle),
+          main="MLE do desvio-padrão, N=10" )
+qqline( tapply(vals10, samp10, sd.mle) )
+qqnorm( tapply(vals100, samp100, sd.mle),
+          main="MLE do desvio-padrão, N=100")
+qqline( tapply(vals100, samp100, sd.mle) )
+par(mfrow=c(1,1))
+```
+
+## Invariância
+
+A propriedade de invariância das MLE é difícil de comprovar por
+simulação, e é mais fácil exemplificá-la com estimadores que não têm
+essa propriedade.
+
+O estimador tradicional da variância tem a propriedade de não ser
+viciado, independentemente do tamanho da amostra:
+
+$$ \widehat{s^2} = \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 }$$
+
+Isso pode ser comprovado com uma simulação:
+
+```{r}
+var.trad10 = tapply( vals10, samp10, var)    # estimativas tradicionais da variância de amostras de tamanho 10
+plot( density(var.trad10), type="l" )        # distribuição das estimativas
+abline( v = mean(var.trad10) )               # média das estimativas
+abline( v = 5^2, col="red" )                 # valor do parâmetro
+```
+
+No entanto, este não é um estimador de máxima verossimilhança. Por
+isso, a propriedade de não ser viciado não se mantém quando a variância
+é transformada em desvio-padrão, que é uma transformação monotônica:
+
+$$ \widehat{s} = \sqrt{ \widehat{s^2}} \ = \ \sqrt{ \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 } }$$
+
+Verifique isso repetindo a avaliação de viés feita antes para a
+variância:
+
+```{r}
+sd.trad10 =  tapply(vals10, samp10, sd )
+plot(density(sd.trad10), type="l")
+abline( v = mean(sd.trad10) )
+abline( v = 5, col="red" )
+```
+
+# Especificando o modelo com o pacote rethinking
+
+Em nosso curso usamos uma notação para descrição dos modelos como o processo que gera os dados:
+
+$$
+\begin{align}
+\ln S_i &\sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = \beta_{0} + \beta_1 \ln A_i
+\end{align}
+$$
+
+Já na primeira parte deste tutorial, tivemos que traduzir essa descrição para duas outras sintaxes dentro do R:
+
+1. Escrever uma função que retorna a log-verossimilhança negativa (`LL1`), que então passamos a um otimizador. 
+
+2. Ajustar o modelo com a função `lm` , que usa a sintaxe de modelos do R (`lm(log(Species.Richness) ~ log(Island_area), data= suarez`)
+ 
+ O pacote **rethinking** (McElreath 2020) permite especificar o modelo no R 
+exatamente como na notação que usamos nas aulas. O  pacote se encarrega de
+montar a função de verossimilhança e de otimizá-la.
+
+### Instalação
+
+O rethinking não está no CRAN. Para instalá-lo a partir do GitHub:
+
+```{r}
+install.packages(c("coda", "mvtnorm", "devtools", "loo", "dagitty", "shape"))
+devtools::install_github("rmcelreath/rethinking")
+```
+
+Algumas funções do pacote, como `ulam`, dependem do Stan, mas a função
+que usaremos aqui (`quap`) funciona sem ele.
+
+### Especificação do modelo
+
+Primeiro, carregue o pacote e prepare uma tabela apenas com as
+variáveis do modelo, já na escala logarítmica:
+
+```{r}
+library(rethinking)
+dados <- data.frame(lnS = log(suarez$Species.Richness),
+                    lnA = log(suarez$Island_area))
+```
+
+O modelo é escrito como uma lista de fórmulas, criada com a função
+`alist`. Cada linha da lista corresponde a uma linha das equações do
+modelo:
+
+```{r}
+modelo <- alist(
+    lnS ~ dnorm(mu, sigma),   # ln S_i ~ Normal(mu_i, sigma)
+    mu <- b0 + b1 * lnA       # mu_i = beta_0 + beta_1 ln A_i
+)
+```
+
+Repare na diferença entre os dois símbolos usados:
+
+* **`~`** indica uma relação **estocástica**: a variável à esquerda é
+  uma variável aleatória, que segue a distribuição de probabilidade à
+  direita. É a primeira linha do modelo, que diz que $\ln S$ segue uma
+  distribuição Normal. A distribuição é indicada pela função de
+  densidade correspondente do R (`dnorm`).
+
+* **`<-`** indica uma relação **determinística**: o valor à esquerda é
+  calculado exatamente a partir dos valores à direita. É a segunda linha
+  do modelo, que diz que a média $\mu$ é uma função linear de $\ln A$.
+
+Os nomes usados na lista são de três tipos. Os que estão na
+tabela de dados (`lnS` e `lnA`) são as **variáveis**. Os que são
+definidos por `<-` (`mu`) são **quantidades derivadas**. Todos os
+demais (`b0`, `b1` e `sigma`) são os **parâmetros** a serem estimados.
+
+### Ajuste do modelo
+
+O ajuste é feito com a função `quap`, que procura os valores dos
+parâmetros que maximizam a verossimilhança, usando as mesmas rotinas
+de otimização que a função `mle2`. Como no `mle2`, é preciso fornecer
+valores iniciais para os parâmetros:
+
+```{r}
+ml1.r <- quap(modelo, data = dados,
+              start = list(b0 = 0, b1 = 0.1, sigma = 0.5))
+```
+
+O resumo do ajuste é obtido com a função `precis`:
+
+```{r}
+precis(ml1.r, prob = 0.95)
+```
+
+Compare as estimativas com as que obtivemos com o `mle2`:
+
+```{r}
+coef(ml1.r)
+ml1.cf
+```
+
+As estimativas devem ser praticamente iguais, pois os três ajustes
+maximizam a mesma função de verossimilhança. Pequenas diferenças nas
+últimas casas decimais vêm do critério de parada da otimização.
+
+Os intervalos mostrados por `precis` não são, porém, os intervalos de
+plausibilidade que obtivemos com os perfis de verossimilhança. A função
+`quap` aproxima a superfície de log-verossimilhança em torno do máximo
+por uma função quadrática, o que equivale a supor que a distribuição
+das estimativas é Normal (lembre-se da propridade de normalidade assintótica
+dos MLE, que vimos na seção anterior). Os intervalos são calculados a partir dessa aproximação. Por
+isso, eles podem diferir dos intervalos calculados com `likelregions`,
+principalmente quando a amostra é pequena ou quando o perfil de
+verossimilhança é assimétrico, o que é comum para o parâmetro $\sigma$:
+
+```{r}
+precis(ml1.r, prob = 0.95)
+likelregions(ml1.p)
+```
+
+### Evitando valores negativos de $\sigma$
+
+O desvio-padrão $\sigma$ só pode assumir valores positivos, mas a
+rotina de otimização não sabe disso. Se ela tentar valores negativos
+de $\sigma$ durante a busca, você verá mensagens de erro ou avisos. Uma
+solução é estimar o logaritmo de $\sigma$, que pode assumir qualquer
+valor real, e indicar a transformação diretamente na especificação do
+modelo:
+
+```{r}
+modelo.log <- alist(
+    lnS ~ dnorm(mu, exp(log_sigma)),
+    mu <- b0 + b1 * lnA
+)
+ml1.r2 <- quap(modelo.log, data = dados,
+               start = list(b0 = 0, b1 = 0.1, log_sigma = log(0.5)))
+exp(coef(ml1.r2)["log_sigma"])
+```
+
+Pela propriedade de invariância dos MLE, a exponencial da estimativa de
+$\log \sigma$ é a estimativa de máxima verossimilhança de $\sigma$.
+
+### Spoiler: ajustes bayesianos
+
+O pacote rethinking foi criado para o ensino de estatística bayesiana,
+e a função `quap` também ajusta modelos bayesianos. Veremos esses
+modelos em outra aula, mas vale adiantar a intuição de por que o nosso
+ajuste pode ser visto como um caso particular deles.
+
+Em um modelo bayesiano, além da distribuição dos dados, atribuímos a
+cada parâmetro uma **distribuição a priori**, que expressa o quanto
+consideramos plausível cada valor do parâmetro antes de olhar para os
+dados. O resultado do ajuste combina essas duas fontes de informação:
+a plausibilidade de cada valor dos parâmetros depois de olhar para os
+dados é proporcional à verossimilhança multiplicada pela distribuição a
+priori [^3].
+
+Agora imagine que consideramos **todos os valores dos parâmetros
+igualmente prováveis** antes de olhar para os dados. Nesse caso, a
+distribuição a priori é a mesma para qualquer valor, e multiplicar a
+verossimilhança por ela não muda a posição do seu máximo. Os valores
+mais plausíveis dos parâmetros passam a ser simplesmente os que
+maximizam a verossimilhança, ou seja, os MLE.
+
+É exatamente isso que acontece quando não indicamos distribuições a
+priori no modelo: a função `quap` trata todos os valores dos parâmetros
+como igualmente prováveis e encontra os mesmos valores que obtivemos
+com o `mle2`. Nestee caso, é obrigatório fornecer os valores
+iniciais com o argumento `start` para a função `quad`.
+
+
+
+# Referências
+
+* McElreath, R. (2020). Statistical Rethinking: A Bayesian Course with
+  Examples in R and Stan. 2nd ed. CRC Press.
+
+* Ohyama, L., Holt, R. D., Matthews, T. J., & Lucky, A. (2021). The
+  species–area relationship in ant ecology. Journal of Biogeography,
+  48(8), 1824-1841.
+  
+* Stigler, S. M. (2007). The epic story of maximum likelihood. Statistical Science, 598-620. 
+
+* Suarez, A. V., Bolger, D. T., & Case, T. J. (1998). Effects of
+  fragmentation and invasion on native ant communities in coastal
+  southern California. Ecology, 79(6), 2041-2056.
+
+  
+
+[^2]: Stigler (2007) faz uma análise histórica aprofundada do método de máxima verossimilhança e dos MLEs. Umas das conclusões é que as propriedades dos MLEs não são totalmente generalizáveis. Ainda assim, aplicam-e para uma ampla classe de modelos, e seguem muito úteis por isto. 
+
+[^3]: Não se preocupe se não entender isto ainda. explicaremos nas próximas aulas.
