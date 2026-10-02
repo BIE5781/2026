@@ -190,7 +190,7 @@ $$y_i \sim \mathcal{N}(\mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
 
 O que implica que:
 
-$$p(y_i \mid \theta) = \mathcal{N}(\mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
+$$p(y_i \mid \theta) = \mathcal{N}(y_i | \mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
 
 onde: 
 $$\theta = \{\beta_0, \beta_1, \sigma\}$$ 
