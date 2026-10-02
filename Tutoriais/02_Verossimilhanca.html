@@ -2616,7 +2616,7 @@ valores dos parâmetros:</p>
 <p><span class="math display">\[\mathcal{L}_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)\]</span></p>
 <p>A função de <strong>log-verossimilhança negativa</strong> é igual ao negativo do
 logaritmo desse produto:</p>
-<p><span class="math display">\[L_y(\theta) ~=~ -ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)\]</span></p>
+<p><span class="math display">\[L_y(\theta) ~=~ -\ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)\]</span></p>
 <p>Usamos o logaritmo porque a função de verossimilhança é um produto de
 densidades probabilísticas, que em geral são números menores que
 um<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>. Com algumas dezenas de observações, esse produto fica tão
@@ -2635,7 +2635,7 @@ disso, as rotinas computacionais de otimização em geral buscam mínimos de
 funções (ou se dão melhor com eles), e não máximos. Por isso
 multiplicamos o valor da log-verossimilhança por menos um
 (<span class="math inline">\(-1\)</span>), e o seu máximo torna-se um mínimo.</p>
-<h4 id="definindo-a-função-de-log-verossimilhança-no-r">Definindo a função de log-verossimilhança no R</h4>
+<h4 id="definindo-a-função-de-log-verossimilhança-negativa-no-r">Definindo a função de log-verossimilhança negativa no R</h4>
 <p>Em resumo, temos a <strong>log-verossimilhança negativa</strong>. Para fazer um
 ajuste, precisaremos então buscar os valores dos parâmetros do modelo
 que <strong>minimizam</strong> esta função. Começamos criando uma função no R que
@@ -2724,9 +2724,9 @@ função <code>plotprofmle</code>, que desenha esses perfis:</p>
 </div>
 </div>
 <p>Cada gráfico mostra um perfil de log-verossimilhança negativa para um
-parâmetro. Esse perfil mostra a relação entre a log-verossimilhança
+parâmetro. Esse perfil mostra a relação aproximada entre a log-verossimilhança
 negativa e esse parâmetro, escalonada para ter mínimo em zero. Com
-isto, podemos avaliar o quanto os dados sustentam diferentes valores
+isso, podemos avaliar o quanto os dados sustentam diferentes valores
 de cada parâmetro, mantidos os demais no melhor valor possível.</p>
 <p>A linha azul marca o limite <span class="math inline">\(L_y(\theta) = 2\)</span>. Uma regra
 muito usada é que os valores dos parâmetros que resultam em um valor de
@@ -2738,7 +2738,7 @@ definimos um <strong>intervalo de plausibilidade</strong> para as MLE. A funçã
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/sads/man/plotprofmle.html">likelregions</a></span><span class="op">(</span><span class="va">ml1.p</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>O parâmetro de importância teórica é o coeficiente da potência,
+<p>O parâmetro de importância teórica é o coeficiente da função de potência,
 <span class="math inline">\(\beta_1\)</span>. O intervalo de plausibilidade é parecido com a faixa de
 valores desse coeficiente registrada em outros sistemas de fragmentos
 continentais (veja, por exemplo, a Fig. 2 de Ohyama et al 2021).</p>
@@ -2814,7 +2814,7 @@ no R, com os seguintes passos:</p>
 a propriedade de convergir em probabilidade para o valor do parâmetro
 com o aumento da amostra. Para verificar a consistência, utilizaremos
 a MLE do desvio-padrão da Gaussiana, que é sabidamente enviesada:</p>
-<p><span class="math display">\[ \widehat{s} = \left[  \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \right] ^{(1/2)} \]</span></p>
+<p><span class="math display">\[ \widehat{\sigma} = \left[  \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \right] ^{(1/2)} \]</span></p>
 <p>Primeiramente, criaremos uma função para obter essa MLE:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2900,7 +2900,7 @@ estimamos um parâmetro por máxima verossimilhança, obtemos de graça as
 MLE de qualquer transformação monotônica dele, sem precisar refazer o ajuste<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>.</p>
 <p>Por exemplo, a MLE da variância de uma Gaussiana é a média dos
 quadrados dos desvios em relação à média:</p>
-<p><span class="math display">\[ \widehat{s^2} = \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \]</span></p>
+<p><span class="math display">\[ \widehat{\sigma^2} = \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \]</span></p>
 <p>Pela invariância, a raiz quadrada dessa estimativa deve ser a MLE do
 desvio-padrão, que usamos nas seções anteriores. Vamos conferir com a
 primeira das amostras simuladas de tamanho 10:</p>

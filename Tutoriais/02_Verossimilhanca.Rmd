@@ -96,7 +96,7 @@ $$\mathcal{L}_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)$$
 A função de **log-verossimilhança negativa** é igual ao negativo do
 logaritmo desse produto:
 
-$$L_y(\theta) ~=~ -ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
+$$L_y(\theta) ~=~ -\ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
 
 Usamos o logaritmo porque a função de verossimilhança é um produto de
 densidades probabilísticas, que em geral são números menores que
@@ -118,7 +118,7 @@ funções (ou se dão melhor com eles), e não máximos. Por isso
 multiplicamos o valor da log-verossimilhança por menos um
 ($-1$), e o seu máximo torna-se um mínimo. 
 
-#### Definindo a função de log-verossimilhança no R
+#### Definindo a função de log-verossimilhança negativa no R
 
 Em resumo, temos a **log-verossimilhança negativa**. Para fazer um
 ajuste, precisaremos então buscar os valores dos parâmetros do modelo
@@ -217,9 +217,9 @@ par(mfrow=c(1,1))
 ```
 
 Cada gráfico mostra um perfil de log-verossimilhança negativa para um
-parâmetro. Esse perfil mostra a relação entre a log-verossimilhança
+parâmetro. Esse perfil mostra a relação aproximada entre a log-verossimilhança
 negativa e esse parâmetro, escalonada para ter mínimo em zero. Com
-isto, podemos avaliar o quanto os dados sustentam diferentes valores
+isso, podemos avaliar o quanto os dados sustentam diferentes valores
 de cada parâmetro, mantidos os demais no melhor valor possível.
 
 A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
@@ -233,7 +233,7 @@ definimos um **intervalo de plausibilidade** para as MLE. A função
 likelregions(ml1.p)
 ```
 
-O parâmetro de importância teórica é o coeficiente da potência,
+O parâmetro de importância teórica é o coeficiente da função de potência,
 $\beta_1$. O intervalo de plausibilidade é parecido com a faixa de
 valores desse coeficiente registrada em outros sistemas de fragmentos
 continentais (veja, por exemplo, a Fig. 2 de Ohyama et al 2021).
@@ -322,7 +322,7 @@ a propriedade de convergir em probabilidade para o valor do parâmetro
 com o aumento da amostra. Para verificar a consistência, utilizaremos
 a MLE do desvio-padrão da Gaussiana, que é sabidamente enviesada:
 
-$$ \widehat{s} = \left[  \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \right] ^{(1/2)} $$
+$$ \widehat{\sigma} = \left[  \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 \right] ^{(1/2)} $$
 
 Primeiramente, criaremos uma função para obter essa MLE:
 
@@ -422,7 +422,7 @@ MLE de qualquer transformação monotônica dele, sem precisar refazer o ajuste[
 Por exemplo, a MLE da variância de uma Gaussiana é a média dos
 quadrados dos desvios em relação à média:
 
-$$ \widehat{s^2} = \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 $$
+$$ \widehat{\sigma^2} = \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 $$
 
 Pela invariância, a raiz quadrada dessa estimativa deve ser a MLE do
 desvio-padrão, que usamos nas seções anteriores. Vamos conferir com a
