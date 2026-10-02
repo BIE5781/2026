@@ -422,7 +422,7 @@ v.unif <- ((10-0+1)^2-1)/12
 ## Variancia esperada pelo TCL 
 v.TCL <- v.unif/60
 ## Diferenca entre a variancia TCL e a das simulações
-var(medias) - v.norm
+var(medias) - v.TCL
 ```
 
 Como parece que, com um tamanho amostral de 60, o TCL já aproxima bem a
