@@ -345,7 +345,7 @@ round(pnorm(df1$y[2] + 0.01, mean = mu, sd = cf1[3]) -
 $$\begin{align}
 p(Y|\theta) &= p(y_1|\theta) \times p(y_2|\theta) \ldots \times  p(y_n|\theta)\\[1em] 
 &= \prod p(x_i|\Theta)\\[1em] 
-&= L_y(\theta)
+&= \mathcal{L}_y(\theta)
 \end{align}$$
 ]
 
@@ -432,7 +432,7 @@ embora seja preciso usar distribuições de probabilidade para calcular verossim
 
 **Notação** 
 
-Usaremos a notação $L_y(\theta)$ para expressar:
+Usaremos a notação $\mathcal{L}_y(\theta)$ para expressar:
 
 * uma função de verossimilhança condicional a um conjunto de dados $y = {y_1, \ldots, y_n}$ ,
 
@@ -460,7 +460,7 @@ Usaremos a notação $L_y(\theta)$ para expressar:
   dados, ou seja, os valores dos parâmetros que maximizam a
   função de verossimilhança:
   
-  $$\widehat{\theta} =  \underset{\theta}{\mathrm{argmax}}[L_y(\theta)]$$
+  $$\widehat{\theta} =  \underset{\theta}{\mathrm{argmax}}[\mathcal{L}_y(\theta)]$$
 ]
 
 ---
@@ -986,7 +986,7 @@ plot(lm.Wp ~ lm.Mh, data = Birds.m,
 
 ---
 
-##Intervalos de plausibilidade
+## Intervalos de plausibilidade
 
 .pull-left[
 .center[

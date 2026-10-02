@@ -30,7 +30,7 @@ htmltools::tagList(
 Neste roteiro, usaremos um conjunto de dados com o número de espécies de
 formigas registradas em fragmentos de vegetação de diferentes tamanhos
 na Califórnia (Suarez et al. 1998). Usaremos esses dados para ajustar
-diferentes modelos para a relação espécie-área.
+um modelo para a relação entre a àrea de cada fragmento e o número de espećies amostradas neles.
 
 Carregue os pacotes necessários e os dados, que estão disponíveis no
 material suplementar de Ohyama *et al.* (2021):
@@ -44,7 +44,7 @@ library(bbmle)
 ```{r, eval=TRUE }
 ## todos os conjuntos de dados compilados por Ohyama et al
 raw <- read.csv("https://github.com/piLaboratory/bie5781/raw/master/data/jbi14149-sup-0003-appendixs3.csv")
-## dados de Suarez et al
+## Seleciona dados do estudo de Suarez et al
 suarez <- raw[raw$Study_ID=="23", c("Island_area", "Species.Richness")]
 ``` 
 
@@ -66,7 +66,7 @@ se aproxima da relação observada com uma regressão linear simples:
 $$
 \begin{align}
 \ln S_i &\sim \text{Normal}(\mu_i, \sigma) \\
-\mu_i & = \beta_{0} + \beta_1 \ln A_i
+\mu_i & = \beta_0 + \beta_1 \ln A_i
 \end{align}
 $$
 
@@ -84,14 +84,46 @@ o ajuste por mínimos quadrados (MQ).
 
 
 ### Método da máxima verossimilhança
+Para fazer o ajuste por MV, usaremos uma rotina computacional de
+otimização para encontrar os valores dos parâmetros $\beta_0$,
+$\beta_1$ e $\sigma$ que minimizam a **função de log-verossimilhança
+negativa**. Lembrando que a função de **verossimilhança** é o produto
+das probabilidades atribuídas pelo modelo a cada observação, dados
+valores dos parâmetros:
+
+$$\mathcal{L}_y(\theta)~ = ~\prod_i=1^i=n p(y_i \mid \theta)$$
+
+A função de **log-verossimilhança negativa** é igual o negativo do
+logarítimo deste produto:
+
+L_y(\theta) ~=~ -\sum_i=1^i=n p(y_i \mid \theta)$$
+
+Usamos o logaritimo porque a função de verossimilhança é um produto de
+densidades probabilísticas, que em geral são números menores que
+um. Como algumas dezenas este observações, esse produto fica tão
+próximo de zero que os computadores em geral não têm precisão para
+lidar com eles. Quando calculamos o logaritimo de um número positivo
+mas próximo de zero, temos um número de magnitude trabalhável. Por
+exemplo, confira o logarítimo de um trilionésimo:
+
+
+```{r }
+log(1e-12)
+```
+
+Essa transformação tem outras vantagens de cálculo. O logaritmo
+de um produto se torna uma soma, que o que é conveniente[^4]. Além
+disso, as rotinas computacionais de otimização em geral buscam (ou se
+dão melhor) com mínimos de funções e não com máximos. Por isso
+multiplicamos o valor da log-verossimilhança por menos um
+($-1$), e o seu máximo torna-se um mínimo. 
 
 #### Definindo a função de log-verossimilhança no R
 
-Para fazer o ajuste por MV, usaremos uma rotina computacional de
-otimização para encontrar os valores dos parâmetros $\beta_0$, $\beta_1$
-e $\sigma$ associados ao valor mínimo da **função de log-verossimilhança
-negativa** $L_y$. Começamos criando uma função no R que calcula essa
-função para os dados:
+Desta maneira temos a **log-verossimilhança negativa**. Para fazer um
+ajuste, precisaremos então buscar os valores dos parâmetros do modelo
+que **minimizam** esta função. Começamos criando uma função no R que
+calcula essa função para os dados:
 
 
 ```{r log-lik linear, eval = TRUE}
@@ -125,7 +157,15 @@ de log-verossimilhança negativa. Você encontra mais detalhes na página
 de ajuda de `mle2` e também na
 [vinheta do pacote bbmle](https://cran.r-project.org/web/packages/bbmle/vignettes/mle2.pdf).
 
-Rode a otimização e guarde o ajuste em um objeto chamado `ml1`:
+Execute a otimização e guarde o ajuste em um objeto chamado `ml1`. Note
+que a função de otimização necessita de **valores iniciais** dos
+parâmetros a partir do quais começa a investigar diferentes
+combinações de valores, até encontrar o mínimo da função (se tudo der
+certo!). Estes valores iniciais são fornecidos como uma lista, que usa
+os nomes dos parâmetros definidos na função de log-verossimilhança
+negativa. Como esta é uma otimização que sabemos que é simples,
+chutamos valores quaisquer. Mas em muitos casos usar é importante usar bons valores
+iniciais, e há algumas maneiras de buscar chutes educados.
 
 ```{r, eval = TRUE }
 ml1 <- mle2(LL1, start = list(beta0 = 0, beta1 = 0.1, sigma = 0.5))
@@ -144,7 +184,7 @@ verossimilhança (**MLE**). Guarde-as em um objeto separado:
 
 
 ```{r}
-ml1.cf <- coef(ml1)
+(ml1.cf <- coef(ml1))
 ```
 
 E então você pode usar essas estimativas para desenhar a reta de
@@ -172,12 +212,19 @@ ml1.p <- profile(ml1, alpha =0.05) ## calcula o perfil
 par(mfrow = c(1,3))
 ## Os gráficos
 plotprofmle(ml1.p, ylim = c(0,3))
+## volta a janela para 1 gráfico
+par(mfrow=c(1,1))
 ```
 
-O gráfico mostra a log-verossimilhança negativa reescalonada para ter
-mínimo em zero. A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
+Cada gráfico mostra um perfil de log-verossimilhança negativa para um
+parâmetro. Este perfil aproxima a relação da log-verossimilhança
+negativa e este parâmetro, escalonada para ter mínimo em zero. Com
+isto, podemos avaliar o quanto os dados sustentam diferentes valores
+deste parâmetro, mantidos os demais no melhor valor possível.
+
+A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
 muito usada é que os valores dos parâmetros que resultam em um valor de
-verossimilhança abaixo desse limite são igualmente plausíveis. Com isso,
+verossimilhança abaixo desse limite são igualmente plausíveis. Com este critério[^5],
 definimos um **intervalo de plausibilidade** para as MLE. A função
 `likelregions` retorna os limites do intervalo de plausibilidade:
 
@@ -197,7 +244,7 @@ continentais (veja, por exemplo, a Fig. 2 de Ohyama et al 2021).
 
 O método dos mínimos quadrados (MQ) é a solução de máxima
 verossimilhança para uma regressão linear Gaussiana simples. Você pode
-verificar isso ajustando o mesmo modelo com a função `lm`
+verificar isso ajustando o mesmo modelo com a função `lm`, que usa o MQ:
 
 ```{r }
 ## Ajusta o mesmo modelo por MQ
@@ -265,7 +312,7 @@ Sob certas premissas[^2], os estimadores de máxima verossimilhança têm vária
 demonstrar essas propriedades das MLE, vamos fazer algumas simulações
 no R, com os seguintes passos:
 
-1. geramos um grande número de amostras de uma distribuição conhecida, com valores conhecidos dos parâmetros;
+1. Geramos um grande número de amostras de uma distribuição conhecida, com valores conhecidos dos parâmetros;
 2. obtemos as MLE para cada uma das amostras simuladas;
 3. construímos gráficos da distribuição das MLE para analisar o seu comportamento.
 
@@ -587,3 +634,9 @@ iniciais com o argumento `start` para a função `quad`.
 [^2]: Stigler (2007) faz uma análise histórica aprofundada do método de máxima verossimilhança e dos MLEs. Umas das conclusões é que as propriedades dos MLEs não são totalmente generalizáveis. Ainda assim, aplicam-e para uma ampla classe de modelos, e seguem muito úteis por isto. 
 
 [^3]: Não se preocupe se não entender isto ainda. explicaremos nas próximas aulas.
+
+[^4]: Por esta propriedade, logarítimos foram muito usados para cálculos multiplicativos, antes que houvesse calculadoras. 
+
+[^5]: este critério de diferença de até 2 das log-verossimilhanças é
+    abritrário. A princípio não há nenhum problema em usar outra, seja
+    menor (mais rigoroso) ou maior (mais permissivo), desde que explique.
