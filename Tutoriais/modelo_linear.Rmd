@@ -63,14 +63,44 @@ Como podemos ver no gráfico, parece haver uma relação linear simples entre as
 
 Podemos estimar o valor dos parâmetros alfa e beta usando muitos métodos diferentes. O método mais comum é o Ordinary Least Squares (OLS), que produz soluções analíticas para o valor desses dois coeficientes.
 
-O valor do coeficiente beta é dado pela covariância entre X e Y, dividido pela variância de X. E o intercepto alpha é dado pela média de Y menos o produto do valor de beta pela média de X.
-
-$$\widehat{\beta}= \frac{Cov(x, y)}{Var(x)} = \frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^{n}(x_i-\bar{x})^2}$$
-
-e
+Para encontrar esses coeficientes, o método OLS escolhe os valores de
+$\alpha$ e $\beta$ que minimizam a soma dos quadrados dos resíduos:
 
 $$
-\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x} 
+Q(\alpha, \beta) = \sum_{i=1}^{n} (y_i - \alpha - \beta x_i)^2.
+$$
+
+No mínimo, as derivadas de $Q$ em relação a cada parâmetro são iguais a
+zero. Derivando em relação a $\alpha$, obtemos:
+
+$$
+\frac{\partial Q}{\partial \alpha}
+= -2\sum_{i=1}^{n}(y_i - \alpha - \beta x_i) = 0,
+$$
+
+o que implica $\bar{y} = \alpha + \beta\bar{x}$. Portanto, uma vez
+conhecida a inclinação, o intercepto é:
+
+$$
+\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x}.
+$$
+
+Derivando em relação a $\beta$, obtemos a segunda condição de primeira
+ordem:
+
+$$
+\frac{\partial Q}{\partial \beta}
+= -2\sum_{i=1}^{n}x_i(y_i - \alpha - \beta x_i) = 0.
+$$
+
+Substituindo $\alpha = \bar{y} - \beta\bar{x}$ e isolando $\beta$,
+encontramos a inclinação:
+
+$$
+\hat{\beta} =
+\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}
+  {\sum_{i=1}^{n}(x_i-\bar{x})^2}
+= \frac{\operatorname{Cov}(x,y)}{\operatorname{Var}(x)}.
 $$
 
 
