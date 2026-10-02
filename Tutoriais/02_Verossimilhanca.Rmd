@@ -91,12 +91,12 @@ negativa**. Lembrando que a função de **verossimilhança** é o produto
 das probabilidades atribuídas pelo modelo a cada observação, dados
 valores dos parâmetros:
 
-$$\mathcal{L}_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)$$
+$$L_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)$$
 
 A função de **log-verossimilhança negativa** é igual ao negativo do
 logaritmo desse produto:
 
-$$L_y(\theta) ~=~ -\ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
+$$L_y(\theta) ~=~ -\ln L_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
 
 Usamos o logaritmo porque a função de verossimilhança é um produto de
 densidades probabilísticas, que em geral são números menores que
@@ -207,6 +207,7 @@ função `plotprofmle`, que desenha esses perfis:
 
 
 ```{r}
+if(!require(sads)){install.packages("sads"); library(sads)}
 ml1.p <- profile(ml1, alpha =0.05) ## calcula o perfil
 ## Uma janela gráfica para 3 gráficos
 par(mfrow = c(1,3))
@@ -475,7 +476,7 @@ O estimador tradicional da variância (que não é um MLE), tem uma correção p
 
 $$ \widehat{s^2} = \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 }$$
 
-A redução do  pode ser comprovado com uma simulação:
+A redução do viés pode ser comprovada com uma simulação:
 
 ```{r}
 var.trad10 = tapply( vals10, samp10, var)    # estimativas com correção de viés da variância de amostras de tamanho 10
