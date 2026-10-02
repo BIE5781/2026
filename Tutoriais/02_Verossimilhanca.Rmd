@@ -96,7 +96,7 @@ $$\mathcal{L}_y(\theta)~ = ~\prod_{i=1}^{n} p(y_i \mid \theta)$$
 A função de **log-verossimilhança negativa** é igual ao negativo do
 logaritmo desse produto:
 
-$$L_y(\theta) ~=~ -\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
+$$L_y(\theta) ~=~ -ln \mathcal{L}_y(\theta) ~=~-\sum_{i=1}^{n} \ln p(y_i \mid \theta)$$
 
 Usamos o logaritmo porque a função de verossimilhança é um produto de
 densidades probabilísticas, que em geral são números menores que
@@ -120,7 +120,7 @@ multiplicamos o valor da log-verossimilhança por menos um
 
 #### Definindo a função de log-verossimilhança no R
 
-Desta maneira temos a **log-verossimilhança negativa**. Para fazer um
+Em resumo, temos a **log-verossimilhança negativa**. Para fazer um
 ajuste, precisaremos então buscar os valores dos parâmetros do modelo
 que **minimizam** esta função. Começamos criando uma função no R que
 calcula essa função para os dados:
@@ -138,12 +138,12 @@ argumentos os três parâmetros do modelo linear. A primeira linha da
 função calcula o valor esperado $\mu$, usando quaisquer valores de
 $\{\beta_0,\beta_1\}$ que você fornecer à função. A segunda linha calcula
 o valor da função de densidade normal para cada valor de $\ln S$, toma
-o logaritmo dessas densidades e soma todos eles. Por exemplo, a
+o logaritmo dessas densidades e soma todos eles. Por exemplo, verifique a
 log-verossimilhança negativa desse modelo para esses dados, usando
 $\beta_0 = 1, \beta_1 = 1$ e $\sigma = 1$, é
 
 
-```{r , eval=TRUE}
+```{r }
 LL1(beta0 = 1, beta1 = 1, sigma =1)
 ```
 
@@ -220,7 +220,7 @@ Cada gráfico mostra um perfil de log-verossimilhança negativa para um
 parâmetro. Esse perfil mostra a relação entre a log-verossimilhança
 negativa e esse parâmetro, escalonada para ter mínimo em zero. Com
 isto, podemos avaliar o quanto os dados sustentam diferentes valores
-deste parâmetro, mantidos os demais no melhor valor possível.
+de cada parâmetro, mantidos os demais no melhor valor possível.
 
 A linha azul marca o limite $L_y(\theta) = 2$. Uma regra
 muito usada é que os valores dos parâmetros que resultam em um valor de
@@ -267,10 +267,9 @@ confint(ls1)
 likelregions(ml1.p)
 ```
 
-Há, porém, uma diferença sistemática. A MLE do parâmetro $\sigma$ é a
-raiz quadrada da média dos quadrados dos resíduos:
+Há, porém, uma diferença sistemática. A MLE da variância  (parâmetro $\sigma$ ao quadrado) é a média dos quadrados dos resíduos:
 
-$$\hat{\sigma}=\sqrt{\frac{\sum(y_i-\hat{y})^2}{n}}$$
+$$\widehat{\sigma²}=\frac{\sum(y_i-\hat{y})^2}{n}$$
 
 Você pode verificar isso:
 
@@ -281,15 +280,15 @@ ml1.yhat <- ml1.cf[1] + ml1.cf[2]*log(suarez$Island_area)
 ## resíduos
 ml1.res <- log(suarez$Species.Richness) - ml1.yhat
 ## Raiz da média dos quadrados dos resíduos
-sqrt( sum (ml1.res^2) / nrow(suarez) )
+sum (ml1.res^2) / nrow(suarez) 
 ## compare com a MLE
-ml1.cf[3]
+ml1.cf[3]^2
 ```
 
 O método de MQ estima a variância da normal do modelo ($\sigma^2$) com
 uma correção de viés para amostras pequenas ($n-2$):
 
-$$\hat{\sigma^2}=\frac{\sum(y_i-\hat{y})^2}{n-2}$$
+$$\widehat{\sigma^2}=\frac{\sum(y_i-\hat{y})^2}{n-2}$$
 
 O que você também pode verificar:
 
@@ -337,6 +336,7 @@ distribuição Gaussiana com média 100 e desvio-padrão 5.
 Gerando a distribuição das MLE para amostras de tamanho 10:
 
 ```{r}
+set.seed(42)                                        # sementes de n aleatórios
 samp10 = sort(rep(1:1000, 10))                      # identificador das 1000 amostras de tamanho 10
 vals10 = rnorm(1000*10, mean=100, sd=5)             # valores das observações
 dens10 = density( tapply(vals10, samp10, sd.mle) )  # obtendo a MLE para cada amostra e a densidade empírica
@@ -412,27 +412,80 @@ par(mfrow=c(1,1))
 
 ## Invariância
 
-A propriedade de invariância das MLE é difícil de comprovar por
-simulação, e é mais fácil exemplificá-la com estimadores que não têm
-essa propriedade.
+A propriedade de invariância diz que, se $\hat{\theta}$ é a MLE de um
+parâmetro $\theta$, então, para qualquer função
+[monotônica](https://en.wikipedia.org/wiki/Monotonic_function) de $g$,
+$g(\hat{\theta})$ é a MLE de $g(\theta)$. Em outras palavras, se
+estimamos um parâmetro por máxima verossimilhança, obtemos de graça as
+MLE de qualquer transformação monotônica dele, sem precisar refazer o ajuste[^7].
 
-O estimador tradicional da variância tem a propriedade de não ser
-viciado, independentemente do tamanho da amostra:
+Por exemplo, a MLE da variância de uma Gaussiana é a média dos
+quadrados dos desvios em relação à média:
+
+$$ \widehat{s^2} = \frac{1}{n} \sum_{i=1}^n (x_i - \bar{x})^2 $$
+
+Pela invariância, a raiz quadrada dessa estimativa deve ser a MLE do
+desvio-padrão, que usamos nas seções anteriores. Vamos conferir com a
+primeira das amostras simuladas de tamanho 10:
+
+```{r}
+var.mle = function(x) mean( (x - mean(x))^2 )   # MLE da variância
+x1 = vals10[samp10 == 1]                        # primeira amostra de tamanho 10
+sqrt( var.mle(x1) )                             # raiz da MLE da variância
+sd.mle(x1)                                      # MLE do desvio-padrão
+```
+
+Neste caso, a igualdade é óbvia pelas próprias fórmulas. Mas a
+propriedade vale também quando não temos fórmulas e encontramos as MLE
+numericamente. Vamos ajustar uma Gaussiana à mesma amostra com a
+função `mle2`, de duas formas: estimando o desvio-padrão e estimando
+a variância.
+
+```{r}
+## Log-verossimilhança negativa com o desvio-padrão como parâmetro
+LL.sd = function(mu, sigma) -sum( dnorm(x1, mean = mu, sd = sigma, log = TRUE) )
+## Log-verossimilhança negativa com a variância como parâmetro
+LL.var = function(mu, v) -sum( dnorm(x1, mean = mu, sd = sqrt(v), log = TRUE) )
+
+m.sd  = mle2(LL.sd,  start = list(mu = 100, sigma = 5),
+             method = "L-BFGS-B", lower = c(mu = -Inf, sigma = 1e-6))
+m.var = mle2(LL.var, start = list(mu = 100, v = 25),
+             method = "L-BFGS-B", lower = c(mu = -Inf, v = 1e-6))
+
+coef(m.sd)["sigma"]       # MLE do desvio-padrão
+sqrt( coef(m.var)["v"] )  # raiz da MLE da variância
+```
+
+As duas estimativas são iguais (a menos de pequenas diferenças
+numéricas da otimização). Isso acontece porque mudar a forma de
+escrever o parâmetro não muda a verossimilhança de cada modelo: um
+desvio-padrão de 5 e uma variância de 25 descrevem exatamente a mesma
+Gaussiana e, portanto, atribuem a mesma probabilidade aos dados. Assim,
+o máximo da verossimilhança corresponde à mesma distribuição, qualquer
+que seja a forma como a parametrizamos. Foi essa propriedade que usamos
+ao estimar $\log \sigma$ em vez de $\sigma$ para evitar valores
+negativos.
+
+### Nem toda propriedade de um estimador é invariante
+
+Para entender por que a invariância é uma propriedade valiosa, vale
+ver uma propriedade que **não** se mantém sob transformações: as correções para vieses amostrais.
+
+O estimador tradicional da variância (que não é um MLE), tem uma correção para viés em amostras pequenas, que divide por $n-1$: .  
 
 $$ \widehat{s^2} = \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 }$$
 
-Isso pode ser comprovado com uma simulação:
+A redução do  pode ser comprovado com uma simulação:
 
 ```{r}
-var.trad10 = tapply( vals10, samp10, var)    # estimativas tradicionais da variância de amostras de tamanho 10
+var.trad10 = tapply( vals10, samp10, var)    # estimativas com correção de viés da variância de amostras de tamanho 10
 plot( density(var.trad10), type="l" )        # distribuição das estimativas
 abline( v = mean(var.trad10) )               # média das estimativas
 abline( v = 5^2, col="red" )                 # valor do parâmetro
 ```
 
-No entanto, este não é um estimador de máxima verossimilhança. Por
-isso, a propriedade de não ser viciado não se mantém quando a variância
-é transformada em desvio-padrão, que é uma transformação monotônica:
+Mas a raiz quadrada desse estimador, que é o estimador tradicional do
+desvio-padrão (a função `sd` do R), é viesada:
 
 $$ \widehat{s} = \sqrt{ \widehat{s^2}} \ = \ \sqrt{ \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 } }$$
 
@@ -445,6 +498,13 @@ plot(density(sd.trad10), type="l")
 abline( v = mean(sd.trad10) )
 abline( v = 5, col="red" )
 ```
+
+Ou seja, a ausência de viés se perde com uma simples transformação do
+parâmetro. As MLE também não garantem ausência de viés para amostras
+pequenas, como vimos na seção sobre consistência. O que elas garantem
+pé que este viés se reduz com o aumento da amostra, e também a
+invariância.
+
 
 # Especificando o modelo com o pacote rethinking
 
@@ -629,6 +689,9 @@ iniciais com o argumento `start` para a função `quap`.
 * Suarez, A. V., Bolger, D. T., & Case, T. J. (1998). Effects of
   fragmentation and invasion on native ant communities in coastal
   southern California. Ecology, 79(6), 2041-2056.
+  
+* Zehna, P. W. (1966). Invariance of maximum likelihood
+  estimators. Annals of Mathematical Statistics, 37(3), 744.
 
   
 
@@ -647,3 +710,7 @@ iniciais com o argumento `start` para a função `quap`.
     casos um produto de muitos números acima d eum pode resultar em um
     número muito grande, o que também é um problema para cálculos com
     computador.
+
+[^7]: Há generalizações para outras transformações (Zehna, 1966), mas para fins
+    didáticos ficamos apenas com transformações monotônicas, que são
+    terreno mais seguro.
