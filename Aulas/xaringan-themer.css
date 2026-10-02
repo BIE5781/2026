@@ -35,7 +35,7 @@
   --code-font-family: 'Fira Mono';
   --code-font-is-google: 1;
   --base-font-size: 20px;
-  --text-font-size: 28px;
+  --text-font-size: 24px;
   --code-font-size: 1rem;
   --code-inline-font-size: 1em;
   --header-h1-font-size: 2.75rem;
@@ -75,7 +75,7 @@ h1, h2, h3 {
 }
 .remark-slide-content {
   background-color: var(--background-color);
-  font-size: 28px;
+  font-size: 24px;
   padding: 16px 64px 16px 64px;
   width: 100%;
   height: 100%;
@@ -271,3 +271,9 @@ table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
 }
 
 
+
+
+/* Extra CSS */
+.pull-left > :first-child, .pull-right > :first-child {
+  margin-top: 0;
+}

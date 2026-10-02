@@ -26,3 +26,8 @@
   flex: 1;
   padding: 0 10px;
 }
+
+.topo-alinhado .pull-left > :first-child,
+.topo-alinhado .pull-right > :first-child {
+  margin-top: 0;
+}
