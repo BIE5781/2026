@@ -344,7 +344,7 @@ round(pnorm(df1$y[2] + 0.01, mean = mu, sd = cf1[3]) -
 .pull-left[
 $$\begin{align}
 p(Y|\theta) &= p(y_1|\theta) \times p(y_2|\theta) \ldots \times  p(y_n|\theta)\\[1em] 
-&= \prod p(x_i|\Theta)\\[1em] 
+&= \prod p(y_i|\theta)\\[1em] 
 &= \mathcal{L}_y(\theta)
 \end{align}$$
 ]
