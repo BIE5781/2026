@@ -633,7 +633,7 @@ legend("topleft", legend = c("Sombra -1", "Sombra 0", "Sombra 1"), col = 2:4, pc
 
 Confira o gráfico: a inclinação muda entre os níveis de sombra? Esse
 padrão é compatível com o coeficiente de interação observado em
-`summary(m3)`?
+`summary(m3)`? Pense na história que esse modelo conta. Ela faz sentido?
 
 [^sem-vies]: Um estimador é não enviesado quando sua esperança, em repetições do processo amostral, coincide com o parâmetro que estima. Neste caso, as igualdades demonstradas são condicionais aos valores de $x$. Note que essa definição depende de uma distribuição de valores hipotéticos dos dados.
 
