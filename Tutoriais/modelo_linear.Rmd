@@ -188,17 +188,17 @@ comporta.
   Sem variação em $x$, não há como distinguir uma inclinação $\beta$ de
   uma mudança no intercepto $\alpha$.
 
-4. **Média condicional do erro igual a zero.** Para cada valor de $x$, os
-  erros têm média zero:
+4. **Média condicional do erro igual a zero.** Condicionalmente aos
+  valores observados de todos os preditores, os erros têm média zero:
 
   $$
-  E(\varepsilon_i \mid x_i) = 0.
+  E(\varepsilon_i \mid x_1, \ldots, x_n) = 0.
   $$
 
   Essa condição diz que o modelo não erra sistematicamente para cima ou
   para baixo em nenhuma região de $x$. 
   
-  Com essas quatro premissas, podemos mostrar que as estimativas OLS são não enviesadas[^sem-vies]. De fato,
+  Com essas quatro premissas, podemos mostrar que as estimativas obtidas pelo método OLS (ou MLE) são não enviesadas[^sem-vies][^tradeoff]. De fato,
   usando $y_i = \alpha + \beta x_i + \varepsilon_i$ na fórmula da
   inclinação,
 
@@ -211,10 +211,11 @@ comporta.
        {\sum_{i=1}^{n}(x_i - \bar{x})^2}.
   $$
 
-  Tomando a média condicional aos valores de $x$, o segundo termo tem
-  esperança zero. Portanto, $E(\hat{\beta}) =
-  \beta$. Como $\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x}$, também
-  temos $E(\hat{\alpha}) = \alpha$.
+  Tomando a esperança condicional aos valores observados de $x$, o segundo
+  termo tem esperança zero. Portanto,
+  $E(\hat{\beta} \mid x_1, \ldots, x_n) = \beta$. Como
+  $\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x}$, também temos
+  $E(\hat{\alpha} \mid x_1, \ldots, x_n) = \alpha$.
 
 1. **Homoscedasticidade.** A variância dos erros é a mesma para todos os
   valores de $x$:
@@ -227,7 +228,7 @@ comporta.
   inclinação estimada é $\operatorname{Var}(\hat{\beta} \mid x) =
   \sigma^2 / \sum_i (x_i - \bar{x})^2$. A homoscedasticidade permite
   estimar $\sigma^2$ sem viés usando a soma dos quadrados dos resíduos
-  dividida por $n - 2$; os dois graus de liberdade correspondem aos
+  dividida por $n - 2$; os dois graus de liberdade[^gdl] correspondem aos
   parâmetros $\alpha$ e $\beta$ estimados.
 
 Por fim, às vezes assumimos também que os erros têm distribuição normal:
@@ -247,15 +248,15 @@ sejam perfeitamente normais.
 
 Uma vez que o modelo está ajustado, podemos calcular os seus resíduos ($e_i$). Ao invés de tratarmos os resíduos simplesmente como "erros", vamos tratar esses valores como a **variação residual não explicada pela variável preditora**.
 
-Matematicamente, o resíduo para a observação $i$ é a diferença entre o valor real observado ($y_i$) e o valor predito pelo nosso modelo linear ($\mu_i$):
+Matematicamente, o resíduo para a observação $i$ é a diferença entre o valor observado ($y_i$) e o valor ajustado pelo modelo ($\hat{\mu}_i$):
 
-$$e_i = y_i - \mu_i$$
+$$e_i = y_i - \hat{\mu}_i$$
 
 Podemos extrair essa variação não explicada diretamente do nosso modelo ajustado no R usando funções nativas:
 
 ```{r extract_residuals}
-# Extraindo os valores preditos (a porção de y explicada por x)
-mu <- fitted(m1)
+# Extraindo os valores ajustados (a porção de y explicada por x)
+mu_hat <- fitted(m1)
 
 # Extraindo os resíduos (a variação residual não explicada)
 res <- residuals(m1)
@@ -270,7 +271,7 @@ plot(y ~ x, pch = 19, main = "Perspectiva 1: Distância da reta de regressão")
 abline(m1, col = "red", lwd = 2)
 
 # Desenhando linhas conectando os pontos reais aos valores preditos
-segments(x0 = x, y0 = y, x1 = x, y1 = mu, col = "blue", lty = 2)
+segments(x0 = x, y0 = y, x1 = x, y1 = mu_hat, col = "blue", lty = 2)
 
 ```
 
@@ -289,6 +290,8 @@ Confira se os resíduos ficam em torno de zero e se ainda aparece algum
 padrão em função de $x$. O que isso sugere sobre a adequação da reta?
 Compare os dois gráficos: no segundo, os resíduos correspondem às
 distâncias verticais do primeiro, agora representadas em torno de zero.
+Ao subtrair de cada observação o valor previsto pela reta de regressão, 
+a reta passa a coincidir com o eixo horizontal no gráfico de resíduos.
 
 Entender os resíduos como uma variável própria, limpa da influência de um preditor específico, é o que nos permitirá usar a regressão como uma ferramenta de controle estatístico. Mais à frente neste tutorial, usaremos essa  propriedade para descontar nossas variáveis de interesse de fontes de variação espúria.
 
@@ -602,13 +605,13 @@ Na saída do modelo, confira o sinal da estimativa de `water:shade`.
 Como esse sinal se relaciona com as inclinações das retas no gráfico?
 
 ```{r fit_interaction}
-m2 <- lm(blooms ~ water * shade, data = tulips)
+m3 <- lm(blooms ~ water * shade, data = tulips)
 ```
 
 O resumo mostra as estimativas dos efeitos principais e da interação:
 
 ```{r summarize_interaction, results='hide'}
-summary(m2)
+summary(m3)
 ```
 
 ## Visualizando a interação
@@ -620,8 +623,8 @@ de `shade`, mantendo os demais termos conforme a fórmula ajustada.
 plot(blooms ~ water, col = 2:4, pch = 16, data = tulips)
 for (s in unique(tulips$shade)) {
   abline(
-    a = coef(m2)["(Intercept)"] + coef(m2)["shade"] * s,
-    b = coef(m2)["water"] + coef(m2)["water:shade"] * s,
+    a = coef(m3)["(Intercept)"] + coef(m3)["shade"] * s,
+    b = coef(m3)["water"] + coef(m3)["water:shade"] * s,
     col = match(s, sort(unique(tulips$shade))) + 1
   )
 }
@@ -630,6 +633,10 @@ legend("topleft", legend = c("Sombra -1", "Sombra 0", "Sombra 1"), col = 2:4, pc
 
 Confira o gráfico: a inclinação muda entre os níveis de sombra? Esse
 padrão é compatível com o coeficiente de interação observado em
-`summary(m2)`?
+`summary(m3)`?
 
 [^sem-vies]: Um estimador é não enviesado quando sua esperança, em repetições do processo amostral, coincide com o parâmetro que estima. Neste caso, as igualdades demonstradas são condicionais aos valores de $x$. Note que essa definição depende de uma distribuição de valores hipotéticos dos dados.
+
+[^tradeoff]: Não se deixe levar pela carga emocional associada ao termo. “Não enviesado” descreve uma propriedade do estimador, mas não significa, por si só, que ele seja o melhor. Um estimador com algum viés pode variar menos entre amostras e, por isso, ter erro quadrático médio menor. Por exemplo, em uma amostra pequena, aceitar um viés modesto pode reduzir bastante a variância do estimador e, com isso, seu erro quadrático médio. Portanto, a escolha do estimador depende do objetivo e do custo relativo de viés e variabilidade. “Não enviesado” não é um selo universal de qualidade. Veja, por exemplo: [James-Stein Estimador](https://en.wikipedia.org/wiki/James%E2%80%93Stein_estimator) ([video](https://www.youtube.com/watch?v=cUqoHQDinCM))
+
+[^gdl]: Na regressão linear simples com intercepto e inclinação, os resíduos $e_i = y_i - \hat{y}_i$ não podem variar livremente: as equações que definem o ajuste por mínimos quadrados impõem $\sum_i e_i = 0$ e $\sum_i (x_i - \bar{x})e_i = 0$. Essas duas restrições deixam os resíduos em um espaço com $n - 2$ dimensões. Por isso, embora haja $n$ resíduos, a soma de seus quadrados é dividida por $n - 2$ para obter um estimador não enviesado de $\sigma^2$, sob as premissas do modelo. Esse é o sentido de “graus de liberdade residuais” neste trecho: a quantidade de informação independente que resta para estimar a variância depois de ajustar os dois coeficientes. Em uma abordagem Bayesiana, os coeficientes e a variância são tratados como parâmetros incertos, recebem distribuições a priori e são atualizados pela distribuição posterior. Assim, a incerteza costuma ser descrita diretamente pela posterior, e não por uma correção frequentista universal que divide a soma dos quadrados por $n - 2$. 
