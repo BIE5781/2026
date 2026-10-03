@@ -320,7 +320,7 @@ Na saída, identifique a categoria de referência e o coeficiente que
 representa a diferença entre as médias. O sinal e a magnitude desse
 contraste fazem sentido diante dos valores simulados de 75 kg e 60 kg?
 
-Nesse caso, o modelo retorna um coeficiente que nós chamamos de um contraste, mostrando a diferença na média entre os indivíduos bem alimentados e mal alimentados. Os indivíduos mal alimentados tendem a ser aproximadamente 15 kg mais leves que os bem alimentados.
+Nesse caso, o modelo retorna um coeficiente chamado contraste, que expressa a diferença entre as médias dos indivíduos bem alimentados e mal alimentados. Confira o sinal e a magnitude desse coeficiente no `summary` e compare-os com o boxplot abaixo.
 
 ```{r, message = FALSE, warning = FALSE}
 # install.packages( "ggplot2") # se necessario...
