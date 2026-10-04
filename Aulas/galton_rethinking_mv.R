@@ -1,0 +1,77 @@
+library(rethinking)
+
+## Leitura dos dados do site https://www.randomservices.org/random/data/Galton.html
+galton <- read.table("Galton.txt", header = TRUE)
+## Apenas meninos, e só o primeiro filho de cada família
+meninos <- galton[galton$Gender == "M", ]
+meninos <- meninos[!duplicated(meninos$Family), ]
+## Preditoras centradas na média (alturas em polegadas)
+dat <- with(meninos, data.frame(
+    H = Height,
+    P = Father - mean(Father),
+    M = Mother - mean(Mother)))
+## As alturas do pai e da mãe são pouco correlacionadas
+cor(dat$P, dat$M)
+plot(M ~ P, data = dat, pch = 19, col = rangi2,
+     xlab = "Altura do pai (centrada, in)",
+     ylab = "Altura da mãe (centrada, in)")
+## Ajustes por máxima verossimilhança com quap().
+## Os valores iniciais dos parâmetros são informados em 'start'.
+## O desvio padrão é estimado em escala log (lsigma), para garantir sigma > 0.
+inicio.a <- mean(dat$H)
+inicio.ls <- log(sd(dat$H))
+
+## Regressão simples: só o pai
+m.pai <- quap(
+    alist(
+        H ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bP * P
+    ), data = dat,
+    start = list(a = inicio.a, bP = 0, lsigma = inicio.ls))
+
+## Regressão simples: só a mãe
+m.mae <- quap(
+    alist(
+        H ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bM * M
+    ), data = dat,
+    start = list(a = inicio.a, bM = 0, lsigma = inicio.ls))
+
+## Regressão múltipla: pai e mãe
+m.pais <- quap(
+    alist(
+        H ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bP * P + bM * M
+    ), data = dat,
+    start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
+
+precis(m.pai)
+precis(m.mae)
+precis(m.pais)
+
+## Os coeficientes quase não mudam entre os modelos simples e o múltiplo
+## Gráfico dos coeficientes (média e intervalo de 89%), só com os
+## parâmetros que existem em cada modelo
+plot_coefs <- function(modelos, pars) {
+    tab <- do.call(rbind, lapply(names(modelos), function(nome) {
+        p <- as.data.frame(precis(modelos[[nome]]))
+        p <- p[rownames(p) %in% pars, , drop = FALSE]
+        data.frame(par = rownames(p), modelo = nome, media = p$mean,
+                   inf = p[["5.5%"]], sup = p[["94.5%"]])
+    }))
+    tab <- tab[order(match(tab$par, pars)), ]
+    y <- nrow(tab):1
+    op <- par(mar = c(5, 10, 1, 1))
+    on.exit(par(op))
+    plot(tab$media, y, xlim = range(tab$inf, tab$sup), yaxt = "n",
+         pch = 19, xlab = "Valor estimado", ylab = "")
+    segments(tab$inf, y, tab$sup, y, lwd = 2)
+    axis(2, at = y, labels = paste(tab$par, "|", tab$modelo), las = 1)
+}
+
+plot_coefs(list("só pai" = m.pai, "só mãe" = m.mae, "pai + mãe" = m.pais),
+           pars = c("bP", "bM"))
+
+## Comparação direta
+rbind(simples  = c(bP = unname(coef(m.pai)["bP"]), bM = unname(coef(m.mae)["bM"])),
+      multipla = coef(m.pais)[c("bP", "bM")])

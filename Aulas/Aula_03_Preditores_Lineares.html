@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelos Estatísticos Lineares</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI (Paulo Inácio Prado)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelos Estatísticos Lineares
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI (Paulo Inácio Prado)
+]
+.date[
+### 07 de outubro de 2026
+]
+
+---
+
+
+
+
+
+
+
+
+## Recapitulando
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Uma expressão geral para modelos estatísticos**
+
+`$$Y\, \sim \, f(Y \mid \Theta=g(X_i))$$`
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Em palavras**
+
+`\(Y\)` é uma variável aleatória, cujos valores têm probabilidades
+definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
+`\(\Theta\)` são uma função qualquer `\(g\)` de outras medidas
+(preditoras) `\(X_i\)`.
+]
+
+---
+
+## Preditores lineares
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Todos que podem ser escritos na forma**
+
+`$$\theta \ = \ g(X_i) \ = \sum \beta_iX_i$$`
+]
+
+sendo `\(\theta\)` uma resposta (que normalmente usamos para expressar a
+dependência que um parâmetro da distribuição tem com outras medidas).
+
+---
+
+## Preditores lineares
+
+### Exemplos
+
+* `\(\beta_0+\beta_1X_1\)` , sendo `\(X_0=1\)`
+
+--
+
+* `\(\beta_0+\beta_1X_1+\beta_2X_1^2\)` , pois podemos chamar `\(X_1^2\)` de `\(X_2\)`
+
+--
+
+* `\(\beta_0+\beta_1X_1+\beta_2\ln(X_1)\)` , pois podemos chamar `\(\ln X_1\)` de `\(X_2\)`
+
+--
+
+* `\(\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2\)` , pois podemos chamar `\(X_1X_2\)` de `\(X_3\)`
+
+--
+
+* `\(\ldots\)`
+
+---
+
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+.center[
+
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-1-1.png" alt="" width="80%" /&gt;
+&lt;br&gt;
+Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 1885)](https://www.randomservices.org/random/data/Galton.html)
+
+]
+
+---
+
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+
+``` r
+&gt; ## Valores iniciais
+&gt; inicio.a &lt;- mean(dat$H)
+&gt; inicio.ls &lt;- log(sd(dat$H))
+&gt; ## Ajuste no rethinking
+&gt; m.pais &lt;- quap(
++     alist(
++         H ~ dnorm(mu, exp(lsigma)),
++         mu &lt;- a + bP * P + bM * M
++     ), data = dat,
++     start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
+&gt; precis(m.pais)
+```
+
+```
+             mean         sd       5.5%      94.5%
+a      70.4358382 0.16058759 70.1791882 70.6924881
+bP      0.4767470 0.06376877  0.3748322  0.5786618
+bM      0.2840529 0.06811670  0.1751892  0.3929165
+lsigma  0.7477301 0.05376032  0.6618107  0.8336494
+```
+
+---
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-3-1.png" alt="" width="85%" /&gt;
+
+```
+NULL
+```
+]
+
+---
+## Modelos lineares múltiplos aditivos
+
+* O preditor é a soma de variáveis independentes isoladas, cada uma multiplicada por seu coeficiente.
+
+--
+
+* A soma **não** inclui variáveis independentes que são produtos de outras presentes no modelo:
+
+`$$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_iX_i$$`
+
+--
+
+* Se uma variável independente `\(X_i\)` aumenta em uma unidade, o preditor aumenta `\(\beta_i\)` , não importando o valor das outras variáveis.
+
+--
+
+* Ou seja, os efeitos das preditoras são **aditivos**. Não são afetados pelo valor das demais variáveis.
+
+---
+
+## Modelos lineares múltiplos com interações
+
+* O preditor inclui variáveis que são produtos de pelo menos outras duas presentes no modelo, por exemplo:
+
+`$$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$`
+
+--
+
+
+* Se a variável indenpendente  `\(X_1\)` aumenta em uma unidade, o preditor aumenta em `\(\beta_1 + \beta_3 X_3\)`.
+
+--
+
+* Ou seja, o efeito de uma preditora depende do valor de outra(s). Há uma **interação** estatística.
+
+---
+
+## Exemplo de preditor linear aditivo
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* `\(X_1\)`: altura da mãe, contínua
+* `\(X_2\)`: gênero binário atribuído (Feminino = 0, Masculino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: `\(\beta_0 + \beta_1X_1 + \beta_2X_2\)`
+
+--
+
+* **masculino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 0 \ = \ \beta_0 + \beta_1X_1\)`
+
+--
+
+* **feminino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 1 \ = \ [\beta_0 + \beta_2] + \beta_1X_1\)`
+
+---
+
+## Gráfico do exemplo aditivo
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-aditivo-1.png" alt="" width="60%" /&gt;
+]
+
+---
+
+## Exemplo de preditor linear com uma interação
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* `\(X_1\)`: altura da mãe, contínua
+* `\(X_2\)`: gênero binário atribuído (Masculino = 0, Feminino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: `\(\beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2\)`
+
+--
+
+* **masculino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 0 + \beta_3X_1\times 0 \ = \ \beta_0 + \beta_1X_1\)`
+
+--
+
+* **feminino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 1 + \beta_3X_1\times 1 \ = \ [\beta_0 + \beta_2] + [\beta_1 + \beta_3]X_1\)`
+
+---
+
+## Gráfico do exemplo com interação
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-teorico-interacao-1.png" alt="" width="60%" /&gt;
+]
+
+---
+
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma `\(\Theta \ = \ \sum \beta_iX_i\)`.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* `\(\beta_0X_1^{\beta_1}\)`
+
+* `\(\beta_0e^{\beta_1 X_1}\)`
+
+* `\(\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)`
+
+* E muitas, muitas mais.
+]
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
