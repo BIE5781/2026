@@ -120,15 +120,19 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 ## Interpretação dos coeficientes de modelos lineares múltiplos
 
 
+
+``` r
+&gt; ## Especifica o modelo
+&gt; m.pais.f &lt;- alist( H ~ dnorm( mu, exp(lsigma) ),
++                    mu &lt;- a + bP * P + bM * M)
+```
+
+
 ``` r
 &gt; ## Valores iniciais
 &gt; inicio.a &lt;- mean(dat$H)
 &gt; inicio.ls &lt;- log(sd(dat$H))
-&gt; 
-&gt; ## Especifica o modelo
-&gt; m.pais.f &lt;- alist( H ~ dnorm( mu, exp(lsigma) ),
-+                    mu &lt;- a + bP * P + bM * M)
-&gt; ## Ajuste no rethinking
+&gt; ## Ajuste
 &gt; m.pais &lt;- quap( m.pais.f, data = dat,
 +     start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
 &gt; ## Coeficientes
@@ -146,6 +150,39 @@ lsigma  0.7477301 0.05376032  0.6618107  0.8336494
 ---
 ## Interpretação dos coeficientes de modelos lineares múltiplos
 
+
+``` r
+&gt; ## Especifica o modelo
+&gt; lm.pais &lt;- lm(H ~ P + M, data = dat)
+&gt; ## Resumo
+&gt; summary(lm.pais)
+```
+
+```
+
+Call:
+lm(formula = H ~ P + M, data = dat)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-6.0629 -1.2474  0.1647  1.4512  7.8374 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 70.43584    0.16200 434.794  &lt; 2e-16 ***
+P            0.47675    0.06433   7.411 5.62e-12 ***
+M            0.28405    0.06872   4.134 5.59e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 2.131 on 170 degrees of freedom
+Multiple R-squared:  0.3206,	Adjusted R-squared:  0.3126 
+F-statistic: 40.11 on 2 and 170 DF,  p-value: 5.384e-15
+```
+
+---
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
 .center[
 &lt;img src="Aula_03_Preditores_Lineares_files/figure-html/coefs-pai-mae-1.png" alt="" width="75%" /&gt;
 ]
@@ -155,7 +192,7 @@ lsigma  0.7477301 0.05376032  0.6618107  0.8336494
 ## Coeficientes são efeitos parciais
 
 .center[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-2-1.png" alt="" width="75%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-4-1.png" alt="" width="75%" /&gt;
 &lt;br&gt;
 ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua altura e DAP [(Meyer, 1953)](https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/trees.html)
 ]
@@ -165,16 +202,19 @@ ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua 
 
 
 ``` r
+&gt; ## Especifica o modelo
+&gt; m.arv.f &lt;- alist( lV ~ dnorm( mu, exp(lsigma) ),
++                   mu &lt;- a + bD * lD + bH * lH)
+```
+
+
+``` r
 &gt; ## Valores iniciais
 &gt; inicio.a2 &lt;- mean(dat2$lV)
 &gt; inicio.ls2 &lt;- log(sd(dat2$lV))
-&gt; 
-&gt; ## Especifica o modelo
-&gt; m.arv.f &lt;- alist( lV ~ dnorm( mu, exp(lsigma) ),
-+                   mu &lt;- a + bG * lD + bH * lH)
 &gt; ## Ajuste no rethinking
 &gt; m.arv &lt;- quap( m.arv.f, data = dat2,
-+     start = list(a = inicio.a2, bG = 0, bH = 0, lsigma = inicio.ls2))
++     start = list(a = inicio.a2, bD = 0, bH = 0, lsigma = inicio.ls2))
 &gt; ## Coeficientes
 &gt; precis(m.arv)
 ```
@@ -182,12 +222,12 @@ ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua 
 ```
                 mean         sd        5.5%       94.5%
 a      -8.122428e-09 0.01389209 -0.02220225  0.02220223
-bG      1.982650e+00 0.07128876  1.86871668  2.09658308
+bD      1.982650e+00 0.07128876  1.86871668  2.09658308
 bH      1.117123e+00 0.19429336  0.80660492  1.42764154
 lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 ```
-
 ---
+
 ## Coeficientes são efeitos parciais
 
 .center[
@@ -198,7 +238,7 @@ lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 
 ## Coeficientes são efeitos parciais
 .center[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-4-1.png" alt="" width="75%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-7-1.png" alt="" width="75%" /&gt;
 ]
 
 ---
@@ -259,7 +299,7 @@ lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 **Duas preditoras:**
 
 * `\(X_1\)`: altura da mãe, contínua
-* `\(X_2\)`: gênero binário atribuído (Feminino = 0, Masculino = 1)
+* `\(X_2\)`: gênero binário atribuído (Masculino = 0, Feminino = 1)
 ]
 
 --
