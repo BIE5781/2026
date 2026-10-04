@@ -1,0 +1,578 @@
+---
+title: "Modelos Estatísticos Lineares"
+subtitle: "Disciplina BIE5781 - IB - USP"
+author: 
+  - "PI (Paulo Inácio Prado)"
+date: '07 de outubro de 2026'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%",
+                      ## Figuras: mesma largura em todos os chunks (texto com tamanho consistente),
+                      ## alta resolução, e fundo transparente para herdar a cor dos slides
+                      fig.width = 8, fig.asp = 0.618,
+                      dpi = 300, fig.retina = 1,
+                      dev.args = list(bg = "transparent"))
+library(xaringanthemer)
+library(ggplot2)
+library(ggthemes)
+library(patchwork)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(latex2exp)
+library(knitr)
+library(kableExtra)
+library(rethinking)
+```
+
+```{r xaringan-themer, include=FALSE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",# base 3
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3", # base 3
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"), text_font_size = "24px",
+  code_font_size="1rem",
+  extra_css = list(
+      ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+
+## clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+## ggplot theme
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+    (theme_foundation(base_size=base_size, base_family=base_family)
+        + theme(plot.title = element_text(face = "bold",
+                                          size = rel(1.2), hjust = 0.5),
+                text = element_text(colour="#586e75"), # solarized base01
+                panel.background = element_rect(fill = "transparent", colour = NA),
+                plot.background = element_rect(fill = "transparent", colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(1)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text = element_text(colour="#657b83"), # solarized base00
+                axis.line = element_line(colour="#586e75"), # solarized base01
+                axis.ticks = element_line(colour="#586e75"),
+                panel.grid.major = element_line(colour="#eee8d5"), # solarized base2
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(fill = "transparent", colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                ##legend.margin = unit(0, "cm"),
+                legend.spacing = unit(0.2, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#eee8d5",fill="#eee8d5"), # solarized base2
+                strip.text = element_text(face="bold", colour="#586e75")
+                ))
+    
+}
+```
+
+```{r galton-modelos-multiplos}
+## Leitura dos dados do site https://www.randomservices.org/random/data/Galton.html
+galton <- read.table("Galton.txt", header=TRUE)
+## Toma apenas o primeiro filho de cada família
+galton1 <- galton[!duplicated(galton$Family),]
+galton.m2 <- lm(Height ~ Mother + Gender, data = galton1)
+cf2 <- coef(galton.m2)
+galton.m3 <- lm(Height ~ Mother * Gender, data = galton1)
+cf3 <- coef(galton.m3)
+
+## Gráfico base: só os eixos, com a amplitude dos dados
+p.galton <-
+    ggplot(galton1, aes(Mother, Height)) +
+    geom_blank() +
+    scale_color_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    xlab("Altura da mãe (in)") +
+    ylab("Altura do(a) filho(a) (in)") +
+    theme_Publication(18)
+```
+
+## Recapitulando
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Uma expressão geral para modelos estatísticos**
+
+$$Y\, \sim \, f(Y \mid \Theta=g(X_i))$$
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Em palavras**
+
+$Y$ é uma variável aleatória, cujos valores têm probabilidades
+definidas pela função de densidade $f(Y)$, cujos parâmetros
+$\Theta$ são uma função qualquer $g$ de outras medidas
+(preditoras) $X_i$.
+]
+
+---
+
+## Preditores lineares
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Todos que podem ser escritos na forma**
+
+$$\theta \ = \ g(X_i) \ = \sum \beta_iX_i$$
+]
+
+sendo $\theta$ uma resposta (que normalmente usamos para expressar a
+dependência que um parâmetro da distribuição tem com outras medidas).
+
+---
+
+## Preditores lineares
+
+### Exemplos
+
+* $\beta_0+\beta_1X_1$ , sendo $X_0=1$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2X_1^2$ , pois podemos chamar $X_1^2$ de $X_2$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2\ln(X_1)$ , pois podemos chamar $\ln X_1$ de $X_2$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2$ , pois podemos chamar $X_1X_2$ de $X_3$
+
+--
+
+* $\ldots$
+
+---
+
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+.center[
+
+```{r galton-pai-mae, fig.asp = 0.5, out.width = "80%"}
+galton <- read.table("Galton.txt", header = TRUE)
+## Apenas meninos, e só o primeiro filho de cada família
+meninos <- galton[galton$Gender == "M", ]
+meninos <- meninos[!duplicated(meninos$Family), ]
+## Preditoras centradas na média (alturas em polegadas)
+dat <- with(meninos, data.frame(
+    H = Height,
+    P = Father - mean(Father),
+    M = Mother - mean(Mother)))
+mP <- lm(H ~ P, data = dat)
+mM <- lm(H ~ M, data = dat)
+cfP <- coef(mP)
+cfM <- coef(mM)
+## Rótulos dos painéis em plotmath, com os coeficientes
+rot <- c(
+    sprintf('"Pai:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfP[1], cfP[2]),
+    sprintf('"Mãe:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfM[1], cfM[2]))
+## Dados em formato longo: um painel para cada genitor
+dat.long <- rbind(
+    data.frame(genitor = rot[1], x = dat$P, H = dat$H),
+    data.frame(genitor = rot[2], x = dat$M, H = dat$H))
+dat.long$genitor <- factor(dat.long$genitor, levels = rot)
+retas <- data.frame(genitor = factor(rot, levels = rot),
+                    a = c(cfP[1], cfM[1]), b = c(cfP[2], cfM[2]))
+## Gráfico
+ggplot(dat.long, aes(x, H)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    geom_abline(data = retas, aes(intercept = a, slope = b), linewidth = 1) +
+    facet_wrap(~ genitor, labeller = label_parsed) +
+    labs(x = "Altura do genitor (centrada, in)", y = "Altura do filho (in)") +
+    theme_Publication(18)
+```
+<br>
+Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 1885)](https://www.randomservices.org/random/data/Galton.html)
+
+]
+
+---
+
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+```{r , echo=TRUE}
+## Valores iniciais
+inicio.a <- mean(dat$H)
+inicio.ls <- log(sd(dat$H))
+
+## Especifica o modelo
+m.pais.f <- alist( H ~ dnorm( mu, exp(lsigma) ),
+                   mu <- a + bP * P + bM * M)
+## Ajuste no rethinking
+m.pais <- quap( m.pais.f, data = dat,
+    start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
+## Coeficientes
+precis(m.pais)
+```
+
+---
+## Interpretação dos coeficientes de modelos lineares múltiplos
+
+.center[
+```{r coefs-pai-mae, fig.asp = 0.55, out.width = "75%"}
+## Regressão simples: só o pai
+m.pai <- quap(
+    alist(
+        H ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bP * P
+    ), data = dat,
+    start = list(a = inicio.a, bP = 0, lsigma = inicio.ls))
+
+## Regressão simples: só a mãe
+m.mae <- quap(
+    alist(
+        H ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bM * M
+    ), data = dat,
+    start = list(a = inicio.a, bM = 0, lsigma = inicio.ls))
+##
+## Gráfico dos coeficientes (média e intervalo de 95%)
+plot_coefs <- function(modelos, pars, rotulos) {
+    tab <- do.call(rbind, lapply(names(modelos), function(nome) {
+        p <- as.data.frame(precis(modelos[[nome]], prob=0.95))
+        p <- p[rownames(p) %in% pars, , drop = FALSE]
+        data.frame(par = rownames(p), modelo = nome, media = p$mean,
+                   inf = p[["2.5%"]], sup = p[["97.5%"]])
+    }))
+    tab$par <- factor(tab$par, levels = pars)
+    tab$modelo <- factor(tab$modelo, levels = rev(names(modelos)))
+    ggplot(tab, aes(x = media, y = modelo)) +
+        geom_pointrange(aes(xmin = inf, xmax = sup), linewidth = 1, size = 0.8) +
+        facet_wrap(~ par, ncol = 1, scales = "free_y",
+                   labeller = if (is.null(rotulos)) "label_value" else as_labeller(rotulos, label_parsed)) +
+        labs(x = "Valor estimado (intervalo de 95%)", y = NULL)
+}
+
+plot_coefs(list("só pai" = m.pai, "só mãe" = m.mae, "pai + mãe" = m.pais),
+           rotulos = c(bP = 'beta[1]~"pai"', bM = 'beta[1]~"mãe"'),
+           pars = c("bP", "bM")) +
+    theme_Publication(18)
+```
+]
+
+---
+
+## Coeficientes são efeitos parciais
+
+.center[
+```{r , out.width="75%"}
+## Dados em escala log, centrados na média
+dat2 <- with(trees, data.frame(
+    lV = log(Volume) - mean(log(Volume)),
+    lD = log(Girth)  - mean(log(Girth)),
+    lH = log(Height) - mean(log(Height))))
+
+mG <- lm(lV ~ lD, data = dat2)
+mH <- lm(lV ~ lH, data = dat2)
+## "+ 0" depois do round() evita que o intercepto apareça como "-0.00"
+cfG <- round(coef(mG), 2) + 0
+cfH <- round(coef(mH), 2) + 0
+## Rótulos dos painéis em plotmath, com os coeficientes
+rot2 <- c(
+    sprintf('"Diâmetro:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfG[1], cfG[2]),
+    sprintf('"Altura:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfH[1], cfH[2]))
+## Dados em formato longo: um painel para cada preditora
+dat2.long <- rbind(
+    data.frame(preditora = rot2[1], x = dat2$lD, lV = dat2$lV),
+    data.frame(preditora = rot2[2], x = dat2$lH, lV = dat2$lV))
+dat2.long$preditora <- factor(dat2.long$preditora, levels = rot2)
+retas2 <- data.frame(preditora = factor(rot2, levels = rot2),
+                     a = c(cfG[1], cfH[1]), b = c(cfG[2], cfH[2]))
+## Gráfico
+ggplot(dat2.long, aes(x, lV)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    geom_abline(data = retas2, aes(intercept = a, slope = b), linewidth = 1) +
+    facet_wrap(~ preditora, labeller = label_parsed, scales = "free_x") +
+    labs(x = "ln da preditora (centrado)", y = "ln do volume (centrado)") +
+    theme_Publication(18)+
+    theme(panel.spacing = unit(2.5, "lines"))
+```
+<br>
+ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua altura e DAP [(Meyer, 1953)](https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/trees.html)
+]
+
+---
+## Coeficientes são efeitos parciais
+
+```{r , echo=TRUE}
+## Valores iniciais
+inicio.a2 <- mean(dat2$lV)
+inicio.ls2 <- log(sd(dat2$lV))
+
+## Especifica o modelo
+m.arv.f <- alist( lV ~ dnorm( mu, exp(lsigma) ),
+                  mu <- a + bG * lD + bH * lH)
+## Ajuste no rethinking
+m.arv <- quap( m.arv.f, data = dat2,
+    start = list(a = inicio.a2, bG = 0, bH = 0, lsigma = inicio.ls2))
+## Coeficientes
+precis(m.arv)
+```
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+```{r coefs-diametro-altura, fig.asp = 0.55, out.width = "75%"}
+
+## Regressão simples: só o diâmetro
+m.diam <- quap(
+    alist(
+        lV ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bG * lD
+    ), data = dat2,
+    start = list(a = inicio.a2, bG = 0, lsigma = inicio.ls2))
+
+## Regressão simples: só a altura
+m.alt <- quap(
+    alist(
+        lV ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bH * lH
+    ), data = dat2,
+    start = list(a = inicio.a2, bH = 0, lsigma = inicio.ls2))
+
+## Gráfico dos coeficientes (média e intervalo de 95%)
+plot_coefs(list("só diâmetro" = m.diam, "só altura" = m.alt,
+                "diâmetro + altura" = m.arv),
+           rotulos = c(bG = 'beta[1]~"diâmetro"', bH = 'beta[1]~"altura"'),
+           pars = c("bG", "bH")) +
+    theme_Publication(18)
+```
+]
+
+---
+
+## Coeficientes são efeitos parciais
+.center[
+```{r , echo=FALSE, eval=TRUE, out.width="75%"}
+ggplot(dat2, aes(lD, lH)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    labs(x = "ln DAP (centrado)", y = "ln altura (centrado)") +
+    theme_Publication(18)
+```
+]
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+```{r av-altura, fig.width = 10, fig.asp = 0.45, out.width = "90%"}
+
+## Parte da altura não explicada pelo diâmetro
+m.HG <- lm(lH ~ lD, data = dat2)
+dat2$fit.H <- fitted(m.HG)
+dat2$res.H <- resid(m.HG)
+## Parte do volume não explicada pelo diâmetro
+dat2$res.V <- resid(lm(lV ~ lD, data = dat2))
+## Coeficiente da altura na regressão múltipla
+bH <- coef(m.arv)["bH"]
+## Cor pelo resíduo da altura, para ligar os dois painéis (azul e vermelho do solarized)
+cores <- scale_color_gradient2(low = "#268bd2", mid = "#93a1a1", high = "#dc322f",
+                               midpoint = 0, guide = "none")
+
+p.A <- ggplot(dat2, aes(lD, lH)) +
+    geom_abline(intercept = coef(m.HG)[1], slope = coef(m.HG)[2],
+                linewidth = 1, colour = "#586e75") +
+    geom_segment(aes(xend = lD, yend = fit.H, colour = res.H), linewidth = 0.8) +
+    geom_point(aes(colour = res.H), size = 2.5) +
+    cores +
+    labs(title = "1. Resíduos da altura",
+         x = "ln DAP (centrado)", y = "ln altura (centrado)") +
+    theme_Publication(18)
+
+p.B <- ggplot(dat2, aes(res.H, res.V)) +
+    geom_abline(intercept = 0, slope = bH, linewidth = 1, colour = "#586e75") +
+    geom_point(aes(colour = res.H), size = 2.5) +
+    cores +
+    annotate("text", x = -Inf, y = Inf, hjust = -0.15, vjust = 1.5,
+             size = 6, colour = "#586e75", parse = TRUE,
+             label = sprintf('beta[1]~"altura"==%.2f', bH)) +
+    labs(title = "2. Regressão nos resíduos",
+         x = "resíduo da altura", y = "resíduo do volume") +
+    theme_Publication(18)
+
+p.A + p.B
+```
+]
+
+**1:** o que sobra da altura depois de descontar o diâmetro. **2:** o volume (também descontado o diâmetro) em função desse resto. A inclinação é o coeficiente da altura na regressão múltipla.
+
+---
+
+## Variáveis categóricas: contrastes
+
+
+---
+## Modelos lineares múltiplos aditivos
+
+* O preditor é a soma de variáveis independentes isoladas, cada uma multiplicada por seu coeficiente.
+
+--
+
+* A soma **não** inclui variáveis independentes que são produtos de outras presentes no modelo:
+
+$$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_iX_i$$
+
+--
+
+* Se uma variável independente $X_i$ aumenta em uma unidade, o preditor aumenta $\beta_i$ , não importando o valor das outras variáveis.
+
+--
+
+* Ou seja, os efeitos das preditoras são **aditivos**. Não são afetados pelo valor das demais variáveis.
+
+---
+
+## Modelos lineares múltiplos com interações
+
+* O preditor inclui variáveis que são produtos de pelo menos outras duas presentes no modelo, por exemplo:
+
+$$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$
+
+--
+
+
+* Se a variável indenpendente  $X_1$ aumenta em uma unidade, o preditor aumenta em $\beta_1 + \beta_3 X_3$.
+
+--
+
+* Ou seja, o efeito de uma preditora depende do valor de outra(s). Há uma **interação** estatística.
+
+---
+
+## Exemplo de preditor linear aditivo
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* $X_1$: altura da mãe, contínua
+* $X_2$: gênero binário atribuído (Masculino = 0, Feminino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: $\beta_0 + \beta_1X_1 + \beta_2X_2$
+
+--
+
+* **masculino**: $\beta_0 + \beta_1X_1 + \beta_2\times 0 \ = \ \beta_0 + \beta_1X_1$
+
+--
+
+* **feminino**: $\beta_0 + \beta_1X_1 + \beta_2\times 1 \ = \ [\beta_0 + \beta_2] + \beta_1X_1$
+
+---
+
+## Gráfico do exemplo aditivo
+
+.center[
+```{r plot-aditivo, fig.width = 5, fig.asp = 1, out.width = "45%"}
+retas.ad <- data.frame(
+    sexo = c("Meninas", "Meninos"),
+    intercepto = c(cf2[1], cf2[1] + cf2[3]),
+    inclinacao = c(cf2[2], cf2[2]))
+
+p.galton +
+    geom_abline(data = retas.ad,
+                aes(intercept = intercepto, slope = inclinacao, color = sexo),
+                linewidth = 1.25)
+```
+]
+
+---
+
+## Exemplo de preditor linear com uma interação
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* $X_1$: altura da mãe, contínua
+* $X_2$: gênero binário atribuído (Masculino = 0, Feminino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: $\beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2$
+
+--
+
+* **masculino**: $\beta_0 + \beta_1X_1 + \beta_2\times 0 + \beta_3X_1\times 0 \ = \ \beta_0 + \beta_1X_1$
+
+--
+
+* **feminino**: $\beta_0 + \beta_1X_1 + \beta_2\times 1 + \beta_3X_1\times 1 \ = \ [\beta_0 + \beta_2] + [\beta_1 + \beta_3]X_1$
+
+---
+
+## Gráfico do exemplo com interação
+
+.center[
+```{r plot-teorico-interacao, fig.width = 5, fig.asp = 1, out.width = "45%"}
+## Retas hipotéticas, para ilustrar a interação
+retas.int <- data.frame(
+    sexo = c("Meninas", "Meninos"),
+    intercepto = c(cf3[1] + 5, cf3[1] - 2),
+    inclinacao = c(cf3[2] - 0.1, cf3[2] + 0.1))
+
+p.galton +
+    geom_abline(data = retas.int,
+                aes(intercept = intercepto, slope = inclinacao, color = sexo),
+                linewidth = 1.25)
+```
+]
+
+---
+
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma $\Theta \ = \ \sum \beta_iX_i$.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* $\beta_0X_1^{\beta_1}$
+
+* $\beta_0e^{\beta_1 X_1}$
+
+* $\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}$
+
+* E muitas, muitas mais.
+]

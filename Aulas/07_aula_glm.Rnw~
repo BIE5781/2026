@@ -1,0 +1,1151 @@
+%\documentclass[handout]{beamer} %uncomment for handouts
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[font=scriptsize, justification=raggedleft]{caption} % legendas das figuras pequenas e a direita
+\usepackage{graphicx}
+%% Uncomment for handouts
+%\usepackage{pgf}
+%\usepackage{pgfpages}
+%\pgfpagesuselayout{2 on 1}[letterpaper,border shrink=5mm]
+
+<<include=FALSE>>=
+library(knitr)
+opts_chunk$set(
+eval=TRUE, tidy=FALSE, echo=TRUE, fig.path='figuras/fig', 
+prompt=TRUE, comment=NA)
+@
+
+
+\mode<presentation>
+%\mode<handout>
+
+\usetheme{Luebeck}
+%\usetheme{default}    			  % for HANDOUT UNcomment this line
+\usefonttheme[onlymath]{serif}
+\usecolortheme[overlystylish]{albatross}  % for HANDOUT COMMENT this line
+
+%----------------------------------------------------------------------
+\def\insertauthorindicator{Quem?}
+\def\insertinstituteindicator{Onde?}
+\def\insertdateindicator{Quando?}
+%----------------------------------------------------------------------
+
+
+
+%===========================================================================
+\newcommand{\enfase}[1]{\emph{\textbf{#1}}}
+\newcommand{\veros}[1]{{\cal L}\{#1\}}
+\newcommand{\logveros}[1]{{\mathbf L}\{#1\}}
+\newcommand{\logverosE}[1]{{\mathbf L}_E\{#1\}}
+\newcommand{\logverosP}[1]{{\mathbf L}_P\{#1\}}
+\newcommand{\E}[1]{{\mathbf E}[#1]}
+\newcommand{\Var}[1]{{\mathbf V}[#1]}
+\newcommand{\R}{{\sf R}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\vect}[1]{{\mathbf#1}}
+%\newcommand{\choose}[2]{\left(\begin{array}{c}#1\\#2\end{array}\right)}
+
+\newcommand{\bitem}{\item[]}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+%\setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+%Setings do sweave
+ 
+<<settings, echo=F, include = FALSE>>=
+knit_hooks$set(fig=function()par(lwd=3, cex.lab=1.5,
+    cex.axis=1.5, las=1, mar=c(5,5.5,4,2), mgp=c(4,1,0)))
+library(xtable)
+library(bbmle)
+library(MASS)
+library(sads)
+@ %def 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Páginas Introdutórias
+%
+\title{{Modelos Não-Gaussianos com preditoras}}
+\author{PI, João Batista, Diogo, Melina}
+\institute{BIE5781 - Pós-Graduação em Ecologia USP}
+\date{Novembro de 2024}
+
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introdução}
+
+\subsection{Objetivos}
+\begin{frame}{Objetivo da Aula}
+  Os objetivos dessa aula são:
+  \begin{enumerate}
+  \item<2-> Generalizar o conceito de modelos lineares  
+  \item<3-> Aplicar esta generalização para definir modelos com distribuições não Gaussianas;
+  \item<4-> Exemplificar essas generalização com modelos Poisson e binomial;
+  \item<5-> Mostrar os comandos básicos no \R \ para ajustar e avaliar esses modelos;
+  \item<6-> Mostrar que alguns deles pertencem à classe dos modelos lineares generalizados (glms);
+  \item<7-> Apresentar ajuste de glms no \R.
+  \end{enumerate}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\subsection{Motivação}
+
+\begin{frame}[<+->]{Onde estamos}
+  Até agora vimos: \\
+  \begin{itemize}
+  \item<2-> Modelos de várias distribuições com parâmetros constantes:
+    \begin{eqnarray*}
+      Y & \sim & N(\mu=a_0, \, \sigma=b_0)  \\
+      Y & \sim & \textrm{Pois}(\lambda=a_0)  \\ 
+       \cdots  &  & 
+    \end{eqnarray*}
+  \item<3-> Modelos Gaussianos lineares:
+    \begin{eqnarray*}
+      Y &\sim & N(\mu=a_0+a_1X_1, \, \sigma=b_0)  \\ 
+      Y & \sim & N \left( \mu=a_0+a_1X_1+a_2X_2, \, \sigma=e^{b_0+b_1X_1} \right)  \\ 
+      \cdots &  & \
+    \end{eqnarray*}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\begin{frame}[<+->]{Para onde vamos}
+  Hoje veremos modelos de distribuições não Gaussianas preditoras, como:
+  \begin{itemize}
+  \item Modelos Binomiais:
+    \begin{displaymath}
+      Y \, \sim \, \textrm{Bin}(N=n, \, p= g(X_i))
+    \end{displaymath}
+  \item Modelos Poisson:
+    \begin{displaymath}
+      Y \, \sim \, \textrm{Pois}(\lambda= g(X_i))
+    \end{displaymath}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[<+->]{Ou seja}
+  \begin{block}{Uma expressão geral para modelos estatísticos}
+    \begin{displaymath}
+      Y\, \sim \, f(Y \mid \Theta=g(X_i))
+    \end{displaymath}
+  \end{block}
+  \begin{block}{Em palavras}
+    $Y$ é uma variável aleatória, cujos valores tem probabilidades
+    definidas pela função de densidade $f(Y)$, cujos parâmetros
+    $\Theta$ são uma função qualquer $g$ de outras medidas
+    (preditoras) $X_i$.
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{O preditor linear}
+
+\subsection{Definição}
+
+\begin{frame}{Preditores lineares}
+  
+  \begin{block}{Todos que podem ser escritos na forma}
+    $$\Theta \ = \ g(X_i) \ = \sum
+    \alpha_iX_i$$  
+  \end{block}
+
+    sendo $\Theta$ uma resposta (que normalmente usamos para expressar a
+    dependência de um parâmetro da distribuição com outras medidas).
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Preditores lineares}
+\begin{block}{exemplos}
+  \begin{itemize}
+    \setlength\itemsep{1em}
+  \item<1-5> $\alpha_0+\alpha_1X_1$ , sendo $X_0=1$
+  \item<2-5> $\alpha_0+\alpha_1X_1+\alpha_2X_1^2$ , pois podemos chamar $X_1^2$ de  $X_2$
+  \item<3-5> $\alpha_0+\alpha_1X_1+\alpha_2\ln(X_1)$ , pois podemos chamar $\ln X_1$ de  $X_2$
+  \item<4-6> $\alpha_0+\alpha_1X_1+\alpha_2X_2+\alpha_3X_1X_2$ , pois podemos chamar $X_1X_2$ de  $X_3$  
+  \item<5-5> \dots  
+  \end{itemize}
+\end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\subsection{Aditividade}
+
+\begin{frame}[<+->]{Modelos lineares múltiplos aditivos}
+  \begin{itemize}
+  \item O preditor é a soma de variáveis independentes isoladas, cada uma multiplicada por seu coeficiente
+  \item A soma \textbf{não} inclui variáveis independentes que são produtos de outras presentes no modelo:
+    \begin{equation*}
+  \alpha_0+\alpha_1X_1+\alpha_2X_2 + \cdots + \alpha_iX_i
+    \end{equation*}
+  \item Se a uma variável independente $X_i$ dobra, seu efeito no preditor vai aumentar em $2 \times \alpha_i$, não importando o valor das outras variáveis.  
+  \item Ou seja, os  efeitos das preditoras são \textbf{aditivos}. Não são afetados pelo valor das demais variáveis. 
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[<+->]{Modelos lineares múltiplos com interações}
+  \begin{itemize}
+  \item O preditor inclui variáveis que são produtos de pelo menos outras duas presentes no modelo, por exemplo
+    \begin{displaymath}
+      \alpha_0+\alpha_1X_1+\alpha_2X_2 + \alpha_3X_1X_2
+    \end{displaymath}
+  \item Se a variável independente $X_1$ dobra, seu efeito no preditor vai aumentar em
+    \begin{displaymath}
+    2 \times \alpha_1 + 2 \times \alpha_3X_2.
+  \end{displaymath}
+  \item Ou seja, o  efeito de uma preditora depende do valor de outra(s). Há uma \textbf{interação} estatística.
+  \end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Exemplos}
+
+<<galton-modelos-multiplos, include = FALSE>>=
+## Leitura dos dados do site https://www.randomservices.org/random/data/Galton.html
+galton <- read.table("../06_modelos-gaussianos/Galton.txt", header=TRUE)
+## Toma apenas o primeiro filho de cada família
+galton1 <- galton[!duplicated(galton$Family),]
+galton.m2 <- lm(Height ~ Mother + Gender, data = galton1)
+cf2 <- coef(galton.m2)
+galton.m3 <- lm(Height ~ Mother * Gender, data = galton1)
+cf3 <- coef(galton.m3)
+@
+
+<<galton-plot-aditivo, include=FALSE>>=
+Y <- jitter(galton1$Height)
+X <- jitter(galton1$Mother)
+index <- galton1$Gender=="M"
+plot(X, Y, type = "n",
+     xlab = "Altura da mãe (in)", ylab = "Altura do(a) filho(a) (in)")
+points(X[index], Y[index], col="deeppink", pch =19, cex = 0.75)
+points(X[!index], Y[!index], col="blue", pch=19, cex=0.75)
+legend("topleft", c("Meninas", "Meninos"), pch =19, col = c("blue", "deeppink"), bty = "n")
+abline(cf2[1] + cf2[3], cf2[2], col = "deeppink")
+abline(cf2[1], cf2[2], col = "blue")
+@
+
+<<galton-plot-inter, include=FALSE>>=
+plot(X, Y, type = "n",
+     xlab = "Altura da mãe (in)", ylab = "Altura do(a) filho(a) (in)")
+points(X[index], Y[index], col="deeppink", pch =19, cex = 0.75)
+points(X[!index], Y[!index], col="blue", pch=19, cex=0.75)
+legend("topleft", c("Meninas", "Meninos"), pch =19, col = c("blue", "deeppink"), bty = "n")
+abline(cf3[1] + cf3[3], cf3[2]+cf3[4], col = "deeppink")
+abline(cf3[1], cf3[2], col = "blue")
+@ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[<+->]{Exemplo de preditor linear aditivo}
+  \begin{block}{Duas preditoras:}
+    \begin{description}
+    \item[$X_1$]: altura da mãe, contínua
+    \item[$X_2$] : Gênero binário atribuído (Masculino = 0, Feminino = 1)   
+    \end{description}
+  \end{block}
+  
+  \begin{block}{Preditor:}
+    \begin{description}
+      \setlength\itemsep{1em}
+    \item[expressão]: $\alpha_0 + \alpha_1X_1 + \alpha_2X_2$
+    \item[masculino]: $\alpha_0 + \alpha_1X_1 + \alpha_2\times 0 \ = \ \alpha_0 + \alpha_1X_1$
+    \item[feminino]: $\alpha_0 + \alpha_1X_1 + \alpha_2\times 1 \ = \ [\alpha_0 + \alpha_2] + \alpha_1X_1$
+    \end{description}   
+  \end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Gráfico do exemplo aditivo}
+\begin{center}
+  <<plot_aditivo, figure=TRUE, echo=FALSE, out.width="0.6\\textwidth">>=
+      plot(X, Y, type = "n",
+           xlab = "Altura da mãe (in)", ylab = "Altura do(a) filho(a) (in)")
+      legend("topleft", c("Meninas", "Meninos"), lty=1, col = c("blue", "deeppink"), bty = "n", cex=1.25)
+      abline(cf2[1] + cf2[3], cf2[2] , col = "deeppink")
+      abline(cf2[1], cf2[2], col = "blue")
+      @       
+ \end{center}  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Exemplo de preditor linear com uma interação}
+  \begin{block}{Duas preditoras:}
+    \begin{description}
+    \item[$X_1$]: altura da mãe, contínua
+    \item[$X_2$] : Gênero binário atribuído (Masculino = 0, Feminino = 1)
+    \end{description}
+  \end{block}
+  
+  \begin{block}{Preditor:}<2->
+    \begin{description}
+      \setlength\itemsep{1em}
+    \item[expressão]<3->: $\alpha_0 + \alpha_1X_1 + \alpha_2X_2 + \alpha_3X_1X_2$ 
+    \item[masculino]<4->: $\alpha_0 + \alpha_1X_1 + \alpha_2\times 0 \ + \alpha_3X_1\times 0 = \ \alpha_0 + \alpha_1X_1$ 
+    \item[feminino]<5->: $\alpha_0 + \alpha_1X_1 + \alpha_2\times 1  + \alpha_3X_1\times1  = \ [\alpha_0 + \alpha_2] + [\alpha_1 + \alpha_3]X_1$
+    \end{description}   
+  \end{block}
+\end{frame}
+
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Gráfico do exemplo com interação}
+  \begin{center}
+    <<plot_teorico_interacao, figure=TRUE, echo=FALSE, out.width="0.6\\textwidth">>=
+    plot(X, Y, type = "n",
+         xlab = "Altura da mãe (in)", ylab = "Altura do(a) filho(a) (in)")
+    legend("topleft", c("Meninas", "Meninos"), lty=1, col = c("blue", "deeppink"), bty = "n", cex=1.25)
+    abline(cf3[1]-2 , cf3[2]+ 0.1 , col = "deeppink", lwd=2)
+    abline(cf3[1]+5, cf3[2]-0.1, col = "blue", lwd = 2)
+    @
+  \end{center}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Não-lineares}
+
+\begin{frame}{E o que são preditores não lineares?}
+
+  Todos que não podem ser reduzidos à forma $\Theta \ = \ \sum \alpha_iX_i$.
+
+  \begin{block}{exemplos}
+    \begin{itemize}
+      
+    \item $\alpha_0X_1^{\alpha_1}$
+      
+    \item $\alpha_0e^{\alpha_1 X_1}$
+      
+    \item $\frac{\alpha_1 X_1}{1+\alpha_1\alpha_2X_1}$
+      
+    \item E  muitas, muitas mais.
+    \end{itemize}
+  \end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Modelos binomiais}
+\label{sec:regressao-binomial}
+
+\subsection{Introdução}
+
+\begin{frame}[<+->]{Modelos Binomiais}
+  \begin{itemize}
+  \item Descrevem número de ocorrência de uma variável binária em um certo número de tentativas,  
+    em função de variáveis preditoras contínuas ou discretas.
+  \item Úteis principalmente quando temos:
+    \begin{itemize}
+    \item Respostas binárias (regressão logística!)
+    \item Proporções
+    \end{itemize} 
+    
+  \item Exemplos de respostas binomiais:
+    \begin{itemize}
+    \item Presença de alguma espécie em manchas, fragmentos, sítios;
+    \item Ocorrência de morte, doença ou qualquer outro evento por indivíduo
+    \item Proporção de frutos parasitados
+    \item Experimentos de dose-resposta  
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\setkeys{Gin}{height=0.6\textheight, width=\textwidth}
+<<dados-seeds, echo=F>>=
+set.seed(42)
+dist <- rep(c(0,0.5,1,2,4,10,20,50),each=3)
+p.esp <- exp(-3+0.05*dist)/(1+exp(-3+0.05*dist))
+nobs <- rbinom(24,size=100,prob=p.esp)
+pred.seed <- data.frame(distancia=dist, n.sobrev=nobs)
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Exemplo}
+\begin{frame}[containsverbatim]{Modelos binomiais: um exemplo}
+
+%\begin{columns}
+%\begin{column}{0.5\textwidth}
+  \begin{itemize}
+    \item Sobrevivência de sementes colocadas as diferentes distâncias da árvore-mãe
+    \item 8 distâncias, 3 réplicas de 100 sementes
+    \item Resposta: número de sobreviventes após 60 dias: \\
+<<dados-seeds-summary, tidy=FALSE>>=
+head(pred.seed)
+@
+\end{itemize}
+\end{frame}
+%\end{column}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Modelos binomiais: um exemplo}
+%\begin{column}{0.5\textwidth}
+\begin{center}
+<<grafico-seeds, echo=FALSE, fig=TRUE, out.width="0.6\\textwidth">>=
+plot(I(n.sobrev/100)~dist, data=pred.seed, 
+     xlab="Distância da árvore-mãe", ylab="Proporção sobrevivente")
+@     
+\end{center}
+%\end{column}
+%\end{columns}
+\end{frame}
+%\setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+%=========================================================================
+\begin{frame}{Modelo Binomial: Função Logística}
+  \begin{itemize}
+  \item Nosso modelo é:
+    \begin{displaymath}
+      Y \, \sim \, Bin(N=100, \, p=g(\textrm{distância}))
+    \end{displaymath}\\
+  \item <2->Que função usar para o efeito da distância sobre $p$?
+  \item<3-> Uma função sigmóide limitada entre zero e um, como:
+    \begin{displaymath}
+      p = \frac{\textrm{e}^{a_0+a_1\textrm{dist}}}
+      {1 + \textrm{e}^{a_0+a_1\textrm{dist}}}
+    \end{displaymath}\\
+  \item<4-> o que implica em
+    \begin{displaymath}
+      \ln\left(\frac{p}{1-p}\right)\, = \, a_0+a_1\textrm{dist}
+    \end{displaymath}   
+  \end{itemize}
+\end{frame}
+
+
+%=========================================================================
+\begin{frame}{Modelo Binomial: Funções logística e \emph{logito}}
+  \centerline{ \begin{tabular}{cc}
+                 $p = \frac{\textrm{e}^{a+bX}}
+                 {1 + \textrm{e}^{a+bX}}$ & $Y=\ln\left(\frac{p}{1-p}\right)$ \\
+                 \includegraphics[width=0.4\textwidth]{figuras/logistica-1.pdf} & \includegraphics[width=0.4\textwidth]{figuras/logit-p-1.pdf} \\
+               \end{tabular}}
+           \end{frame}
+
+%=========================================================================
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+  
+    \begin{block}{Função auxiliar: logística}    
+      <<logistica-seed>>=
+      logistica <- function(X, a0, a1){
+          exp(a0 + a1*X) / (1 + exp(a0 + a1*X))
+      }
+      @ %def    
+    \end{block}
+    
+\end{frame}
+
+%=========================================================================
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+  
+
+  \begin{block}{Função de log-verossimilhança negativa}
+    <<log-lik-seed>>=
+    seed.LL1 <- function(a0, a1){
+        eta  <- logistica(X=pred.seed$distancia, 
+                                  a0=a0, a1=a1)
+        -sum(dbinom(pred.seed$n.sobrev, size = 100, 
+                    p = eta, log=T))
+    }
+    @ %def 
+  \end{block}
+  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+  
+  \begin{block}{Valores iniciais: regressão linear dos logitos}
+    <<binomial-starting-values>>=
+    p1 <- pred.seed$n.sobrev/100
+    logito1 <- log( p1 / (1-p1) )
+    lm1 <- lm(logito1~pred.seed$distancia)
+    (cf1 <- coef(lm1))
+    @
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+
+  \begin{block}{Ajuste numérico}
+    <<Ajuste-numérico>>=
+    seed.m1 <- mle2(seed.LL1, 
+                    start=list(a0=cf1[1], a1=cf1[2]) )
+    @ 
+  \end{block}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<seeds-coefs, include=FALSE>>=
+(cf2 <- coef(seed.m1))
+@ 
+
+<<seeds-predicted-plot-code, echo=FALSE, include=FALSE>>=
+plot(I(n.sobrev/100)~dist, data=pred.seed, 
+     xlab="Distância da árvore-mãe", 
+     ylab="Proporção sobrevivente")
+curve(logistica(x, a0 = cf2[1], a1 = cf2[2]), 
+      add=T, col="blue")
+@
+
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+  
+\begin{block}{Coeficientes}
+<<seeds-coefs, echo=TRUE>>=
+@ 
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}[containsverbatim]{Modelo Binomial: Ajuste no \R}
+  \begin{block}{Código do Gráfico observado e estimado}
+<<seeds-predicted-plot-code, eval=FALSE>>=
+@ 
+\end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}{Modelo Binomial: Gráfico previsto}
+  \begin{center}
+<<seeds-predicted-plot-code, echo=FALSE, fig=TRUE, out.width="0.6\\textwidth">>=
+@
+\end{center}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%\setkeys{Gin}{height=0.7\textheight, width=\textwidth}
+\begin{frame}{Modelo Binomial: Perfis de log-verossimilhança}
+  \begin{center}
+<<seeds-profile,echo=F, fig=T, fig.width=12, fig.height=6>>=
+par(mfrow = c(1,2))
+plotprofmle( profile(seed.m1) )
+par( mfrow=c(1,1) )
+@     
+  \end{center}
+\end{frame}
+%\setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Binomial: incerteza das estimativas}
+
+\begin{block}{Intervalo de plausibilidade}
+
+<<seeds-intervals>>=
+likelregions( profile(seed.m1) )
+@     
+
+\end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Binomial: incerteza das estimativas}
+
+
+\begin{block}{Intervalo de confiança}
+<<seeds-ci>>=
+confint( seed.m1 )
+@     
+\end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo binomial: seleção de modelos}
+  
+  \begin{block}{Modelo sem efeitos: log-verossimilhança negativa}
+    <<log-lik-seed-m0>>=
+    seed.LL0 <- function(a0){
+        eta <- exp(a0)/(1+exp(a0))
+        -sum(dbinom(pred.seed$n.sobrev,
+                    size=100, p=eta, log=T)) }
+    @ %def 
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}[containsverbatim]{Modelo binomial: seleção de modelos}
+  
+  \begin{block}{Modelo sem efeitos: uma LL mais simples}
+    <<log-lik-seed-simple>>=
+    seed.LL0 <- function(p){
+        -sum(dbinom(pred.seed$n.sobrev,size=100,
+                    prob=p, log=T)) }
+    @ %def 
+  \end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo binomial: seleção de modelos}
+
+  \begin{block}{Ajuste do modelo sem efeito da distância}
+    <<seeds-model0>>=
+    seed.m0 <- mle2(seed.LL0, 
+                    start=list(
+                        p=sum(pred.seed$n.sobrev)/2400)
+                    )
+    @ 
+  \end{block}
+  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[containsverbatim]{Modelo binomial: seleção de modelos}
+  \begin{block}{Comparação com AIC (pacote bbmle)}
+    <<seeds-aic>>=
+    AICtab(seed.m0, seed.m1, base=T)
+    @   
+  \end{block}
+  % }
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}{Modelos Binomiais: Previstos pelos dois modelos}
+  \begin{center}
+    <<compara-modelos,echo=F, fig=T, out.width="0.6\\textwidth">>=
+    plot(I(n.sobrev/100)~dist, data=pred.seed, 
+         xlab="Distância da árvore-mãe", 
+         ylab="Proporção sobrevivente")
+    curve(logistica(x, a0 = cf2[1], a1 = cf2[2]), add=T, col="blue")
+    abline(h=coef(seed.m0), lty=2,col="red")
+    @     
+  \end{center}
+\end{frame}
+% \setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+
+% incluir outras funcoes de ligacao
+
+\section{Modelos Poisson}
+\label{sec:regressao-poisson}
+<<aves-data, echo=F>>=
+set.seed(42)
+area <- round(runif(20,50,800))
+ncap <- rpois(20,lambda=exp(-5+1*log(area)))
+aves <- data.frame(area=area,larea=log(area),ncap=ncap)
+@ 
+\subsection{Introdução}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}{Modelos Poisson}
+  \begin{itemize}
+  \item<2-> Descrevem contagens de eventos independentes em função de variáveis preditoras contínuas ou discretas.
+  \item<3-> Úteis principalmente quando temos:
+    \begin{itemize}
+    \item contagens com médias baixas
+    \item contagens com variância igual à média
+    \end{itemize}
+  \item<4-> Exemplos de respostas Poisson:
+    \begin{itemize}
+    \item<5-> Número de capturas, avistamentos, registros por unidade de tempo ou espaço
+    \item<6-> Taxas de ocorrência de eventos (\emph{e.g.} fotos/hora, células/área)
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+% \begin{frame}[<+->]{Modelos Poisson}
+%   \begin{itemize}
+%   \item Forma geral:
+%     \begin{displaymath}
+%       Y \, \sim \, P \left( \lambda=e^{a_0+a_1X_1+\ldots+a_iX_i} \right)
+%     \end{displaymath}
+%   \item Portanto a função de ligação mais usada é a logarítmica:
+%     \begin{displaymath}
+%       \ln(E[Y])\, = \, \ln(\lambda) \, = \, a_0+a_1X_1+\ldots+a_iX_i
+%     \end{displaymath}
+%   \item Isso dá propriedades boas ao modelo, incluindo evitar que $\lambda$ assuma valores negativos na otimização.
+%   \end{itemize}
+% \end{frame}
+
+\subsection{Exemplo}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelos Poisson: um exemplo}
+  
+  \begin{itemize}
+  \item Capturas de \emph{Pyriglena leucoptera} em redes de neblina 
+  \item 20 fragmentos de diferentes tamanhos, 500 horas/rede
+  \item Resposta: número de capturas
+  \item Preditora: ln da área do fragmento em ha (a partir de agora simplesmente ``área''): \\  
+    <<aves-data-summary, tidy=FALSE>>=
+    head(aves)
+    @
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Modelo Poisson: Gráfico}
+  \begin{center}
+    <<scatterplot-poisson, fig=T, echo=F, out.width="0.6\\textwidth">>=
+    plot(ncap~larea, data=aves,
+         xlab="Ln área do fragmento (ha)",
+         ylab="N Capturas")
+    @
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}[<+->]{Modelos Poisson}
+  \begin{itemize}
+  \item Nosso modelo é:
+    \begin{displaymath}
+      Y \, \sim \, \textrm{Pois} ( \lambda = g(\textrm{área}) )
+    \end{displaymath}
+  \item Que função usar para o efeito do log da área sobre $\lambda$?
+  \item Uma função monotônica positiva como a exponencial: 
+    \begin{displaymath}
+      \lambda\, = \, e^{a_0+a_1 \textrm{área}}
+    \end{displaymath}
+  \item O que implica em
+    \begin{displaymath}
+    \ln(\lambda) \, = \, a_0+a_1\textrm{área}
+  \end{displaymath}
+  \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[containsverbatim]{Modelo Poisson: Ajuste no \R}
+  \begin{block}{Função de log-verossimilhança negativa}
+    
+<<log-lik-aves>>=
+aves.LL1 <- function(a0, a1) {
+  eta <-  exp( a0 + a1*aves$larea )
+  -sum( dpois(aves$ncap, lambda = eta, log = T) )
+}
+@ %def 
+\end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Poisson: Ajuste no \R}
+  \begin{block}{Valores iniciais: regressão linear dos logarítmos}
+
+    <<poisson-starting-values>>=
+    pm1 <- lm(log(ncap+0.1)~aves$larea)
+    ( cf1 <- coef(pm1) )
+    @    
+  \end{block}
+  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Poisson: Ajuste no \R}
+  \begin{block}{Ajuste numérico}
+    <<aves-ajuste-numérico>>=
+    aves.m1 <- mle2(aves.LL1,
+                    start= list(a0 = cf1[1],
+                                a1 = cf1[2]) )
+    @ 
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Poisson: Ajuste no \R}
+
+  \begin{block}{Coeficientes}
+    <<aves-coefs>>=
+    ( cf3 <- coef(aves.m1) )
+    @ 
+  \end{block}
+  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<aves-predicted-plot-code, include=FALSE, echo=FALSE>>=
+f3 <- function(x) exp(cf3[1]+cf3[2]*x)
+
+plot(ncap ~ larea, data = aves,
+     xlab = "Ln área do fragmento (ha)",
+     ylab = "N de Capturas")
+curve(f3(x), add = T, col = "blue")
+@
+
+\begin{frame}[containsverbatim]{Modelo Poisson: Ajuste no \R}
+
+  \begin{block}{Código do Gráfico observado e estimado}
+
+<<aves-predicted-plot-code, eval=FALSE>>=
+@ 
+
+\end{block}
+
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Modelo Poisson: Gráfico observado e previsto}
+\begin{center}
+  
+<<aves-predicted-plot-code, fig=T, echo=FALSE, out.width="0.6\\textwidth">>=
+@
+
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%\setkeys{Gin}{height=0.7\textheight, width=\textwidth}
+\begin{frame}{Modelo Poisson: Perfis de log-verossimilhança}
+  \begin{center}
+    <<aves-profile,echo=F, fig=T, fig.width=12, fig.height=6>>=
+    par(mfrow=c(1,2))
+    plotprofmle(profile(aves.m1))
+    par(mfrow=c(1,1))
+    @     
+  \end{center}
+\end{frame}
+% \setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}[containsverbatim]{Poisson: incerteza das estimativas}
+  
+  \begin{block}{Intervalo de plausibilidade}
+    <<aves-intervals>>=
+    likelregions( profile(aves.m1) )
+    @     
+  \end{block}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[containsverbatim]{Poisson: incerteza das estimativas}
+
+\begin{block}{Intervalo de confiança}
+  <<aves-ci>>=
+  confint( aves.m1 )
+  @     
+\end{block}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Poisson: seleção de modelos}
+  
+  \begin{block}{Modelo sem efeitos: log-verossimilhança negativa}
+    <<log-lik-aves-m0>>=
+    aves.LL0 <- function(a0){
+        eta <- exp(a0)
+        -sum(dpois(aves$ncap, lambda=eta, log=T))
+    }
+    @ %def 
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}[containsverbatim]{Modelo Poisson: seleção de modelos}
+  
+  \begin{block}{Ajuste do modelo sem efeito da área}
+    <<aves-model0>>=
+    aves.m0 <- mle2(aves.LL0, 
+                    start=list(
+                        a0=log(mean(aves$ncap))))
+    @ 
+  \end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[containsverbatim]{Modelo Poisson: seleção de modelos}
+
+  \begin{block}{Comparação com AIC}
+    <<aves-aic>>=
+    AICtab(aves.m0,aves.m1, base=T)
+    @   
+  \end{block}
+  
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Modelos Poisson: previstos pelos dois modelos}
+  \begin{center}
+    <<compara-modelos-aves,echo=F, fig=T, out.width="0.6\\textwidth">>=
+    plot(ncap ~ larea, 
+         data=aves,
+         xlab="Ln área do fragmento (ha)",
+         ylab="N de Capturas")
+    curve(f3(x),add=T, col="blue")
+    abline(h=exp(coef(aves.m0)), lty=2,col="red")
+    @     
+  \end{center}
+\end{frame}
+
+% \setkeys{Gin}{height=0.75\textheight, width=0.6\textwidth}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% incluir: modelo binomial negativo
+
+\section{GLMs}
+
+\subsection{Exemplo no \R}
+
+\begin{frame}[containsverbatim]{Generalized linear models: exemplo Poisson}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Generalized linear models: exemplo Poisson}
+  \begin{block}{Função \code{glm} no \R}
+    <<glm-aves>>=
+    aves.glm1 <- glm(ncap ~ larea, data = aves,
+                     family=poisson)
+    coef(aves.glm1)
+    coef(aves.m1)
+    @
+    
+  \end{block}
+  
+\end{frame}
+
+\begin{frame}[containsverbatim]{Generalized linear models: exemplo Poisson}
+  \begin{block}{Função \code{glm} no \R}
+    <<glm-aves-logLik>>=
+    logLik(aves.glm1)
+    logLik(aves.m1)
+    @
+
+\end{block}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{GLMs: gráficos diagnósticos \footnote{Veja também análise de resíduos quantílicos, pacote DHARMa}}
+  \begin{center}
+    <<residuos-glm-aves, echo=F, fig=T, out.width="0.6\\textwidth">>=
+    par(mfrow=c(2,2))
+    plot(aves.glm1)
+    par(mfrow=c(1,1))
+    @     
+  \end{center}
+\end{frame}
+
+\subsection{Definição}
+
+\begin{frame}{Modelo lineares generalizados (glm)}
+  \begin{itemize}
+  \item<2-> Generalizam a lógica da regressão linear gaussiana para algumas outras distribuições;
+  \item<3-> Preservam várias propriedades dos modelos lineares gaussianos;
+  \item<4-> Abrangem vários modelos sob um conjunto único de soluções analíticas e de propriedades matemáticas.
+  \item<5-> Ou seja, uma teoria unificada.
+  \item<6-> Definiu a sintaxe de modelos do \R \, e de várias outras linguagens computacionais. 
+    
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}{Modelos lineares generalizados (glm)}
+  \begin{center}
+    \includegraphics[width=0.9\textwidth]{figuras/nelder1972}
+  \end{center}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\begin{frame}[<+->]{A família exponencial de distribuições \footnote{Não é o mesmo que distribuição exponencial}}
+  \begin{itemize}
+  \item Distribuições que podem ser expressas por  
+    \begin{displaymath}
+      y \sim \textrm{exp} \left \{ \frac{y\Theta \, - \, f(\Theta)}{g(\phi)} \, + \, h(y,\phi) \right \}
+    \end{displaymath}
+  \item como:
+    \begin{itemize}
+    \item Gaussiana
+    \item Binomial
+    \item Poisson
+    \item Gama
+    \item Inversa da normal
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[<+->]{A família exponencial de distribuições - Exemplo}
+  \begin{itemize}
+  \item A distribuição Poisson
+    \begin{displaymath}
+      f(y) = \frac{ e^{-\lambda} \lambda^{y}} {y!}
+    \end{displaymath}
+  \item Pertence à família exponencial porque pode ser expressa como
+    \begin{displaymath}
+      \textrm{exp} \left \{ \frac{y\Theta \, - \, f(\Theta)}{g(\phi)} \, + \, h(y,\phi) \right \}
+    \end{displaymath}
+  \item onde
+    \begin{eqnarray*}
+      \Theta&=& \ln(\lambda)\\
+      f(\Theta)&=& e^{\lambda}\\
+      g(\phi)&=&1 \\
+      h(y, \Theta)&=&-\ln(y!)
+    \end{eqnarray*}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[<+->]{A função de ligação}
+  \begin{itemize}
+  \item Os glms têm esse nome porque generalizam a ideia de estabelecer uma relação do valor esperado com
+    uma combinação linear de covariáveis:
+    \begin{displaymath}
+      \eta(E[Y]) \, = \, a_0 + a_1X_1 + \ldots + a_iX_i \, = \,\sum_0^i a_iX_i
+    \end{displaymath}
+  \item A função $\eta$ estabelece esta relação. Ela é chamada \textbf{função de ligação}.    
+  \item Quando a função de ligação corresponde ao parâmetro $\Theta$ da família exponencial 
+    ela é chamada \textbf{função de ligação canônica}. 
+    Funções de ligação canônicas dão várias propriedades estatísticas importantes aos modelos.
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[<+->]{Exemplos de funções de ligação canônicas}
+  \begin{itemize} 
+  \item Função log para a Poisson:
+    \begin{displaymath}
+      \ln E[Y]\, = \, \ln \lambda \, = \, \sum_0^i a_iX_i
+    \end{displaymath}
+  \item Função logito para a binomial:
+    \begin{displaymath}
+      \ln \left( \frac{E[Y]}{n-E[Y]} \right) \, = \, \ln \left( \frac{p}{1-p} \right) \, = \,\sum_0^i a_iX_i
+    \end{displaymath}
+  \item Função identidade para a normal
+    \begin{displaymath}
+      E[Y] \, = \, \sum_0^i a_iX_i
+    \end{displaymath}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<iwls-prep, echo=F>>=
+## Exemplo 4.4 da Dodson: glm com link=indentity
+## Os pesos sao as variancias previstas pelo modelo para cada ponto
+set.seed(22)
+x <- runif(20,0,6)
+y <- rpois(20,lambda=1+0.5*x)
+## Regressão linear
+m0 <- lm(y~x)
+## Regressao linear ponderada pelas variancias estimadas pela anterior
+m1 <- lm(y~x, weights=1/fitted(m0))
+## Segunda iteracao
+m2 <- lm(y~x, weights=1/fitted(m1))
+## Terceira iteracao
+m3 <- lm(y~x, weights=1/fitted(m2))
+## Quarta
+m4 <- lm(y~x, weights=1/fitted(m3))
+## Quinta
+m5 <- lm(y~x, weights=1/fitted(m4))
+## Sexta
+m6 <- lm(y~x, weights=1/fitted(m5))
+## Funcao para plotar
+plot.peso <- function(x,y,m0,m1,cor.peso=0.05, ...){
+  plot(y~x, cex=cor.peso/(fitted(m0)/sum(fitted(m0))),...)
+  abline(m0, lty=2)
+  if(!missing(m1))
+      abline(m1, col="blue")
+}
+@
+%\setkeys{Gin}{height=0.7\textheight, width=\textwidth}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Iteratively reweighted least squares method}
+  \only<1>{
+    \begin{center}
+      <<iwls-1, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m0, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+
+  \only<2>{
+    \begin{center}
+      <<iwls-2, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m0,m1, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+
+  \only<3>{
+    \begin{center}
+      <<iwls-3, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m1, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+
+  \only<4>{
+    \begin{center}
+      <<iwls-4, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m1,m2, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+
+  \only<5>{
+    \begin{center}
+      <<iwls-5, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m2, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+  
+  \only<6>{
+    \begin{center}
+      <<iwls-6, fig=T, echo=F, out.width="0.6\\textwidth">>=
+      plot.peso(x,y, m2,m3, xlim=c(0,6), ylim=c(0,6))
+      @
+    \end{center}
+  }
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{frame}[<+->]{Modelo lineares generalizados}
+  \begin{itemize}
+  \item Função \code{glm} no \R
+  \item Generalizações:
+    \begin{itemize}
+    \item \emph{Quasi-likelihood} para dados com sobredispersão
+    \item Modelo similar para binomial negativa (e.g., função \code{MASS::glm.nb})
+    \item Modelos lineares generalizados de efeitos mistos
+    \item Modelos lineares generalizados bivariados
+    \item \ldots      
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Para saber mais}
+  \begin{itemize}
+  \item Bolker, B.M. 2008 Ecological Models and Data in R Princeton: Princeton University Press, caps 6 e 9.
+  \item Bolker, B. M., et al. 2009. Generalized linear mixed models: a practical guide for ecology and evolution. Trends in ecology \& evolution, 2009, 24.3: 127-135.
+  \item Crawley, M.J. 2007. The R Book. (caps.13,14 e 16)
+  \item Dobson, A.J. 1990. An Introduction to Generalized Linear Models. London: Chapman and Hall.
+  \end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% incluir
+% comandos e diagnosticos glm (completar)
+% sobredispersao
+% quasi-likelihood
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

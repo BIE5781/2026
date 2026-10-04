@@ -1,0 +1,311 @@
+---
+title: "Modelos Estatísticos Lineares"
+subtitle: "Disciplina BIE5781 - IB - USP"
+author: 
+  - "PI (Paulo Inácio Prado)"
+date: '07 de outubro de 2026'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%")
+library(xaringanthemer)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(latex2exp)
+library(knitr)
+library(kableExtra)
+```
+
+```{r xaringan-themer, include=FALSE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",# base 3
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3", # base 3
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"), text_font_size = "24px",
+  code_font_size="1rem",
+  extra_css = list(
+      ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+
+## clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+## ggplot theme
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+    (theme_foundation(base_size=base_size, base_family=base_family)
+        + theme(plot.title = element_text(face = "bold",
+                                          size = rel(1.2), hjust = 0.5),
+                text = element_text(),
+                panel.background = element_rect(colour = NA),
+                plot.background = element_rect(colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(1)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text = element_text(), 
+                axis.line = element_line(colour="black"),
+                axis.ticks = element_line(),
+                panel.grid.major = element_line(colour="#f0f0f0"),
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                ##legend.margin = unit(0, "cm"),
+                legend.spacing = unit(0.2, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+                strip.text = element_text(face="bold")
+                ))
+    
+}
+```
+
+```{r galton-modelos-multiplos}
+## Leitura dos dados do site https://www.randomservices.org/random/data/Galton.html
+galton <- read.table("Galton.txt", header=TRUE)
+## Toma apenas o primeiro filho de cada família
+galton1 <- galton[!duplicated(galton$Family),]
+galton.m2 <- lm(Height ~ Mother + Gender, data = galton1)
+cf2 <- coef(galton.m2)
+galton.m3 <- lm(Height ~ Mother * Gender, data = galton1)
+cf3 <- coef(galton.m3)
+
+## Gráfico base: só os eixos, com a amplitude dos dados
+p.galton <-
+    ggplot(galton1, aes(Mother, Height)) +
+    geom_blank() +
+    scale_color_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    xlab("Altura da mãe (in)") +
+    ylab("Altura do(a) filho(a) (in)") +
+    theme_Publication(18)
+```
+
+## Recapitulando
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Uma expressão geral para modelos estatísticos**
+
+$$Y\, \sim \, f(Y \mid \Theta=g(X_i))$$
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Em palavras**
+
+$Y$ é uma variável aleatória, cujos valores têm probabilidades
+definidas pela função de densidade $f(Y)$, cujos parâmetros
+$\Theta$ são uma função qualquer $g$ de outras medidas
+(preditoras) $X_i$.
+]
+
+---
+
+## Preditores lineares
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Todos que podem ser escritos na forma**
+
+$$\theta \ = \ g(X_i) \ = \sum \beta_iX_i$$
+]
+
+sendo $\theta$ uma resposta (que normalmente usamos para expressar a
+dependência que um parâmetro da distribuição tem com outras medidas).
+
+---
+
+## Preditores lineares
+
+### Exemplos
+
+* $\beta_0+\beta_1X_1$ , sendo $X_0=1$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2X_1^2$ , pois podemos chamar $X_1^2$ de $X_2$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2\ln(X_1)$ , pois podemos chamar $\ln X_1$ de $X_2$
+
+--
+
+* $\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2$ , pois podemos chamar $X_1X_2$ de $X_3$
+
+--
+
+* $\ldots$
+
+---
+
+## Modelos lineares múltiplos aditivos
+
+* O preditor é a soma de variáveis independentes isoladas, cada uma multiplicada por seu coeficiente.
+
+--
+
+* A soma **não** inclui variáveis independentes que são produtos de outras presentes no modelo:
+
+$$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_iX_i$$
+
+--
+
+* Se uma variável independente $X_i$ aumenta em uma unidade, o preditor aumenta $\beta_i$ , não importando o valor das outras variáveis.
+
+--
+
+* Ou seja, os efeitos das preditoras são **aditivos**. Não são afetados pelo valor das demais variáveis.
+
+---
+
+## Modelos lineares múltiplos com interações
+
+* O preditor inclui variáveis que são produtos de pelo menos outras duas presentes no modelo, por exemplo:
+
+$$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$
+
+--
+
+
+* Se a variável indenpendente  $X_1$ aumenta em uma unidade, o preditor aumenta em $\beta_1 + \beta_3 X_3$.
+
+--
+
+* Ou seja, o efeito de uma preditora depende do valor de outra(s). Há uma **interação** estatística.
+
+---
+
+## Exemplo de preditor linear aditivo
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* $X_1$: altura da mãe, contínua
+* $X_2$: gênero binário atribuído (Feminino = 0, Masculino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: $\beta_0 + \beta_1X_1 + \beta_2X_2$
+
+--
+
+* **masculino**: $\beta_0 + \beta_1X_1 + \beta_2\times 0 \ = \ \beta_0 + \beta_1X_1$
+
+--
+
+* **feminino**: $\beta_0 + \beta_1X_1 + \beta_2\times 1 \ = \ [\beta_0 + \beta_2] + \beta_1X_1$
+
+---
+
+## Gráfico do exemplo aditivo
+
+.center[
+```{r plot-aditivo, out.width="60%"}
+retas.ad <- data.frame(
+    sexo = c("Meninas", "Meninos"),
+    intercepto = c(cf2[1], cf2[1] + cf2[3]),
+    inclinacao = c(cf2[2], cf2[2]))
+
+p.galton +
+    geom_abline(data = retas.ad,
+                aes(intercept = intercepto, slope = inclinacao, color = sexo),
+                linewidth = 1.25)
+```
+]
+
+---
+
+## Exemplo de preditor linear com uma interação
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Duas preditoras:**
+
+* $X_1$: altura da mãe, contínua
+* $X_2$: gênero binário atribuído (Masculino = 0, Feminino = 1)
+]
+
+--
+
+### Preditor:
+
+* **expressão**: $\beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2$
+
+--
+
+* **masculino**: $\beta_0 + \beta_1X_1 + \beta_2\times 0 + \beta_3X_1\times 0 \ = \ \beta_0 + \beta_1X_1$
+
+--
+
+* **feminino**: $\beta_0 + \beta_1X_1 + \beta_2\times 1 + \beta_3X_1\times 1 \ = \ [\beta_0 + \beta_2] + [\beta_1 + \beta_3]X_1$
+
+---
+
+## Gráfico do exemplo com interação
+
+.center[
+```{r plot-teorico-interacao, out.width="60%"}
+## Retas hipotéticas, para ilustrar a interação
+retas.int <- data.frame(
+    sexo = c("Meninas", "Meninos"),
+    intercepto = c(cf3[1] + 5, cf3[1] - 2),
+    inclinacao = c(cf3[2] - 0.1, cf3[2] + 0.1))
+
+p.galton +
+    geom_abline(data = retas.int,
+                aes(intercept = intercepto, slope = inclinacao, color = sexo),
+                linewidth = 1.25)
+```
+]
+
+---
+
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma $\Theta \ = \ \sum \beta_iX_i$.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* $\beta_0X_1^{\beta_1}$
+
+* $\beta_0e^{\beta_1 X_1}$
+
+* $\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}$
+
+* E muitas, muitas mais.
+]
