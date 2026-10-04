@@ -445,120 +445,129 @@ One key advantage of using Bayesian methods is that it is very easy to modify ou
 
 Let's illustrate this point here by defining robust regression. One common problem in linear regression models is outliers. Sometimes these points are measuremente errors, but sometimes they are just really true manifestations of biological processes that generate variation that is outside the expected normal (gaussian) range of the population we are studing, and removing them would be a mistake. 
 
-To illustrate, let's use a dataset in which a single point can shift the estimates of the parameters of our simple linear regression.
+To illustrate, let's use a dataset in which a few extreme species can shift the estimates of a simple regression.
 
 ## A high-leverage observation in real data
 
-The `trees` dataset in R contains measurements of girth, height, and
-volume for 31 black cherry trees. We will model volume as a linear
-function of girth. This is a deliberately simple model: the largest
-tree may have a real biological explanation, and its influence may also
-signal that a straight line is an inadequate description of the
-relationship.
+The `Animals` dataset in the `MASS` package contains body and brain
+weights for 28 land-animal species. We will model log brain weight as a
+linear function of log body weight, a simple allometric relationship
+used to compare species. The dataset includes large dinosaurs whose
+measurements are estimates, so an influential point may reflect
+biological differences or uncertainty in the source data rather than a
+recording error.
 
 First, use an ordinary linear model as a diagnostic to locate the case
 with the greatest leverage. Leverage is determined by how unusual a
 predictor value is; it is not the same as a large residual. The common
 rule $2p/n$ is only a heuristic for flagging cases, not a deletion rule.
 
-```{r trees_diagnostic, eval=TRUE}
-data(trees, package = "datasets")
-diagnostic_fit <- lm(Volume ~ Girth, data = trees)
-case_high_leverage <- which.max(hatvalues(diagnostic_fit))
-leverage_reference <- 2 * length(coef(diagnostic_fit)) / nrow(trees)
+```{r animals_diagnostic, eval=TRUE}
+animals <- MASS::Animals
+animals$log_body <- log(animals$body)
+animals$log_brain <- log(animals$brain)
+body_center <- mean(animals$log_body)
+animals$log_body_c <- animals$log_body - body_center
+large_dinosaurs <- c("Brachiosaurus", "Dipliodocus", "Triceratops")
+dinosaur_labels <- c("Brachiosaurus", "Diplodocus", "Triceratops")
+dinosaur_indices <- match(large_dinosaurs, rownames(animals))
+stopifnot(!anyNA(dinosaur_indices))
+diagnostic_fit <- lm(log_brain ~ log_body_c, data = animals)
+leverage_reference <- 2 * length(coef(diagnostic_fit)) / nrow(animals)
 
 data.frame(
-  case = case_high_leverage,
-  girth = trees$Girth[case_high_leverage],
-  volume = trees$Volume[case_high_leverage],
-  leverage = hatvalues(diagnostic_fit)[case_high_leverage],
+  species = dinosaur_labels,
+  body_kg = animals$body[dinosaur_indices],
+  brain_g = animals$brain[dinosaur_indices],
+  leverage = hatvalues(diagnostic_fit)[dinosaur_indices],
   reference_2p_over_n = leverage_reference,
-  cooks_distance = cooks.distance(diagnostic_fit)[case_high_leverage]
+  cooks_distance = cooks.distance(diagnostic_fit)[dinosaur_indices]
 )
 ```
 
-Case 31 has the largest girth and is flagged for high leverage. Its
-Cook's distance also indicates that it can influence the fitted line.
-We will keep the case in the data for the first fit, then omit it only
-as a sensitivity analysis.
+These three large dinosaurs have high influence diagnostics; Brachiosaurus
+has the largest leverage and Cook's distance. We will keep all species in
+the first model, then omit the three dinosaurs together only as a
+sensitivity analysis. The rule $2p/n$ is a flag, not a rule for deleting
+data.
 
 ## Fitting both models with `quap`
 
-Fit the same Gaussian regression to the full dataset and to the dataset
-without case 31. Both models use the same weakly informative priors.
+Fit the same Gaussian regression to all species and to the data without
+the three dinosaurs. Both models use the same weakly informative priors.
 
-```{r trees_quap_fits, eval=TRUE, message=FALSE, warning=FALSE}
+```{r animals_quap_fits, eval=TRUE, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages(library(rethinking))
 
-trees_without_case <- trees[-case_high_leverage, ]
+animals_without_dinosaurs <- animals[-dinosaur_indices, ]
 
-m_trees_all <- quap(
+m_animals_all <- quap(
   alist(
-    Volume ~ dnorm(mu, sigma),
-    mu <- a + b * Girth,
-    a ~ dnorm(0, 100),
+    log_brain ~ dnorm(mu, sigma),
+    mu <- a + b * log_body_c,
+    a ~ dnorm(0, 10),
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1)
   ),
-  data = trees
+  data = animals
 )
 
-m_trees_without_case <- quap(
+m_animals_without_dinosaurs <- quap(
   alist(
-    Volume ~ dnorm(mu, sigma),
-    mu <- a + b * Girth,
-    a ~ dnorm(0, 100),
+    log_brain ~ dnorm(mu, sigma),
+    mu <- a + b * log_body_c,
+    a ~ dnorm(0, 10),
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1)
   ),
-  data = trees_without_case
+  data = animals_without_dinosaurs
 )
 
-precis(m_trees_all, digits = 2)
-precis(m_trees_without_case, digits = 2)
+precis(m_animals_all, digits = 2)
+precis(m_animals_without_dinosaurs, digits = 2)
 ```
 
 Compare the posterior estimates of the slope `b` and residual standard
-deviation `sigma`. How much do they change when case 31 is omitted? The
-comparison is a sensitivity analysis; it does not establish that the
-case should be discarded.
+deviation `sigma`. How much do they change when all three dinosaurs are
+omitted? This is a sensitivity analysis, not evidence that these species
+should be discarded.
 
 ## Visualizing the influence on the fit
 
 The lines below show posterior-mean fits from both models on the same
-scatterplot. The highlighted case is present in the full-data fit and
-excluded from the second fit.
+scatterplot. The highlighted species are included in the full-data fit
+and excluded together from the second fit.
 
-```{r trees_fit_comparison, eval=TRUE, fig.asp=1}
-posterior_all <- extract.samples(m_trees_all)
-posterior_without_case <- extract.samples(m_trees_without_case)
-girth_values <- seq(min(trees$Girth), max(trees$Girth), length.out = 100)
-point_colors <- ifelse(seq_len(nrow(trees)) == case_high_leverage,
+```{r animals_fit_comparison, eval=TRUE, fig.asp=1}
+posterior_all <- extract.samples(m_animals_all)
+posterior_without_dinosaurs <- extract.samples(m_animals_without_dinosaurs)
+body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
+body_values_c <- body_values - body_center
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
                        "firebrick", "grey35")
 
-plot(Volume ~ Girth, data = trees, pch = 19, col = point_colors,
-     xlab = "Girth (inches)", ylab = "Volume (cubic feet)")
-text(trees$Girth[case_high_leverage], trees$Volume[case_high_leverage],
-     labels = paste("Case", case_high_leverage), pos = 2, col = "firebrick")
-lines(girth_values,
-      mean(posterior_all$a) + mean(posterior_all$b) * girth_values,
+plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
+  xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
+     labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
+lines(body_values,
+      mean(posterior_all$a) + mean(posterior_all$b) * body_values_c,
       col = "navy", lwd = 2)
-lines(girth_values,
-      mean(posterior_without_case$a) +
-        mean(posterior_without_case$b) * girth_values,
+lines(body_values,
+      mean(posterior_without_dinosaurs$a) +
+        mean(posterior_without_dinosaurs$b) * body_values_c,
       col = "darkorange3", lwd = 2, lty = 2)
 legend("topleft",
-       legend = c("All trees", "Without case 31", "High-leverage case"),
+       legend = c("All species", "Without large dinosaurs", "Large dinosaurs"),
        col = c("navy", "darkorange3", "firebrick"),
        lty = c(1, 2, NA), pch = c(NA, NA, 19), bty = "n")
 ```
 
-Does the slope change in the direction you expected from the position of
-case 31? Notice that a high-leverage observation can strongly affect the
-fit even when it is a genuine measurement. Before removing such a point,
-investigate its source and consider whether the model's functional form
-is adequate. The plotted lines are posterior means; they do not show the
-uncertainty around either fit.
+Does the slope change in the direction you expected from the three
+dinosaurs' positions? Before removing influential species, investigate
+the measurements and consider whether one allometric line is appropriate
+across mammals and dinosaurs. The plotted lines are posterior means;
+they do not show uncertainty around either fit.
 
 # Modifying the model to be less sensitive to outliers
 
@@ -572,10 +581,10 @@ specific problem.
 Some outliers are measurement errors; others are genuine observations
 from biological processes with more extreme variation than a Gaussian
 model allows. Removing a genuine observation can discard important
-information. Instead, we will keep case 31 and replace the Gaussian
-residual distribution with a Student-$t$ distribution. We will then
-compare the sensitivity of each model by fitting it both with and
-without that case.
+information. Instead, we will keep all three dinosaurs and replace the
+Gaussian residual distribution with a Student-$t$ distribution. We will
+then compare the sensitivity of each model by fitting it both with and
+without those species.
 
 ## Student-t residual model
 
@@ -586,49 +595,49 @@ model's expected value. As $\nu$ increases, the distribution approaches
 the Normal. In the model below, $\nu = 2 + \exp(\text{log\_nu})$ keeps
 the degrees of freedom above 2, so the residual variance is finite.
 
-```{r trees_student_fits, eval=TRUE, message=FALSE, warning=FALSE}
-m_trees_student_all <- quap(
+```{r animals_student_fits, eval=TRUE, message=FALSE, warning=FALSE}
+m_animals_student_all <- quap(
   alist(
-    Volume ~ dstudent(nu, mu, sigma),
-    mu <- a + b * Girth,
+    log_brain ~ dstudent(nu, mu, sigma),
+    mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
-    a ~ dnorm(0, 100),
+    a ~ dnorm(0, 10),
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1),
     log_nu ~ dnorm(1, 1)
   ),
-  data = trees
+  data = animals
 )
 
-m_trees_student_without_case <- quap(
+m_animals_student_without_dinosaurs <- quap(
   alist(
-    Volume ~ dstudent(nu, mu, sigma),
-    mu <- a + b * Girth,
+    log_brain ~ dstudent(nu, mu, sigma),
+    mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
-    a ~ dnorm(0, 100),
+    a ~ dnorm(0, 10),
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1),
     log_nu ~ dnorm(1, 1)
   ),
-  data = trees_without_case
+  data = animals_without_dinosaurs
 )
 
-precis(m_trees_student_all, digits = 2)
-precis(m_trees_student_without_case, digits = 2)
+precis(m_animals_student_all, digits = 2)
+precis(m_animals_student_without_dinosaurs, digits = 2)
 ```
 
-## Comparing sensitivity to case 31
+## Comparing sensitivity to the large dinosaurs
 
-Compare the change in the posterior mean slope when case 31 is omitted
+Compare the change in the posterior mean slope when the three dinosaurs are omitted
 under each residual distribution. The fits below use posterior draws
 from the same four models shown in the previous sections.
 
-```{r trees_sensitivity, eval=TRUE}
+```{r animals_sensitivity, eval=TRUE}
 set.seed(42)
-post_normal_all <- extract.samples(m_trees_all)
-post_normal_without <- extract.samples(m_trees_without_case)
-post_student_all <- extract.samples(m_trees_student_all)
-post_student_without <- extract.samples(m_trees_student_without_case)
+post_normal_all <- extract.samples(m_animals_all)
+post_normal_without <- extract.samples(m_animals_without_dinosaurs)
+post_student_all <- extract.samples(m_animals_student_all)
+post_student_without <- extract.samples(m_animals_student_without_dinosaurs)
 
 slope_change_normal <- abs(mean(post_normal_all$b) - mean(post_normal_without$b))
 slope_change_student <- abs(mean(post_student_all$b) - mean(post_student_without$b))
@@ -636,55 +645,58 @@ slope_change_student <- abs(mean(post_student_all$b) - mean(post_student_without
 data.frame(
   residual_distribution = c("Normal", "Student-t"),
   slope_all_cases = c(mean(post_normal_all$b), mean(post_student_all$b)),
-  slope_without_case_31 = c(mean(post_normal_without$b), mean(post_student_without$b)),
+  slope_without_dinosaurs = c(mean(post_normal_without$b), mean(post_student_without$b)),
   absolute_slope_change = c(slope_change_normal, slope_change_student)
 )
 ```
 
 Is the change in slope smaller under the Student-$t$ model? In this
 example it is smaller, but not zero: heavy-tailed residuals reduce the
-influence of the unusual response, while the extreme predictor value
-can still give case 31 leverage.
+influence of the unusual response, while Brachiosaurus' extreme body
+weight still gives it leverage.
 
 ## Plotting the four fitted lines
 
-The solid lines use all 31 trees; the dashed lines omit case 31. Compare
+The solid lines use all 28 species; the dashed lines omit the three dinosaurs. Compare
 the separation between each pair of lines to the slope changes in the
 table above.
 
-```{r trees_student_comparison, eval=TRUE, fig.asp=1}
-girth_values <- seq(min(trees$Girth), max(trees$Girth), length.out = 100)
-point_colors <- ifelse(seq_len(nrow(trees)) == case_high_leverage,
+```{r animals_student_comparison, eval=TRUE, fig.asp=1}
+body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
+body_values_c <- body_values - body_center
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
                        "firebrick", "grey35")
 
-plot(Volume ~ Girth, data = trees, pch = 19, col = point_colors,
-     xlab = "Girth (inches)", ylab = "Volume (cubic feet)")
-text(trees$Girth[case_high_leverage], trees$Volume[case_high_leverage],
-     labels = paste("Case", case_high_leverage), pos = 2, col = "firebrick")
+plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
+     xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
+  labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
 
-lines(girth_values,
-      mean(post_normal_all$a) + mean(post_normal_all$b) * girth_values,
+lines(body_values,
+  mean(post_normal_all$a) + mean(post_normal_all$b) * body_values_c,
       col = "navy", lwd = 2)
-lines(girth_values,
-      mean(post_normal_without$a) + mean(post_normal_without$b) * girth_values,
+lines(body_values,
+  mean(post_normal_without$a) + mean(post_normal_without$b) * body_values_c,
       col = "navy", lwd = 2, lty = 2)
-lines(girth_values,
-      mean(post_student_all$a) + mean(post_student_all$b) * girth_values,
+lines(body_values,
+  mean(post_student_all$a) + mean(post_student_all$b) * body_values_c,
       col = "firebrick", lwd = 2)
-lines(girth_values,
-      mean(post_student_without$a) + mean(post_student_without$b) * girth_values,
+lines(body_values,
+  mean(post_student_without$a) + mean(post_student_without$b) * body_values_c,
       col = "firebrick", lwd = 2, lty = 2)
 
 legend("topleft",
-       legend = c("Normal: all cases", "Normal: without case 31",
-                  "Student-t: all cases", "Student-t: without case 31",
-                  "High-leverage case"),
+  legend = c("Normal: all species", "Normal: without large dinosaurs",
+    "Student-t: all species", "Student-t: without large dinosaurs",
+    "Large dinosaurs"),
        col = c("navy", "navy", "firebrick", "firebrick", "grey35"),
        lty = c(1, 2, 1, 2, NA), pch = c(NA, NA, NA, NA, 19), bty = "n")
 ```
 
 The Student-$t$ model is less sensitive here if its two fitted lines are
 closer together than the two Normal-model lines. This does not mean that
-Student-$t$ residuals make high-leverage cases harmless: they mainly
-reduce the effect of large residuals. Always investigate an influential
-case and check whether the model's functional form is appropriate.
+Student-$t$ residuals make high-leverage species harmless: they mainly
+reduce the effect of large residuals. The dinosaur measurements are
+estimates, and dinosaurs may differ systematically from mammals. Always
+investigate influential observations and consider whether one allometric
+relationship is appropriate for all groups.
