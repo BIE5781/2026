@@ -190,7 +190,7 @@ $$y_i \sim \mathcal{N}(\mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
 
 O que implica que:
 
-$$p(y_i \mid \theta) = \mathcal{N}(\mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
+$$p(y_i \mid \theta) = \mathcal{N}(y_i | \mu_i = \beta_0 + \beta_1 x_i, ~ \sigma)$$
 
 onde: 
 $$\theta = \{\beta_0, \beta_1, \sigma\}$$ 
@@ -258,7 +258,7 @@ $$p(y_i \mid \theta), ~\theta : \{\beta_0=110.03, \beta_1=2.11, \sigma = 0.0278\
 
 ### Exemplo: 
 
-Qual é probabilidade atribuída pelo modelo para as medidas observadas no trecho de Paris a Evaux ($x=0.5438, y=111.22 Km$)?
+Qual é a probabilidade atribuída pelo modelo às medidas observadas no trecho de Paris a Evaux ($x=0.5438, y=111.22 Km$)?
 
 ]
 
@@ -282,7 +282,7 @@ p1 +
 $$p(y_i \mid \theta), ~\theta : \{\beta_0=110.03, \beta_1=2.11, \sigma = 0.0278\}$$
 
 ### Exemplo: 
-Qual é probabilidade atribuída pelo modelo para as medidas observadas no trecho de Paris a Evaux ($x=0.5438, y=111.22 Km$)?
+Qual é a probabilidade atribuída pelo modelo às medidas observadas no trecho de Paris a Evaux ($x=0.5438, y=111.22 Km$)?
 
 1- Calcule o valor de $\mu$ da distribuição normal. Ou
 seja, o valor previsto de $y$ pela reta de regressão para 
@@ -343,8 +343,8 @@ round(pnorm(df1$y[2] + 0.01, mean = mu, sd = cf1[3]) -
 
 .pull-left[
 $$\begin{align}
-p(Y|\theta) &= p(y_1|\theta) \times p(y_2|\theta) \ldots \times  p(y_n|\theta)\\[1em] 
-&= \prod p(x_i|\Theta)\\[1em] 
+p(y|\theta) &= p(y_1|\theta) \times p(y_2|\theta) \ldots \times  p(y_n|\theta)\\[1em] 
+&= \prod p(y_i|\theta)\\[1em] 
 &= \mathcal{L}_y(\theta)
 \end{align}$$
 ]
@@ -449,7 +449,7 @@ Usaremos a notação $\mathcal{L}_y(\theta)$ para expressar:
   * Cada combinação de parâmetros resulta em um modelo diferente.
   
   * Assim, podemos usar a função de verossimilhança para encontrar a
-    combinação de parâmetros melhor sustentada pelos dados os **MLEs**:
+    combinação de parâmetros mais bem apoiada pelos dados, isto é, as estimativas de máxima verossimilhança (**MLEs**):
 
 --
 
@@ -704,7 +704,7 @@ $$\mathcal{L}_y (\theta) \, = \, \prod_{i=1}^n \, (2 \pi \sigma^2)^{-\frac{1}{2}
 
 ---
 
-##Regressão linear simples: dedução dos MLEs 
+## Regressão linear simples: dedução dos MLEs 
 
 ### Função de log-verossimilhança do modelo:
 
@@ -734,7 +734,7 @@ $$
 
 ---
 
-##O método de MQ é a solução de máxima verossimilhança para modelos Gaussianos!
+## O método de MQ é a solução de máxima verossimilhança para modelos Gaussianos!
 
 ### Resolvendo o sistema com as duas primeiras equações:
 
@@ -833,8 +833,8 @@ euterpe$adulta.viva[is.na(euterpe$adulta.viva)] <- 0
 x <- 0: max(euterpe$adulta.viva, na.rm=TRUE)
 yobs <- as.numeric(table(factor(euterpe$adulta.viva, levels = x)))
 yobsp <- yobs/sum(yobs)
-eut.fitp <- fitdistr(euterpe$adulta.viva, "Poisson")
-eut.fitnb <- fitdistr(euterpe$adulta.viva, "negative binomial")
+eut.fitp <- MASS::fitdistr(euterpe$adulta.viva, "Poisson")
+eut.fitnb <- MASS::fitdistr(euterpe$adulta.viva, "negative binomial")
 eut.p <- dpois(x, lambda = mean(euterpe$adulta.viva))
 eut.nb.cf <- coef(eut.fitnb)
 eut.nb <- dnbinom(x, size = eut.nb.cf[1], mu = eut.nb.cf[2])
@@ -894,7 +894,7 @@ legend("topright", c("Obs", expression(P(lambda==7.468)), expression(paste(NB(mu
 
 ---
 
-##Inferência sobre parâmetros 
+## Inferência sobre parâmetros 
 
 ```{r }
 Birds <- read.csv("DatasetS1-IndivBirdParasiteLoad.csv")

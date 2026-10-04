@@ -10,6 +10,7 @@ output:
     distill::distill_article:
       toc: true
       toc_depth: 3
+      mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
 ---
 
 
@@ -31,8 +32,12 @@ htmltools::tagList(
 
 A regressão linear impõe ou presume que exista uma relação linear entre uma ou mais variáveis preditoras $x_i$ e uma variável resposta $y$.
 
-$$y_i \sim Normal(\mu_i, \sigma) \\
-\mu_i = \alpha + \beta x_i$$
+$$
+\begin{aligned}
+y_i &\sim Normal(\mu_i, \sigma) \\
+\mu_i &= \alpha + \beta x_i
+\end{aligned}
+$$
 
 A primeira linha desse modelo descreve a distribuição de probabilidade da variável $y$. Ela pode ser modelada como uma variável com uma distribuição normal, com uma média $\mu$ e um desvio-padrão $\sigma$.
 
@@ -59,22 +64,52 @@ plot(y ~ x, pch = 19)
 
 Como podemos ver no gráfico, parece haver uma relação linear simples entre as duas variáveis, como previsto pela simulação.
 
-## Coeficiente de regressão
+## Derivando os coeficiente de regressão linear usando OLS
 
 Podemos estimar o valor dos parâmetros alfa e beta usando muitos métodos diferentes. O método mais comum é o Ordinary Least Squares (OLS), que produz soluções analíticas para o valor desses dois coeficientes.
 
-O valor do coeficiente beta é dado pela covariância entre X e Y, dividido pela variância de X. E o intercepto alpha é dado pela média de Y menos o produto do valor de beta pela média de X.
-
-$$\widehat{\beta}= \frac{Cov(x, y)}{Var(x)} = \frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^{n}(x_i-\bar{x})^2}$$
-
-e
+Para encontrar esses coeficientes, o método OLS escolhe os valores de
+$\alpha$ e $\beta$ que minimizam a soma dos quadrados dos resíduos:
 
 $$
-\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x} 
+Q(\alpha, \beta) = \sum_{i=1}^{n} (y_i - \alpha - \beta x_i)^2.
+$$
+
+No mínimo, as derivadas de $Q$ em relação a cada parâmetro são iguais a
+zero. Derivando em relação a $\alpha$, obtemos:
+
+$$
+\frac{\partial Q}{\partial \alpha}
+= -2\sum_{i=1}^{n}(y_i - \alpha - \beta x_i) = 0,
+$$
+
+o que implica $\bar{y} = \alpha + \beta\bar{x}$. Portanto, uma vez
+conhecida a inclinação, o intercepto é:
+
+$$
+\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x}.
+$$
+
+Derivando em relação a $\beta$, obtemos a segunda condição de primeira
+ordem:
+
+$$
+\frac{\partial Q}{\partial \beta}
+= -2\sum_{i=1}^{n}x_i(y_i - \alpha - \beta x_i) = 0.
+$$
+
+Substituindo $\alpha = \bar{y} - \beta\bar{x}$ e isolando $\beta$,
+encontramos a inclinação:
+
+$$
+\hat{\beta} =
+\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}
+  {\sum_{i=1}^{n}(x_i-\bar{x})^2}
+= \frac{\operatorname{Cov}(x,y)}{\operatorname{Var}(x)}.
 $$
 
 
-```{r beta0 and beta1}
+```{r beta0 and beta1, results='hide'}
 beta_hat <- sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x)) ^ 2)
 beta_hat
 
@@ -85,6 +120,10 @@ cov(x, y) / var(x)
 alpha_hat <- mean(y) - beta_hat * mean(x)
 alpha_hat
 ```
+
+Confira as estimativas: $\hat{\beta}$ ficou próximo de 3.5 e
+$\hat{\alpha}$ de 1.2, valores usados na simulação? Por que elas não
+precisam ser exatamente iguais? 
 
 Usando esse valor dos parâmetros, podemos incluir a reta de regressão no gráfico que fizemos acima.
 
@@ -97,30 +136,127 @@ abline(a = alpha_hat, b = beta_hat, col = 2, lwd = 2)
 
 Claro que não precisamos calcular os parâmetros diretamente. Podemos usar uma função do R para ajustar esse modelo linear. Essa função é a função "lm" e pode ser chamada usando a sintaxe de fórmula do R.
 
-```{r}
+```{r, results='hide'}
 m1 = lm(y ~ x)
 m1
 ```
 
+Compare os coeficientes impressos pelo `lm()` com os calculados acima.
+
 Com o modelo ajustado, podemos usar a função "summary" para ver as estimativas dos coeficientes, que devem ser idênticas às que obtivemos acima, e também a sua significância e várias outras informações úteis.
 
-```{r}
+```{r, results='hide'}
 summary(m1)
 ```
 
-## Resíduos da regressão
+## Premissas da regressão linear (opcional)
+
+Muitos cursos dedicam bastante tempo às premissas dos modelos, embora nem sempre deixem claro o que elas significam. Aqui, não vamos nos deter numa discussão extensa sobre o tema. Em vez disso, vamos nos concentrar em verificar se os modelos recuperam os aspectos dos dados que nos interessam. Ainda assim, vale examinar as premissas da regressão linear e entender quais resultados podemos deduzir a partir delas.
+
+Para interpretar os coeficientes e quantificar a incerteza das estimativas,
+precisamos explicitar algumas premissas. Escrevemos o modelo como
+
+$$
+y_i = \alpha + \beta x_i + \varepsilon_i,
+$$
+
+em que $\varepsilon_i$ representa a parte de $y_i$ que não é explicada por
+$x_i$. As premissas abaixo descrevem como essa parte não explicada se
+comporta.
+
+1. **Relação linear nos parâmetros.** A média de $y_i$, dado $x_i$, é
+  representada por uma reta:
+
+  $$
+  E(y_i \mid x_i) = \alpha + \beta x_i.
+  $$
+
+  Isso não exige que os dados caiam exatamente sobre a reta. As diferenças
+  entre as observações e suas médias são representadas pelos resíduos
+  $\varepsilon_i$.
+
+2. **Amostra aleatória.** As observações $(x_i, y_i)$ são obtidas por uma
+  amostragem aleatória. Assim, uma observação não determina o erro de outra;
+  essa condição permite tratar as observações como independentes no modelo.
+
+3. **Variação em $x$.** Os valores de $x$ não são todos iguais:
+
+  $$
+  \sum_{i=1}^{n}(x_i - \bar{x})^2 > 0.
+  $$
+
+  Sem variação em $x$, não há como distinguir uma inclinação $\beta$ de
+  uma mudança no intercepto $\alpha$.
+
+4. **Média condicional do erro igual a zero.** Condicionalmente aos
+  valores observados de todos os preditores, os erros têm média zero:
+
+  $$
+  E(\varepsilon_i \mid x_1, \ldots, x_n) = 0.
+  $$
+
+  Essa condição diz que o modelo não erra sistematicamente para cima ou
+  para baixo em nenhuma região de $x$. 
+  
+  Com essas quatro premissas, podemos mostrar que as estimativas obtidas pelo método OLS (ou MLE) são não enviesadas[^sem-vies][^tradeoff]. De fato,
+  usando $y_i = \alpha + \beta x_i + \varepsilon_i$ na fórmula da
+  inclinação,
+
+  $$
+  \hat{\beta}
+  = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}
+       {\sum_{i=1}^{n}(x_i - \bar{x})^2}
+  = \beta +
+    \frac{\sum_{i=1}^{n}(x_i - \bar{x})\varepsilon_i}
+       {\sum_{i=1}^{n}(x_i - \bar{x})^2}.
+  $$
+
+  Tomando a esperança condicional aos valores observados de $x$, o segundo
+  termo tem esperança zero. Portanto,
+  $E(\hat{\beta} \mid x_1, \ldots, x_n) = \beta$. Como
+  $\hat{\alpha} = \bar{y} - \hat{\beta}\bar{x}$, também temos
+  $E(\hat{\alpha} \mid x_1, \ldots, x_n) = \alpha$.
+
+1. **Homoscedasticidade.** A variância dos erros é a mesma para todos os
+  valores de $x$:
+
+  $$
+  \operatorname{Var}(\varepsilon_i \mid x_i) = \sigma^2.
+  $$
+
+  Com erros independentes e essa variância constante, a variância da
+  inclinação estimada é $\operatorname{Var}(\hat{\beta} \mid x) =
+  \sigma^2 / \sum_i (x_i - \bar{x})^2$. A homoscedasticidade permite
+  estimar $\sigma^2$ sem viés usando a soma dos quadrados dos resíduos
+  dividida por $n - 2$; os dois graus de liberdade[^gdl] correspondem aos
+  parâmetros $\alpha$ e $\beta$ estimados.
+
+Por fim, às vezes assumimos também que os erros têm distribuição normal:
+
+$$
+\varepsilon_i \mid x_1, \ldots, x_n \sim \mathcal{N}(0, \sigma^2).
+$$
+
+Essa premissa não é necessária para calcular os coeficientes OLS nem para
+que sejam não enviesados. Ela permite obter distribuições exatas para as
+estatísticas usadas em testes de hipóteses e intervalos de confiança em
+amostras finitas. Aqui, quando falamos em normalidade, estamos nos
+referindo aos erros do modelo, não exigindo que os resíduos observados
+sejam perfeitamente normais.
+
+# Resíduos da regressão
 
 Uma vez que o modelo está ajustado, podemos calcular os seus resíduos ($e_i$). Ao invés de tratarmos os resíduos simplesmente como "erros", vamos tratar esses valores como a **variação residual não explicada pela variável preditora**.
 
-Matematicamente, o resíduo para a observação $i$ é a diferença entre o valor real observado ($y_i$) e o valor predito pelo nosso modelo linear ($\mu_i$):
+Matematicamente, o resíduo para a observação $i$ é a diferença entre o valor observado ($y_i$) e o valor ajustado pelo modelo ($\hat{\mu}_i$):
 
-$$e_i = y_i - \mu_i$$
+$$e_i = y_i - \hat{\mu}_i$$
 
 Podemos extrair essa variação não explicada diretamente do nosso modelo ajustado no R usando funções nativas:
 
 ```{r extract_residuals}
-# Extraindo os valores preditos (a porção de y explicada por x)
-mu <- fitted(m1)
+# Extraindo os valores ajustados (a porção de y explicada por x)
+mu_hat <- fitted(m1)
 
 # Extraindo os resíduos (a variação residual não explicada)
 res <- residuals(m1)
@@ -135,7 +271,7 @@ plot(y ~ x, pch = 19, main = "Perspectiva 1: Distância da reta de regressão")
 abline(m1, col = "red", lwd = 2)
 
 # Desenhando linhas conectando os pontos reais aos valores preditos
-segments(x0 = x, y0 = y, x1 = x, y1 = mu, col = "blue", lty = 2)
+segments(x0 = x, y0 = y, x1 = x, y1 = mu_hat, col = "blue", lty = 2)
 
 ```
 
@@ -150,7 +286,12 @@ abline(h = 0, col = "red", lwd = 2, lty = 2)
 
 ```
 
-Compare os dois gráficos. O segundo gráfico é essencialmente o primeiro, mas nós "rotacionamos" a linha de regressão até que ela ficasse horizontal, centralizada no zero.
+Confira se os resíduos ficam em torno de zero e se ainda aparece algum
+padrão em função de $x$. O que isso sugere sobre a adequação da reta?
+Compare os dois gráficos: no segundo, os resíduos correspondem às
+distâncias verticais do primeiro, agora representadas em torno de zero.
+Ao subtrair de cada observação o valor previsto pela reta de regressão, 
+a reta passa a coincidir com o eixo horizontal no gráfico de resíduos.
 
 Entender os resíduos como uma variável própria, limpa da influência de um preditor específico, é o que nos permitirá usar a regressão como uma ferramenta de controle estatístico. Mais à frente neste tutorial, usaremos essa  propriedade para descontar nossas variáveis de interesse de fontes de variação espúria.
 
@@ -173,12 +314,16 @@ head(dados)
 
 Agora vamos ajustar um modelo linear e tentar capturar a diferença nas médias nessas duas classes.
 
-```{r}
+```{r, results='hide'}
 m2 = lm(peso ~ estado_nutricional)
 summary(m2)
 ```
 
-Nesse caso, o modelo retorna um coeficiente que nós chamamos de um contraste, mostrando a diferença na média entre os indivíduos bem alimentados e mal alimentados. Os indivíduos mal alimentados tendem a ser aproximadamente 15 kg mais leves que os bem alimentados.
+Na saída, identifique a categoria de referência e o coeficiente que
+representa a diferença entre as médias. O sinal e a magnitude desse
+contraste fazem sentido diante dos valores simulados de 75 kg e 60 kg?
+
+Nesse caso, o modelo retorna um coeficiente chamado contraste, que expressa a diferença entre as médias dos indivíduos bem alimentados e mal alimentados. Confira o sinal e a magnitude desse coeficiente no `summary` e compare-os com o boxplot abaixo.
 
 ```{r, message = FALSE, warning = FALSE}
 # install.packages( "ggplot2") # se necessario...
@@ -195,8 +340,12 @@ O coeficiente beta representa a diferença na média desses dois conjuntos de ob
 
 Nós podemos estender a regressão linear para mais de uma variável preditora. Nesse caso, a média esperada de Y é uma função linear de mais de uma variável X.
 
-$$y_i \sim Normal(\mu_i, \sigma) \\
-\mu_i = \alpha + \sum \beta_j x_{ij}$$
+$$
+\begin{aligned}
+y_i &\sim Normal(\mu_i, \sigma) \\
+\mu_i &= \alpha + \sum \beta_j x_{ij}
+\end{aligned}
+$$
 
 ## Relação entre regressão múltipla e simples
 
@@ -218,20 +367,24 @@ y = a + b_x * x + b_z * z + rnorm(n)
 
 Primeiro, vamos olhar para os coeficientes das regressões simples, de y em x, depois de y em z.
 
-```{r}
+```{r, results='hide'}
 lm(y ~ x) |> coefficients() |> round(2)
 lm(y ~ z) |> coefficients() |> round(2)
 ```
 
-Os valores dos coeficientes de X e Z são muito parecidos com os valores simulados.
+Confira os coeficientes: eles estão próximos dos valores usados na
+simulação ($1.35$ para $x$ e $3.5$ para $z$)?
 
 Finalmente, vamos olhar para os coeficientes da regressão múltipla, ajustando coeficientes para X e Y simultaneamente.
 
-```{r}
+```{r, results='hide'}
 lm(y ~ x + z) |> coefficients() |> round(2)
 ```
 
-Note como os valores dos coeficientes calculados pela regressão simples e pela regressão múltipla são idênticos. Isso acontece sempre que as variáveis preditoras são não correlacionadas.
+Compare esses coeficientes com os das regressões simples. Eles mudaram
+muito? Com preditores não correlacionados, esperamos que as estimativas
+simples e múltiplas sejam próximas, embora não necessariamente idênticas
+em uma amostra finita.
 
 ## Preditores correlacionados na regressão múltipla
 
@@ -253,18 +406,24 @@ y = a + b_x * x + b_z * z + rnorm(n)
 
 Agora, vamos novamente olhar para os coeficientes da regressão simples de Y em X e de Y em Z.
 
-```{r}
+```{r, results='hide'}
 lm(y ~ x) |> coefficients() |> round(2)
 lm(y ~ z) |> coefficients() |> round(2)
 ```
 
-Veja como agora os coeficientes da regressão simples são completamente diferentes dos coeficientes que usávamos para fazer a simulação ($b_x = 1.35$; $b_z = 3.5$). 
+Confira agora as regressões simples: os coeficientes ainda estão
+próximos dos valores usados na simulação ($b_x = 1.35$; $b_z = 3.5$)?
+Compare com o exemplo anterior. O que mudou entre os dois cenários?
 
 Mas, se incluirmos tanto o X quanto o Z na regressão, conseguimos recuperar esses valores simulados.
 
-```{r}
+```{r, results='hide'}
 lm(y ~ x + z) |> coefficients() |> round(2)
 ```
+
+Compare as estimativas múltiplas com os valores usados para gerar os
+dados. Incluir as duas variáveis ajuda a recuperar seus efeitos
+simulados?
 
 ## Recuperando os coeficientes da regressão múltipla usando residuos
 
@@ -280,7 +439,7 @@ Podemos fazer isso em três passos:
 
 Vamos ver isso em código:
 
-```{r}
+```{r, results='hide'}
 # 1. Regredimos a variável X contra a variável Z
 m_xz <- lm(x ~ z)
 
@@ -292,11 +451,12 @@ lm(y ~ res_x) |> coefficients() |> round(2)
 
 ```
 
-Observe a estimativa do coeficiente para `res_x`. Ela é idêntica ao coeficiente de $x$ que obtivemos na regressão múltipla `lm(y ~ x + z)`!
+Compare o coeficiente de `res_x` com o coeficiente de $x$ em
+`lm(y ~ x + z)`. Eles são iguais, salvo diferenças de arredondamento?
 
 Podemos fazer exatamente o mesmo procedimento para isolar o efeito de $z$ sem a influência de $x$:
 
-```{r}
+```{r, results='hide'}
 # Isolando Z: regredimos Z em função de X e extraímos os resíduos
 res_z <- residuals(lm(z ~ x))
 
@@ -305,7 +465,8 @@ lm(y ~ res_z) |> coefficients() |> round(2)
 
 ```
 
-Novamente, o coeficiente obtido na regressão simples bate com o coeficiente de $z$ no modelo múltiplo.
+Faça a mesma comparação para `res_z` e o coeficiente de $z$ no modelo
+múltiplo. O resultado confirma o padrão observado para `res_x`?
 
 Esse processo ilustra o [Teorema de Frisch-Waugh-Lovell](https://en.wikipedia.org/wiki/Frisch%E2%80%93Waugh%E2%80%93Lovell_theorem): a regressão múltipla não é nada além de uma série de regressões simples nas quais o efeito de cada variável preditora é estimado usando apenas a parte da sua variação que é única e não compartilhada com os demais preditores do modelo.
 
@@ -334,7 +495,11 @@ As primeiras colunas representam variáveis categóricas, como:
 
 E a partir da coluna IS_PM até a coluna BA_OPI, temos as distâncias cranianas em milímetros.
 
-```{r}
+Este resultado é extenso e está oculto. Execute o bloco e confira: quantas
+observações e variáveis há? Quais colunas são categóricas e quais contêm
+medidas cranianas?
+
+```{r, results='hide'}
 str(ratones)
 ```
 
@@ -355,7 +520,10 @@ Parece haver uma relação entre as duas variáveis; porém, diferenças nas mé
 
 Antes de usar o modelo linear para controlar esses efeitos espúrios, vamos calcular a correlação bruta, sem nenhuma correção, entre as duas variáveis.
 
-```{r}
+Anote a correlação bruta antes de seguir. Ela indica uma associação
+positiva ou negativa, e quão forte parece ser?
+
+```{r, results='hide'}
 x = ratones$NSL_NA
 y = ratones$IS_PNS
 cor(x, y)
@@ -383,12 +551,92 @@ ggplot(ratones_res, aes(NSL_NA, IS_PNS, color = SEX, shape = line, group = line)
 
 Veja como agora as elipses estão todas sobrepostas: as diferenças nas médias foram removidas pelo modelo linear.
 
-Podemos então calcular a correlação entre essas duas medidas, descontando os efeitos dessas variáveis de confusão.
+Podemos, então, calcular a correlação entre essas duas medidas, descontando os efeitos dessas variáveis de confusão.
 
-```{r}
+```{r, results='hide'}
 x = ratones_res$NSL_NA
 y = ratones_res$IS_PNS
 cor(x, y)
 ```
 
+Compare este valor com a correlação bruta calculada antes. Ela aumentou
+ou diminuiu após controlar sexo e linhagem? Qual aspecto dos dados pode
+explicar essa mudança?
+
 A correlação, descontadas as variáveis de confusão, é sensivelmente maior do que o valor que havíamos calculado anteriormente. O efeito das variáveis espúrias (sexo e linhagem) estava reduzindo o valor da correlação bruta nos dados. Sem essa correção, nós estaríamos calculando uma correlação que não corresponde às relações fenotípicas encontradas dentro dessas populações.
+
+# Incluindo interações no modelo
+
+Uma interação permite que a relação entre uma variável preditora e a
+resposta mude conforme o valor de outra variável preditora. Por exemplo,
+podemos investigar se a relação entre a umidade do solo (`water`) e o
+número de flores (`blooms`) depende da quantidade de sombra (`shade`),
+usando o conjunto de dados `tulips`.
+
+## Preparando os dados
+
+Vamos dividir `blooms` pelo seu valor máximo e centralizar `water` e
+`shade` em torno de suas médias. Assim, os coeficientes principais ficam
+mais fáceis de interpretar.
+
+```{r tulips_data}
+tulips <- read.csv("tulips.csv")
+tulips$blooms <- tulips$blooms / max(tulips$blooms)
+tulips$water <- as.numeric(scale(tulips$water, scale = FALSE))
+tulips$shade <- as.numeric(scale(tulips$shade, scale = FALSE))
+```
+
+## Ajustando o modelo
+
+Na fórmula do R, `water * shade` inclui os efeitos de `water` e `shade`,
+além da interação entre eles. O modelo pode ser escrito como
+
+$$
+E(\text{blooms}_i) = \beta_0 + \beta_1\,\text{water}_i
+  + \beta_2\,\text{shade}_i
+  + \beta_3\,\text{water}_i\,\times\text{shade}_i.
+$$
+
+O coeficiente $\beta_3$ descreve como a inclinação da relação entre
+`water` e `blooms` muda com `shade`: para um valor de sombra $s$, essa
+inclinação é $\beta_1 + \beta_3 s$.
+
+Na saída do modelo, confira o sinal da estimativa de `water:shade`.
+Como esse sinal se relaciona com as inclinações das retas no gráfico?
+
+```{r fit_interaction}
+m3 <- lm(blooms ~ water * shade, data = tulips)
+```
+
+O resumo mostra as estimativas dos efeitos principais e da interação:
+
+```{r summarize_interaction, results='hide'}
+summary(m3)
+```
+
+## Visualizando a interação
+
+As retas abaixo mostram os valores previstos pelo modelo para cada nível
+de `shade`, mantendo os demais termos conforme a fórmula ajustada.
+
+```{r visualize_interaction}
+plot(blooms ~ water, col = 2:4, pch = 16, data = tulips)
+for (s in unique(tulips$shade)) {
+  abline(
+    a = coef(m3)["(Intercept)"] + coef(m3)["shade"] * s,
+    b = coef(m3)["water"] + coef(m3)["water:shade"] * s,
+    col = match(s, sort(unique(tulips$shade))) + 1
+  )
+}
+legend("topleft", legend = c("Sombra -1", "Sombra 0", "Sombra 1"), col = 2:4, pch = 16)
+```
+
+Confira o gráfico: a inclinação muda entre os níveis de sombra? Esse
+padrão é compatível com o coeficiente de interação observado em
+`summary(m3)`? Pense na história que esse modelo conta. Ela faz sentido?
+
+[^sem-vies]: Um estimador é não enviesado quando sua esperança, em repetições do processo amostral, coincide com o parâmetro que estima. Neste caso, as igualdades demonstradas são condicionais aos valores de $x$. Note que essa definição depende de uma distribuição de valores hipotéticos dos dados.
+
+[^tradeoff]: Não se deixe levar pela carga emocional associada ao termo. “Não enviesado” descreve uma propriedade do estimador, mas não significa, por si só, que ele seja o melhor. Um estimador com algum viés pode variar menos entre amostras e, por isso, ter erro quadrático médio menor. Por exemplo, em uma amostra pequena, aceitar um viés modesto pode reduzir bastante a variância do estimador e, com isso, seu erro quadrático médio. Portanto, a escolha do estimador depende do objetivo e do custo relativo de viés e variabilidade. “Não enviesado” não é um selo universal de qualidade. Veja, por exemplo: [James-Stein Estimador](https://en.wikipedia.org/wiki/James%E2%80%93Stein_estimator) ([video](https://www.youtube.com/watch?v=cUqoHQDinCM))
+
+[^gdl]: Na regressão linear simples com intercepto e inclinação, os resíduos $e_i = y_i - \hat{y}_i$ não podem variar livremente: as equações que definem o ajuste por mínimos quadrados impõem $\sum_i e_i = 0$ e $\sum_i (x_i - \bar{x})e_i = 0$. Essas duas restrições deixam os resíduos em um espaço com $n - 2$ dimensões. Por isso, embora haja $n$ resíduos, a soma de seus quadrados é dividida por $n - 2$ para obter um estimador não enviesado de $\sigma^2$, sob as premissas do modelo. Esse é o sentido de “graus de liberdade residuais” neste trecho: a quantidade de informação independente que resta para estimar a variância depois de ajustar os dois coeficientes. Em uma abordagem Bayesiana, os coeficientes e a variância são tratados como parâmetros incertos, recebem distribuições a priori e são atualizados pela distribuição posterior. Assim, a incerteza costuma ser descrita diretamente pela posterior, e não por uma correção frequentista universal que divide a soma dos quadrados por $n - 2$. 

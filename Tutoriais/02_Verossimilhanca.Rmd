@@ -7,6 +7,7 @@ output:
     distill::distill_article:
       toc: true
       toc_depth: 3
+      mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
 ---
 
 ```{r setup, echo=FALSE}
@@ -207,6 +208,7 @@ função `plotprofmle`, que desenha esses perfis:
 
 
 ```{r}
+if(!require(sads)){install.packages("sads"); library(sads)}
 ml1.p <- profile(ml1, alpha =0.05) ## calcula o perfil
 ## Uma janela gráfica para 3 gráficos
 par(mfrow = c(1,3))
@@ -475,7 +477,7 @@ O estimador tradicional da variância (que não é um MLE), tem uma correção p
 
 $$ \widehat{s^2} = \frac{ \sum_{i=1}^n (x_i - \bar{x})^2 }{ n - 1 }$$
 
-A redução do  pode ser comprovado com uma simulação:
+A redução do viés pode ser comprovada com uma simulação:
 
 ```{r}
 var.trad10 = tapply( vals10, samp10, var)    # estimativas com correção de viés da variância de amostras de tamanho 10
