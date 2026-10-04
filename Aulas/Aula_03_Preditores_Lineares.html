@@ -109,7 +109,7 @@ dependência que um parâmetro da distribuição tem com outras medidas).
 
 .center[
 
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-1-1.png" alt="" width="80%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/galton-pai-mae-1.png" alt="" width="80%" /&gt;
 &lt;br&gt;
 Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 1885)](https://www.randomservices.org/random/data/Galton.html)
 
@@ -124,13 +124,14 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 &gt; ## Valores iniciais
 &gt; inicio.a &lt;- mean(dat$H)
 &gt; inicio.ls &lt;- log(sd(dat$H))
+&gt; 
+&gt; ## Especifica o modelo
+&gt; m.pais.f &lt;- alist( H ~ dnorm( mu, exp(lsigma) ),
++                    mu &lt;- a + bP * P + bM * M)
 &gt; ## Ajuste no rethinking
-&gt; m.pais &lt;- quap(
-+     alist(
-+         H ~ dnorm(mu, exp(lsigma)),
-+         mu &lt;- a + bP * P + bM * M
-+     ), data = dat,
+&gt; m.pais &lt;- quap( m.pais.f, data = dat,
 +     start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
+&gt; ## Coeficientes
 &gt; precis(m.pais)
 ```
 
@@ -146,12 +147,73 @@ lsigma  0.7477301 0.05376032  0.6618107  0.8336494
 ## Interpretação dos coeficientes de modelos lineares múltiplos
 
 .center[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-3-1.png" alt="" width="85%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/coefs-pai-mae-1.png" alt="" width="75%" /&gt;
+]
+
+---
+
+## Coeficientes são efeitos parciais
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-2-1.png" alt="" width="75%" /&gt;
+&lt;br&gt;
+ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua altura e DAP [(Meyer, 1953)](https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/trees.html)
+]
+
+---
+## Coeficientes são efeitos parciais
+
+
+``` r
+&gt; ## Valores iniciais
+&gt; inicio.a2 &lt;- mean(dat2$lV)
+&gt; inicio.ls2 &lt;- log(sd(dat2$lV))
+&gt; 
+&gt; ## Especifica o modelo
+&gt; m.arv.f &lt;- alist( lV ~ dnorm( mu, exp(lsigma) ),
++                   mu &lt;- a + bG * lD + bH * lH)
+&gt; ## Ajuste no rethinking
+&gt; m.arv &lt;- quap( m.arv.f, data = dat2,
++     start = list(a = inicio.a2, bG = 0, bH = 0, lsigma = inicio.ls2))
+&gt; ## Coeficientes
+&gt; precis(m.arv)
+```
 
 ```
-NULL
+                mean         sd        5.5%       94.5%
+a      -8.122428e-09 0.01389209 -0.02220225  0.02220223
+bG      1.982650e+00 0.07128876  1.86871668  2.09658308
+bH      1.117123e+00 0.19429336  0.80660492  1.42764154
+lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 ```
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/coefs-diametro-altura-1.png" alt="" width="75%" /&gt;
 ]
+
+---
+
+## Coeficientes são efeitos parciais
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-4-1.png" alt="" width="75%" /&gt;
+]
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/av-altura-1.png" alt="" width="90%" /&gt;
+]
+
+**1:** o que sobra da altura depois de descontar o diâmetro. **2:** o volume (também descontado o diâmetro) em função desse resto. A inclinação é o coeficiente da altura na regressão múltipla.
+
+---
+
+## Variáveis categóricas: contrastes
+
 
 ---
 ## Modelos lineares múltiplos aditivos
@@ -219,7 +281,7 @@ NULL
 ## Gráfico do exemplo aditivo
 
 .center[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-aditivo-1.png" alt="" width="60%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-aditivo-1.png" alt="" width="45%" /&gt;
 ]
 
 ---
@@ -252,7 +314,7 @@ NULL
 ## Gráfico do exemplo com interação
 
 .center[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-teorico-interacao-1.png" alt="" width="60%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/plot-teorico-interacao-1.png" alt="" width="45%" /&gt;
 ]
 
 ---

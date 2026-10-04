@@ -20,10 +20,16 @@ self-contained: true
 options(htmltools.dir.version = FALSE)
 options(servr.daemon = TRUE)#para que não bloqueie a sessão
 knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
-                      out.width="85%")
+                      out.width="85%",
+                      ## Figuras: mesma largura em todos os chunks (texto com tamanho consistente),
+                      ## alta resolução, e fundo transparente para herdar a cor dos slides
+                      fig.width = 8, fig.asp = 0.618,
+                      dpi = 300, fig.retina = 1,
+                      dev.args = list(bg = "transparent"))
 library(xaringanthemer)
 library(ggplot2)
 library(ggthemes)
+library(patchwork)
 library(dplyr)
 library(tidyr)
 library(stringr)
@@ -66,19 +72,20 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
     (theme_foundation(base_size=base_size, base_family=base_family)
         + theme(plot.title = element_text(face = "bold",
                                           size = rel(1.2), hjust = 0.5),
-                text = element_text(),
-                panel.background = element_rect(colour = NA),
-                plot.background = element_rect(colour = NA),
+                text = element_text(colour="#586e75"), # solarized base01
+                panel.background = element_rect(fill = "transparent", colour = NA),
+                plot.background = element_rect(fill = "transparent", colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
                 panel.border = element_rect(colour = NA),
                 axis.title = element_text(face = "bold",size = rel(1)),
                 axis.title.y = element_text(angle=90,vjust =2),
                 axis.title.x = element_text(vjust = -0.2),
-                axis.text = element_text(), 
-                axis.line = element_line(colour="black"),
-                axis.ticks = element_line(),
-                panel.grid.major = element_line(colour="#f0f0f0"),
+                axis.text = element_text(colour="#657b83"), # solarized base00
+                axis.line = element_line(colour="#586e75"), # solarized base01
+                axis.ticks = element_line(colour="#586e75"),
+                panel.grid.major = element_line(colour="#eee8d5"), # solarized base2
                 panel.grid.minor = element_blank(),
-                legend.key = element_rect(colour = NA),
+                legend.key = element_rect(fill = "transparent", colour = NA),
                 legend.position = "bottom",
                 legend.direction = "horizontal",
                 legend.key.size= unit(0.2, "cm"),
@@ -86,8 +93,8 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
                 legend.spacing = unit(0.2, "cm"),
                 legend.title = element_text(face="italic"),
                 plot.margin=unit(c(10,5,5,5),"mm"),
-                strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
-                strip.text = element_text(face="bold")
+                strip.background=element_rect(colour="#eee8d5",fill="#eee8d5"), # solarized base2
+                strip.text = element_text(face="bold", colour="#586e75")
                 ))
     
 }
@@ -175,7 +182,7 @@ dependência que um parâmetro da distribuição tem com outras medidas).
 
 .center[
 
-```{r , echo=FALSE, fig.asp = 0.5, out.width ="80%"}
+```{r galton-pai-mae, fig.asp = 0.5, out.width = "80%"}
 galton <- read.table("Galton.txt", header = TRUE)
 ## Apenas meninos, e só o primeiro filho de cada família
 meninos <- galton[galton$Gender == "M", ]
@@ -189,20 +196,24 @@ mP <- lm(H ~ P, data = dat)
 mM <- lm(H ~ M, data = dat)
 cfP <- coef(mP)
 cfM <- coef(mM)
-## Grafico
-par(#cex.axis = 1, cex.lab = 1,
-    #cex.main=1,
-    ##mar = c(5, 5.5, 0.5, 1), mgp=c(3.5,1,0),
-    bty = "l", las=1, mfrow=c(1,2))
-plot(H ~ P, data = dat, col = rangi2,
-     xlab = "Altura do pai (centrada, in)",
-     ylab = "Altura do filho (in)",
-     main=bquote(beta[0] == .(round(cfP[1], 1)) * "," ~~ beta[1] == .(round(cfP[2], 2))))
-plot(H ~ M, data = dat, col = rangi2,
-     xlab = "Altura da mãe (centrada, in)",
-     ylab = "",
-     main=bquote(beta[0] == .(round(cfM[1], 1)) * "," ~~ beta[1] == .(round(cfM[2], 2))))
-par(mfrow=c(1,1))
+## Rótulos dos painéis em plotmath, com os coeficientes
+rot <- c(
+    sprintf('"Pai:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfP[1], cfP[2]),
+    sprintf('"Mãe:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfM[1], cfM[2]))
+## Dados em formato longo: um painel para cada genitor
+dat.long <- rbind(
+    data.frame(genitor = rot[1], x = dat$P, H = dat$H),
+    data.frame(genitor = rot[2], x = dat$M, H = dat$H))
+dat.long$genitor <- factor(dat.long$genitor, levels = rot)
+retas <- data.frame(genitor = factor(rot, levels = rot),
+                    a = c(cfP[1], cfM[1]), b = c(cfP[2], cfM[2]))
+## Gráfico
+ggplot(dat.long, aes(x, H)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    geom_abline(data = retas, aes(intercept = a, slope = b), linewidth = 1) +
+    facet_wrap(~ genitor, labeller = label_parsed) +
+    labs(x = "Altura do genitor (centrada, in)", y = "Altura do filho (in)") +
+    theme_Publication(18)
 ```
 <br>
 Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 1885)](https://www.randomservices.org/random/data/Galton.html)
@@ -217,13 +228,14 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 ## Valores iniciais
 inicio.a <- mean(dat$H)
 inicio.ls <- log(sd(dat$H))
+
+## Especifica o modelo
+m.pais.f <- alist( H ~ dnorm( mu, exp(lsigma) ),
+                   mu <- a + bP * P + bM * M)
 ## Ajuste no rethinking
-m.pais <- quap(
-    alist(
-        H ~ dnorm(mu, exp(lsigma)),
-        mu <- a + bP * P + bM * M
-    ), data = dat,
+m.pais <- quap( m.pais.f, data = dat,
     start = list(a = inicio.a, bP = 0, bM = 0, lsigma = inicio.ls))
+## Coeficientes
 precis(m.pais)
 ```
 
@@ -231,7 +243,7 @@ precis(m.pais)
 ## Interpretação dos coeficientes de modelos lineares múltiplos
 
 .center[
-```{r, echo=FALSE, fig.height=3 }
+```{r coefs-pai-mae, fig.asp = 0.55, out.width = "75%"}
 ## Regressão simples: só o pai
 m.pai <- quap(
     alist(
@@ -248,29 +260,181 @@ m.mae <- quap(
     ), data = dat,
     start = list(a = inicio.a, bM = 0, lsigma = inicio.ls))
 ##
-plot_coefs <- function(modelos, pars) {
+## Gráfico dos coeficientes (média e intervalo de 95%)
+plot_coefs <- function(modelos, pars, rotulos) {
     tab <- do.call(rbind, lapply(names(modelos), function(nome) {
-        p <- as.data.frame(precis(modelos[[nome]]))
+        p <- as.data.frame(precis(modelos[[nome]], prob=0.95))
         p <- p[rownames(p) %in% pars, , drop = FALSE]
         data.frame(par = rownames(p), modelo = nome, media = p$mean,
-                   inf = p[["5.5%"]], sup = p[["94.5%"]])
+                   inf = p[["2.5%"]], sup = p[["97.5%"]])
     }))
-    tab <- tab[order(match(tab$par, pars)), ]
-    y <- nrow(tab):1
-    op <- par(mar = c(5, 10, 1, 1))
-    on.exit(par(op))
-    plot(tab$media, y, xlim = range(tab$inf, tab$sup), yaxt = "n",
-         pch = 19, xlab = "Valor estimado", ylab = "")
-    segments(tab$inf, y, tab$sup, y, lwd = 2)
-    axis(2, at = y, labels = paste(tab$par, "|", tab$modelo), las = 1)
+    tab$par <- factor(tab$par, levels = pars)
+    tab$modelo <- factor(tab$modelo, levels = rev(names(modelos)))
+    ggplot(tab, aes(x = media, y = modelo)) +
+        geom_pointrange(aes(xmin = inf, xmax = sup), linewidth = 1, size = 0.8) +
+        facet_wrap(~ par, ncol = 1, scales = "free_y",
+                   labeller = if (is.null(rotulos)) "label_value" else as_labeller(rotulos, label_parsed)) +
+        labs(x = "Valor estimado (intervalo de 95%)", y = NULL)
 }
 
 plot_coefs(list("só pai" = m.pai, "só mãe" = m.mae, "pai + mãe" = m.pais),
+           rotulos = c(bP = 'beta[1]~"pai"', bM = 'beta[1]~"mãe"'),
            pars = c("bP", "bM")) +
-    theme_Publication()
-   
+    theme_Publication(18)
 ```
 ]
+
+---
+
+## Coeficientes são efeitos parciais
+
+.center[
+```{r , out.width="75%"}
+## Dados em escala log, centrados na média
+dat2 <- with(trees, data.frame(
+    lV = log(Volume) - mean(log(Volume)),
+    lD = log(Girth)  - mean(log(Girth)),
+    lH = log(Height) - mean(log(Height))))
+
+mG <- lm(lV ~ lD, data = dat2)
+mH <- lm(lV ~ lH, data = dat2)
+## "+ 0" depois do round() evita que o intercepto apareça como "-0.00"
+cfG <- round(coef(mG), 2) + 0
+cfH <- round(coef(mH), 2) + 0
+## Rótulos dos painéis em plotmath, com os coeficientes
+rot2 <- c(
+    sprintf('"Diâmetro:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfG[1], cfG[2]),
+    sprintf('"Altura:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfH[1], cfH[2]))
+## Dados em formato longo: um painel para cada preditora
+dat2.long <- rbind(
+    data.frame(preditora = rot2[1], x = dat2$lD, lV = dat2$lV),
+    data.frame(preditora = rot2[2], x = dat2$lH, lV = dat2$lV))
+dat2.long$preditora <- factor(dat2.long$preditora, levels = rot2)
+retas2 <- data.frame(preditora = factor(rot2, levels = rot2),
+                     a = c(cfG[1], cfH[1]), b = c(cfG[2], cfH[2]))
+## Gráfico
+ggplot(dat2.long, aes(x, lV)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    geom_abline(data = retas2, aes(intercept = a, slope = b), linewidth = 1) +
+    facet_wrap(~ preditora, labeller = label_parsed, scales = "free_x") +
+    labs(x = "ln da preditora (centrado)", y = "ln do volume (centrado)") +
+    theme_Publication(18)+
+    theme(panel.spacing = unit(2.5, "lines"))
+```
+<br>
+ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua altura e DAP [(Meyer, 1953)](https://stat.ethz.ch/R-manual/R-patched/library/datasets/html/trees.html)
+]
+
+---
+## Coeficientes são efeitos parciais
+
+```{r , echo=TRUE}
+## Valores iniciais
+inicio.a2 <- mean(dat2$lV)
+inicio.ls2 <- log(sd(dat2$lV))
+
+## Especifica o modelo
+m.arv.f <- alist( lV ~ dnorm( mu, exp(lsigma) ),
+                  mu <- a + bG * lD + bH * lH)
+## Ajuste no rethinking
+m.arv <- quap( m.arv.f, data = dat2,
+    start = list(a = inicio.a2, bG = 0, bH = 0, lsigma = inicio.ls2))
+## Coeficientes
+precis(m.arv)
+```
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+```{r coefs-diametro-altura, fig.asp = 0.55, out.width = "75%"}
+
+## Regressão simples: só o diâmetro
+m.diam <- quap(
+    alist(
+        lV ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bG * lD
+    ), data = dat2,
+    start = list(a = inicio.a2, bG = 0, lsigma = inicio.ls2))
+
+## Regressão simples: só a altura
+m.alt <- quap(
+    alist(
+        lV ~ dnorm(mu, exp(lsigma)),
+        mu <- a + bH * lH
+    ), data = dat2,
+    start = list(a = inicio.a2, bH = 0, lsigma = inicio.ls2))
+
+## Gráfico dos coeficientes (média e intervalo de 95%)
+plot_coefs(list("só diâmetro" = m.diam, "só altura" = m.alt,
+                "diâmetro + altura" = m.arv),
+           rotulos = c(bG = 'beta[1]~"diâmetro"', bH = 'beta[1]~"altura"'),
+           pars = c("bG", "bH")) +
+    theme_Publication(18)
+```
+]
+
+---
+
+## Coeficientes são efeitos parciais
+.center[
+```{r , echo=FALSE, eval=TRUE, out.width="75%"}
+ggplot(dat2, aes(lD, lH)) +
+    geom_point(color = rangi2, size = 2, alpha = 0.7) +
+    labs(x = "ln DAP (centrado)", y = "ln altura (centrado)") +
+    theme_Publication(18)
+```
+]
+
+---
+## Coeficientes são efeitos parciais
+
+.center[
+```{r av-altura, fig.width = 10, fig.asp = 0.45, out.width = "90%"}
+
+## Parte da altura não explicada pelo diâmetro
+m.HG <- lm(lH ~ lD, data = dat2)
+dat2$fit.H <- fitted(m.HG)
+dat2$res.H <- resid(m.HG)
+## Parte do volume não explicada pelo diâmetro
+dat2$res.V <- resid(lm(lV ~ lD, data = dat2))
+## Coeficiente da altura na regressão múltipla
+bH <- coef(m.arv)["bH"]
+## Cor pelo resíduo da altura, para ligar os dois painéis (azul e vermelho do solarized)
+cores <- scale_color_gradient2(low = "#268bd2", mid = "#93a1a1", high = "#dc322f",
+                               midpoint = 0, guide = "none")
+
+p.A <- ggplot(dat2, aes(lD, lH)) +
+    geom_abline(intercept = coef(m.HG)[1], slope = coef(m.HG)[2],
+                linewidth = 1, colour = "#586e75") +
+    geom_segment(aes(xend = lD, yend = fit.H, colour = res.H), linewidth = 0.8) +
+    geom_point(aes(colour = res.H), size = 2.5) +
+    cores +
+    labs(title = "1. Resíduos da altura",
+         x = "ln DAP (centrado)", y = "ln altura (centrado)") +
+    theme_Publication(18)
+
+p.B <- ggplot(dat2, aes(res.H, res.V)) +
+    geom_abline(intercept = 0, slope = bH, linewidth = 1, colour = "#586e75") +
+    geom_point(aes(colour = res.H), size = 2.5) +
+    cores +
+    annotate("text", x = -Inf, y = Inf, hjust = -0.15, vjust = 1.5,
+             size = 6, colour = "#586e75", parse = TRUE,
+             label = sprintf('beta[1]~"altura"==%.2f', bH)) +
+    labs(title = "2. Regressão nos resíduos",
+         x = "resíduo da altura", y = "resíduo do volume") +
+    theme_Publication(18)
+
+p.A + p.B
+```
+]
+
+**1:** o que sobra da altura depois de descontar o diâmetro. **2:** o volume (também descontado o diâmetro) em função desse resto. A inclinação é o coeficiente da altura na regressão múltipla.
+
+---
+
+## Variáveis categóricas: contrastes
+
 
 ---
 ## Modelos lineares múltiplos aditivos
@@ -316,7 +480,7 @@ $$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$
 **Duas preditoras:**
 
 * $X_1$: altura da mãe, contínua
-* $X_2$: gênero binário atribuído (Feminino = 0, Masculino = 1)
+* $X_2$: gênero binário atribuído (Masculino = 0, Feminino = 1)
 ]
 
 --
@@ -338,7 +502,7 @@ $$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$
 ## Gráfico do exemplo aditivo
 
 .center[
-```{r plot-aditivo, out.width="60%"}
+```{r plot-aditivo, fig.width = 5, fig.asp = 1, out.width = "45%"}
 retas.ad <- data.frame(
     sexo = c("Meninas", "Meninos"),
     intercepto = c(cf2[1], cf2[1] + cf2[3]),
@@ -381,7 +545,7 @@ p.galton +
 ## Gráfico do exemplo com interação
 
 .center[
-```{r plot-teorico-interacao, out.width="60%"}
+```{r plot-teorico-interacao, fig.width = 5, fig.asp = 1, out.width = "45%"}
 ## Retas hipotéticas, para ilustrar a interação
 retas.int <- data.frame(
     sexo = c("Meninas", "Meninos"),
