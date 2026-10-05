@@ -103,6 +103,7 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 ## Preditores lineares
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+
 **Todos que podem ser escritos na forma**
 
 `$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
@@ -116,6 +117,24 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 `$$\frac{\partial g(X_i)}{\partial \beta_i} = X_i$$`
 ]
 
+---
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* `\(\beta_0X_1^{\beta_1}\)`
+
+* `\(\beta_0e^{\beta_1 X_1}\)`
+
+* `\(\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)`
+
+* E muitas, muitas mais.
+]
+
+Em todos os casos, as derivadas parciais dependem dos parâmetros.
 
 ---
 ## E o que são preditores não lineares?
@@ -140,27 +159,9 @@ Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
 * E muitas, muitas mais.
 ]
 
---
 
 Em todos os casos, as derivadas parciais dependem dos parâmetros.
 
-
----
-## E o que são preditores não lineares?
-
-Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
-
-.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Exemplos**
-
-* `\(\beta_0X_1^{\beta_1}\)`
-
-* `\(\beta_0e^{\beta_1 X_1}\)`
-
-* `\(\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)`
-
-* E muitas, muitas mais.
-]
 
 ---
 class: inverse, middle, center
@@ -202,13 +203,15 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 
 ## Interpretação dos coeficientes
 
+Especifica o modelo
 
 
 ``` r
-&gt; ## Especifica o modelo
 &gt; m.pais.f &lt;- alist( H ~ dnorm( mu, exp(lsigma) ),
-+                    mu &lt;- a + bPai * pai + bMae * mae)
++                    mu &lt;- b0 + b1 * pai + b2 * mae)
 ```
+
+Ajuste
 
 
 ``` r
@@ -217,16 +220,16 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 &gt; inicio.ls &lt;- log(sd(dat$H))
 &gt; ## Ajuste
 &gt; m.pais &lt;- quap( m.pais.f, data = dat,
-+     start = list(a = inicio.a, bPai = 0, bMae = 0, lsigma = inicio.ls))
++     start = list(b0 = inicio.a, b1 = 0, b2 = 0, lsigma = inicio.ls))
 &gt; ## Coeficientes
 &gt; precis(m.pais)
 ```
 
 ```
              mean         sd       5.5%      94.5%
-a      70.4358382 0.16058759 70.1791882 70.6924881
-bPai    0.4767470 0.06376877  0.3748322  0.5786618
-bMae    0.2840529 0.06811670  0.1751892  0.3929165
+b0     70.4358382 0.16058759 70.1791882 70.6924881
+b1      0.4767470 0.06376877  0.3748322  0.5786618
+b2      0.2840529 0.06811670  0.1751892  0.3929165
 lsigma  0.7477301 0.05376032  0.6618107  0.8336494
 ```
 
@@ -288,7 +291,7 @@ ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua 
 ``` r
 &gt; ## Especifica o modelo
 &gt; m.arv.f &lt;- alist( lV ~ dnorm( mu, exp(lsigma) ),
-+                   mu &lt;- a + bD * lD + bH * lH)
++                   mu &lt;- b0 + b1 * lD + b2 * lH)
 ```
 
 
@@ -298,16 +301,16 @@ ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua 
 &gt; inicio.ls2 &lt;- log(sd(dat2$lV))
 &gt; ## Ajuste no rethinking
 &gt; m.arv &lt;- quap( m.arv.f, data = dat2,
-+     start = list(a = inicio.a2, bD = 0, bH = 0, lsigma = inicio.ls2))
++     start = list(b0 = inicio.a2, b1 = 0, b2 = 0, lsigma = inicio.ls2))
 &gt; ## Coeficientes
 &gt; precis(m.arv)
 ```
 
 ```
                 mean         sd        5.5%       94.5%
-a      -8.122428e-09 0.01389209 -0.02220225  0.02220223
-bD      1.982650e+00 0.07128876  1.86871668  2.09658308
-bH      1.117123e+00 0.19429336  0.80660492  1.42764154
+b0     -8.122428e-09 0.01389209 -0.02220225  0.02220223
+b1      1.982650e+00 0.07128876  1.86871668  2.09658308
+b2      1.117123e+00 0.19429336  0.80660492  1.42764154
 lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 ```
 ---
@@ -400,7 +403,7 @@ lsigma  0.8836568 0.05038493  0.8031319  0.9641816
 
 .pull-left[
 
-`$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2, \text{menina}$$`
+`$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}$$`
 
 {{content}}
 ]
@@ -419,7 +422,7 @@ lsigma  0.8836568 0.05038493  0.8031319  0.9641816
 --
 
 * **Meninas** ( `\(\text{menina} = 1\)` ): 
-`$$\mu = [\beta0 + \beta_2] + \beta_1\, \text{mae}$$`
+`$$\mu = [\beta_0 + \beta_2] + \beta_1\, \text{mae}$$`
 
 {{content}}
 

@@ -271,7 +271,7 @@ cfM <- coef(mM)
 ## Rótulos dos painéis em plotmath, com os coeficientes
 rot <- c(
     sprintf('"Pai:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfP[1], cfP[2]),
-    sprintf('"Mãe:"~~beta[0]==%.1f*","~~beta[1]==%.2f', cfM[1], cfM[2]))
+    sprintf('"Mãe:"~~beta[0]==%.1f*","~~beta[2]==%.2f', cfM[1], cfM[2]))
 ## Dados em formato longo: um painel para cada genitor
 dat.long <- rbind(
     data.frame(genitor = rot[1], x = dat$pai, H = dat$H),
@@ -365,7 +365,7 @@ plot_coefs <- function(modelos, pars, rotulos) {
 }
 
 plot_coefs(list("só pai" = m.pai, "só mãe" = m.mae, "pai + mãe" = m.pais),
-           rotulos = c(bPai = 'beta[1]', bMae = 'beta[2]'),
+           rotulos = c(b1 = 'beta[1]~"pai"', b2 = 'beta[2]~"mãe"'),
            pars = c("b1", "b2")) +
     theme_Publication(18)
 ```
@@ -391,7 +391,7 @@ cfH <- round(coef(mH), 2) + 0
 ## Rótulos dos painéis em plotmath, com os coeficientes
 rot2 <- c(
     sprintf('"Diâmetro:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfG[1], cfG[2]),
-    sprintf('"Altura:"~~beta[0]==%.2f*","~~beta[1]==%.2f', cfH[1], cfH[2]))
+    sprintf('"Altura:"~~beta[0]==%.2f*","~~beta[2]==%.2f', cfH[1], cfH[2]))
 ## Dados em formato longo: um painel para cada preditora
 dat2.long <- rbind(
     data.frame(preditora = rot2[1], x = dat2$lD, lV = dat2$lV),
@@ -443,7 +443,7 @@ precis(m.arv)
 m.diam <- quap(
     alist(
         lV ~ dnorm(mu, exp(lsigma)),
-        mu <- a + b1 * lD
+        mu <- b0 + b1 * lD
     ), data = dat2,
     start = list(b0 = inicio.a2, b1 = 0, lsigma = inicio.ls2))
 
@@ -451,14 +451,14 @@ m.diam <- quap(
 m.alt <- quap(
     alist(
         lV ~ dnorm(mu, exp(lsigma)),
-        mu <- a + b2 * lH
+        mu <- b0 + b2 * lH
     ), data = dat2,
     start = list(b0 = inicio.a2, b2 = 0, lsigma = inicio.ls2))
 
 ## Gráfico dos coeficientes (média e intervalo de 95%)
 plot_coefs(list("só diâmetro" = m.diam, "só altura" = m.alt,
                 "diâmetro + altura" = m.arv),
-           rotulos = c(bD = 'beta[1]~"diâmetro"', bH = 'beta[2]~"altura"'),
+           rotulos = c(b1 = 'beta[1]~"diâmetro"', b2 = 'beta[2]~"altura"'),
            pars = c("b1", "b2")) +
     theme_Publication(18)
 ```
@@ -489,7 +489,7 @@ dat2$res.H <- resid(m.HG)
 ## Parte do volume não explicada pelo diâmetro
 dat2$res.V <- resid(lm(lV ~ lD, data = dat2))
 ## Coeficiente da altura na regressão múltipla
-bH <- coef(m.arv)["b1"]
+bH <- coef(m.arv)["b2"]
 ## Cor pelo resíduo da altura, para ligar os dois painéis (azul e vermelho do solarized)
 cores <- scale_color_gradient2(low = "#268bd2", mid = "#93a1a1", high = "#dc322f",
                                midpoint = 0, guide = "none")
@@ -505,12 +505,12 @@ p.A <- ggplot(dat2, aes(lD, lH)) +
     theme_Publication(18)
 
 p.B <- ggplot(dat2, aes(res.H, res.V)) +
-    geom_abline(intercept = 0, slope = b2, linewidth = 1, colour = "#586e75") +
+    geom_abline(intercept = 0, slope = bH, linewidth = 1, colour = "#586e75") +
     geom_point(aes(colour = res.H), size = 2.5) +
     cores +
     annotate("text", x = -Inf, y = Inf, hjust = -0.15, vjust = 1.5,
              size = 6, colour = "#586e75", parse = TRUE,
-             label = sprintf('beta[1]~"altura"==%.2f', bH)) +
+             label = sprintf('beta[2]~"altura"==%.2f', bH)) +
     labs(title = "2. Regressão nos resíduos",
          x = "resíduo da altura", y = "resíduo do volume") +
     theme_Publication(18)
@@ -587,7 +587,7 @@ precis(m.gal)
 
 .pull-left[
 
-$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2, \text{menina}$$
+$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}$$
 
 {{content}}
 ]
@@ -619,7 +619,7 @@ $$\mu = \beta_0 + \beta_1\, \text{mae}$$
 --
 
 * **Meninas** ( $\text{menina} = 1$ ): 
-$$\mu = [\beta0 + \beta_2] + \beta_1\, \text{mae}$$
+$$\mu = [\beta_0 + \beta_2] + \beta_1\, \text{mae}$$
 
 {{content}}
 
