@@ -1,0 +1,762 @@
+---
+title: "Inferência Bayesiana 1"
+date: "2026-10-09"
+lang: "pt-BR"
+author: Diogo Melo
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+      mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+---
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, fig.asp = 1)
+# Área de transferência
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+```
+
+# Definindo uma posterior muito simples
+
+Considere o seguinte modelo:
+
+Verossimilhança:
+
+$$
+y_i \sim Normal(\mu, \sigma = 1) 
+$$
+
+Distribuições a priori:
+
+$$
+\begin{aligned}
+\mu &\sim Normal(0, 1) \\
+\sigma &\sim Exponential(1)
+\end{aligned}
+$$
+
+Para modelos muito simples, como este, podemos escrever e calcular a
+posterior diretamente. Em seguida, usamos os valores calculados para
+representar a distribuição posterior completa.
+
+Vamos escrever essa posterior em R:
+
+No código a seguir, percorremos os valores possíveis de $\mu$ e
+calculamos sua probabilidade posterior usando o produto entre a
+distribuição a priori e a verossimilhança (ou a soma na escala
+logarítmica). Isso revela a forma da distribuição posterior, que podemos
+representar e examinar para tirar conclusões.
+
+```{r}
+set.seed(2)
+# Dados:
+y = rnorm(100, mean = 2, sd = 1)
+
+# Posterior na escala logarítmica, para estabilidade numérica
+logP_theta_y = function(mu, sigma = 1, data = y){
+  ll = sum(dnorm(data, mu, sigma, log = TRUE))
+  logprior = dnorm(mu, 0, 1, log = TRUE) + dexp(sigma, 1, log = TRUE)
+  logprior + ll # P(theta)P(y|theta)
+}
+```
+
+Neste caso univariado, é fácil avaliar muitos valores possíveis de
+$\mu$ e identificar aqueles com maior probabilidade. Em dimensões
+elevadas, porém, essa estratégia deixa de ser viável.
+
+```{r}
+x = seq(0, 4, 0.01)
+px = Vectorize(logP_theta_y)(x)
+plot(px ~ x, pch = 19, col = 2, xlab = "mean parameter (mu)", ylab = "proportional to P(mu|y)")
+abline(v = 2)
+```
+
+Com base nessa posterior, qual é o valor mais provável do parâmetro?
+
+# Instalando o pacote `rethinking`
+
+Estas instruções foram adaptadas de
+[https://github.com/rmcelreath/rethinking](https://github.com/rmcelreath/rethinking).
+Consulte o site para obter mais detalhes e conhecer outras opções.
+
+O processo tem três etapas: (1) instalar as ferramentas de compilação
+C++; (2) instalar `cmdstanr`; e (3) instalar `rethinking`. Os detalhes
+estão abaixo.
+
+Primeiro, instale as ferramentas de compilação C++. Acesse
+[mc-stan.org/docs/cmdstan-guide/cmdstan-installation.html](https://mc-stan.org/docs/cmdstan-guide/cmdstan-installation.html#cpp-toolchain)
+e siga as instruções para sua plataforma.
+
+Em seguida, instale o pacote `cmdstanr`. Consulte
+[https://mc-stan.org/cmdstanr/](https://mc-stan.org/cmdstanr/) para obter mais informações. Para
+instalá-lo, execute:
+
+```
+install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
+```
+
+Na primeira instalação do `cmdstanr`, também será necessário compilar
+as bibliotecas com `cmdstanr::install_cmdstan()`. Esse trabalho inicial
+vale a pena e só precisa ser feito uma vez.
+
+Por fim, instale `rethinking` no R com:
+```
+install.packages(c("coda","mvtnorm","remotes","loo","dagitty","shape","rstanarm"))
+remotes::install_github("rmcelreath/rethinking")
+```
+
+O pacote `rethinking` não está no CRAN; ele é distribuído pelo GitHub.
+Se aparecer uma mensagem dizendo que o pacote não está disponível para
+sua versão do R, confira se tentou instalá-lo pelo CRAN. Use o comando
+do GitHub mostrado acima.
+
+# Especificando um modelo com o pacote `rethinking`
+
+A sintaxe de `rethinking` se aproxima bastante da notação matemática
+usada em aula. Por exemplo, podemos especificar uma regressão linear
+simples de $y_i$ em $x_i$ com distribuições a priori razoáveis:
+
+$$
+\begin{aligned} 
+  y_i &\sim Normal(\mu_i, \sigma) \\
+  \mu_i &= \alpha + \beta x_i  \\
+  \alpha &\sim Normal(0, 1) \\
+  \beta &\sim Normal(0, 1) \\
+  \sigma &\sim Exponential(1) \\
+\end{aligned} 
+$$
+Primeiro, vamos visualizar as distribuições a priori assumidas para os
+três parâmetros.
+
+Distribuição normal com $\mu = 0$ e $\sigma = 1$:
+
+```{r}
+curve(dnorm(x, mean = 0, sd = 1), -3, 3)
+```
+
+Distribuição exponencial com $\lambda = 1$:
+
+```{r}
+curve(dexp(x, rate = 1), 0, 3)
+```
+
+O que essas distribuições a priori nos dizem? Que valores são
+considerados plausíveis para esses parâmetros?
+
+Agora, vamos simular alguns dados:
+
+```{r }
+N = 100 # tamanho da amostra
+
+# Parâmetros da regressão linear
+alpha = 1 # Intercepto
+beta = 1  # Inclinação em relação a x
+## Simula uma resposta normal cuja média é uma função linear de um preditor
+x = rnorm(N)           # Variável preditora simulada: média = 0 e desvio-padrão = 1
+mu = alpha + beta * x  # Modelo linear para o valor esperado
+y = rnorm(N, mu)       # Variável resposta, com desvio-padrão residual igual a 1
+
+```
+
+Agora, vamos ajustar o modelo, que pode ser escrito no código da
+seguinte forma:
+
+```{r, eval = FALSE, message=FALSE, warning=FALSE}
+
+library(rethinking)
+
+## Código do `rethinking`
+m1 = quap(alist(
+  y ~ dnorm(mu, sigma),     # Verossimilhança
+  mu <- a + b * x,           # Modelo linear
+  a ~ dnorm(0, 1),          # Distribuição a priori do intercepto
+  b ~ dnorm(0, 1),          # Distribuição a priori da inclinação
+  sigma ~ dexp(1)),   # Distribuição a priori do desvio-padrão residual
+  data = list(y = y, x = x) # Lista de dados
+) 
+```
+
+A função `precis()` gera uma tabela resumida com as estimativas dos
+coeficientes:
+
+```{r }
+precis(m1, digits = 2) # Resumo do ajuste
+```
+
+**Exercício:** ajuste o mesmo modelo com a função `lm()` do R e compare
+os resumos dos dois modelos.
+
+Quando a amostra é grande, a verossimilhança tende a dominar a
+distribuição a priori; por isso, até distribuições a priori mais
+informativas podem levar a conclusões semelhantes.
+
+**Exercício:** altere as distribuições a priori. Você consegue encontrar
+uma que mude substancialmente as estimativas? Em seguida, reduza o
+tamanho da amostra, alterando `N`. As distribuições a priori fazem mais
+diferença agora?
+
+
+# Ajustando modelos com métodos Bayesianos
+
+Na seção anterior, ajustamos um modelo linear pelo método OLS. Agora,
+vamos ajustar o mesmo modelo usando uma abordagem Bayesiana.
+
+A abordagem Bayesiana para a regressão linear se baseia na distribuição
+posterior dos parâmetros $\alpha$ e $\beta$. Essa posterior é
+proporcional ao produto entre a verossimilhança dos dados, condicionada
+aos parâmetros, e as distribuições a priori dos parâmetros.
+
+A verossimilhança dos dados, dados os parâmetros, é a mesma usada no
+ajuste OLS. Em geral, atribuímos aos parâmetros distribuições a priori
+normais, com média zero e desvio-padrão fixo.
+
+Vamos gerar um novo conjunto de dados com parâmetros conhecidos para
+ilustrar algumas diferenças entre os métodos OLS e Bayesiano.
+
+```{r create_dataset2}
+set.seed(4) 
+
+x = runif(50, 50, 100)
+y = 1000 + 150 * x + rnorm(50, 0, 1000)
+data = data.frame(x, y)
+```
+
+Sempre visualize os dados antes de ajustar um modelo.
+
+```{r plot2}
+plot(y ~ x, data = data)
+```
+
+Primeiro, vamos ajustar o modelo pelo método OLS:
+
+```{r fit_ols}
+mod_ols <- lm(y ~ x, data = data)
+
+# A função summary fornece várias informações sobre o modelo,
+# incluindo estimativas, erros-padrão, valores-p para os coeficientes
+# e o desvio-padrão residual (sigma).
+summary(mod_ols)
+```
+
+Agora, vamos ajustar o modelo com o pacote `rstanarm`, que utiliza a
+linguagem Stan e fornece um conjunto padrão de distribuições a priori
+fracamente informativas.
+
+```{r fit_bayesian, messages=FALSE, eval=FALSE}
+suppressPackageStartupMessages(library(rstanarm))
+mod_bayesian <- stan_glm(y ~ x, data = data)
+
+summary(mod_bayesian)
+```
+
+Vamos comparar as estimativas dos coeficientes obtidas pelos dois
+métodos.
+
+```{r compare, eval=FALSE}
+coef(mod_ols)
+coef(mod_bayesian)
+
+library(ggplot2)
+
+# Extrai o intercepto e a inclinação dos dois modelos
+ols_intercept <- coef(mod_ols)[1]
+ols_slope <- coef(mod_ols)[2]
+bayesian_intercept <- coef(mod_bayesian)[1]
+bayesian_slope <- coef(mod_bayesian)[2]
+
+
+ggplot(data, aes(x, y)) + 
+  geom_point() +
+  geom_abline(intercept = ols_intercept, slope = ols_slope, color = "red", linetype = "solid") +
+  geom_abline(intercept = bayesian_intercept, slope = bayesian_slope, color = "blue", linetype = "dashed") + 
+  theme_bw()
+
+```
+
+Quão semelhantes são as estimativas dos dois métodos?
+
+### Especificando o modelo explicitamente com `rethinking`
+
+Agora, vamos usar o pacote `rethinking` para ajustar o modelo com
+algumas das distribuições a priori padrão usadas em aula.
+
+```{r fit_rethinking, message=FALSE, eval=FALSE}
+suppressPackageStartupMessages(library(rethinking))
+
+mod_rethinking = quap(
+  alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + b * x,
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = data
+)
+precis(mod_rethinking)
+```
+
+Como ficaram as estimativas agora? Péssimas!
+
+Isso acontece porque as distribuições a priori padrão usadas no código
+de `rethinking` estão muito distantes dos valores verdadeiros dos
+parâmetros. Uma forma de evitar esse problema é padronizar as variáveis
+antes de ajustar o modelo.
+
+```{r scale, eval=FALSE}
+data$x_scaled = scale(data$x)
+data$y_scaled = scale(data$y)
+
+mod_rethinking_scaled = quap(
+  alist(
+    y_scaled ~ dnorm(mu, sigma),
+    mu <- a + b * x_scaled,
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = data
+)
+mod_stanarm_scaled = stan_glm(y_scaled ~ x_scaled, data = data)
+mod_ols_scaled = lm(y_scaled ~ x_scaled, data = data)
+```
+
+Agora, vamos comparar as estimativas dos modelos.
+
+```{r compare_scaled, eval=FALSE}
+coef(mod_ols_scaled)
+coef(mod_stanarm_scaled)
+coef(mod_rethinking_scaled)
+```
+
+Padronizar as variáveis é uma boa prática ao ajustar modelos
+Bayesianos. Isso pode melhorar a eficiência computacional e facilitar a
+definição de distribuições a priori razoáveis.
+
+# Estendendo a regressão linear
+
+Podemos estender a regressão linear simples para incluir vários
+preditores. Esses são os modelos de **regressão linear múltipla**, dos
+quais a regressão simples é um caso particular, com apenas um preditor.
+
+Nas próximas seções, vamos ajustar modelos de regressão múltipla com o
+pacote `rethinking`, interpretar seus coeficientes e visualizar os
+resultados.
+
+# Modelo linear múltiplo aditivo
+
+Em uma regressão linear múltipla aditiva, o valor esperado da resposta
+$\mu$ é a soma dos efeitos de vários preditores $X_i$, cada um
+ponderado por seu próprio coeficiente $\beta_i$:
+
+$$
+\begin{align}
+y_i &\sim Normal(\mu_i, \sigma) \\
+\mu_i & = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots + \beta_j x_{ij} \\
+\end{align}
+$$
+
+## Ajustando o modelo
+
+Vamos usar dados da planta bienal *Ipomopsis aggregata*. Quarenta
+plantas foram distribuídas entre dois tratamentos: sem proteção contra
+herbivoria e protegidas da herbivoria. Para cada planta, mediram-se a
+produção de frutos e o diâmetro do caule na base.
+
+Prepare os dados:
+
+```{r data, eval=TRUE}
+df <- read.csv("https://raw.githubusercontent.com/lmmx/crawley-r-statistics-book-notes/master/code/ipomopsis.csv")
+names(df) <- c("Root", "Fruit", "Grazing")
+df$Root <- scale(df$Root, center = TRUE, scale = TRUE)
+df$Fruit <- scale(df$Fruit, center = TRUE, scale = TRUE)
+
+# Plantas sem proteção são o controle; as protegidas por cerca recebem o tratamento:
+df$Grazing0 <- ifelse(df$Grazing == "Ungrazed", 1, 0)
+```
+
+Ajuste o modelo aditivo com `rethinking`:
+
+```{r fit_model}
+# Ajusta o modelo usando quap
+m1 <- quap(
+  alist(
+    Fruit ~ dnorm(mu, sigma),
+    mu <- a + b * Grazing0 + c * Root,
+    a ~ dnorm(0, 1),  
+    b ~ dnorm(0, 1),   
+    c ~ dnorm(0, 1),  
+    sigma ~ dexp(1)          
+  ),
+  data = df
+)
+```
+
+Extraia e resuma os coeficientes:
+
+```{r summarize_model}
+precis(m1)
+
+m1_coef <- precis(m1)[1]
+```
+
+## Visualizando previsões
+
+Crie um gráfico com os dados observados e os valores previstos:
+
+```{r plot_predictions}
+# Representa os dados observados
+plot(df$Fruit ~ df$Root, 
+     col = ifelse(df$Grazing0 == 1, "red", "black"), 
+     pch = ifelse(df$Grazing0 == 1, 17, 16),
+     xlab = "Basal diameter (z-scores)", 
+     ylab = "Fruit dry weight (z-scores)")
+
+# Adiciona as retas previstas
+abline(a = m1_coef["a", ], b = m1_coef["b", ], col = "black", lwd = 2)
+abline(a = m1_coef["a", ] + m1_coef["c", ], b = m1_coef["b", ], col = "red", lwd = 2)
+
+# Adiciona a legenda
+legend("topleft", legend = c("Fenced", "Control"), col = c("red", "black"), 
+       pch = c(17, 16), lty = 1, bty = "n")
+
+```
+
+# Incluindo interações no modelo
+
+Uma interação permite que a relação entre um preditor e a variável
+resposta mude conforme o valor de outro preditor. Por exemplo, podemos
+modelar a interação entre umidade do solo (`water`) e sombra (`shade`)
+no conjunto de dados `tulips`.
+
+Prepare os dados:
+
+```{r tulips_data}
+data(tulips)
+tulips$blooms <- tulips$blooms / max(tulips$blooms)
+tulips$water <- scale(tulips$water, scale = FALSE)
+tulips$shade <- scale(tulips$shade, scale = FALSE)
+```
+
+Ajuste o modelo com interação:
+
+```{r fit_interaction}
+m2 <- quap(
+  alist(
+    blooms ~ dnorm(mu, sigma),
+    mu <- b0 + b1 * water + b2 * shade + b3 * water * shade,
+    b0 ~ dnorm(0, 1),
+    b1 ~ dnorm(0, 1),
+    b2 ~ dnorm(0, 1),
+    b3 ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = tulips
+)
+```
+
+Resuma o modelo com interação:
+
+```{r summarize_interaction}
+precis(m2)
+```
+
+Visualize a interação:
+
+```{r visualize_interaction}
+post <- extract.samples(m2)
+plot(blooms ~ water, col = 2:4, pch = 16, data = tulips)
+for (s in unique(tulips$shade)) {
+  abline(
+    a = mean(post$b0) + mean(post$b2) * s,
+    b = mean(post$b1) + mean(post$b3) * s,
+    col = s + 1
+  )
+}
+legend("topright", legend = c("Shade 1", "Shade 2", "Shade 3"), col = 2:4, pch = 16)
+```
+
+# Regressão robusta
+
+Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
+a sintaxe usada nos exemplos simples. Essa flexibilidade, porém, pode
+levar a modelos excessivamente complexos, feitos sob medida para
+problemas específicos.
+
+Vamos ilustrar essa ideia com a regressão robusta. Em modelos lineares,
+observações atípicas podem resultar de erros de medição ou de processos
+biológicos reais que produzem valores fora da faixa esperada por uma
+distribuição normal. Nesse segundo caso, excluí-las pode descartar
+informação importante.
+
+Para ilustrar, vamos usar um conjunto de dados em que algumas espécies
+extremas alteram as estimativas de uma regressão simples.
+
+## Observações de alta alavancagem em dados reais
+
+O conjunto `Animals`, do pacote `MASS`, contém as massas corporal e
+cerebral de 28 espécies de animais terrestres. Vamos modelar o
+logaritmo da massa cerebral como uma função linear do logaritmo da massa
+corporal, uma relação alométrica simples usada para comparar espécies.
+O conjunto inclui grandes dinossauros cujas medidas são estimativas;
+portanto, um ponto influente pode refletir diferenças biológicas ou
+incerteza nos dados de origem, e não necessariamente um erro de
+registro.
+
+Primeiro, vamos usar um modelo linear comum como diagnóstico para
+identificar os casos com maior alavancagem. A alavancagem depende de
+quão incomum é o valor do preditor; ela não é a mesma coisa que um
+resíduo grande. A regra $2p/n$ é apenas uma heurística para sinalizar
+observações, não um critério para excluí-las.
+
+```{r animals_diagnostic, eval=TRUE}
+animals <- MASS::Animals
+animals$log_body <- log(animals$body)
+animals$log_brain <- log(animals$brain)
+body_center <- mean(animals$log_body)
+animals$log_body_c <- animals$log_body - body_center
+large_dinosaurs <- c("Brachiosaurus", "Dipliodocus", "Triceratops")
+dinosaur_labels <- c("Brachiosaurus", "Diplodocus", "Triceratops")
+dinosaur_indices <- match(large_dinosaurs, rownames(animals))
+stopifnot(!anyNA(dinosaur_indices))
+diagnostic_fit <- lm(log_brain ~ log_body_c, data = animals)
+leverage_reference <- 2 * length(coef(diagnostic_fit)) / nrow(animals)
+
+data.frame(
+  species = dinosaur_labels,
+  body_kg = animals$body[dinosaur_indices],
+  brain_g = animals$brain[dinosaur_indices],
+  leverage = hatvalues(diagnostic_fit)[dinosaur_indices],
+  reference_2p_over_n = leverage_reference,
+  cooks_distance = cooks.distance(diagnostic_fit)[dinosaur_indices]
+)
+```
+
+Esses três grandes dinossauros apresentam medidas de influência
+elevadas; Brachiosaurus tem a maior alavancagem e a maior distância de
+Cook. Vamos manter todas as espécies no primeiro modelo e retirar os
+três dinossauros juntos apenas em uma análise de sensibilidade. A regra
+$2p/n$ serve como sinalização, não como regra para excluir dados.
+
+## Ajustando os modelos com `quap`
+
+Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
+sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
+priori fracamente informativas.
+
+```{r animals_quap_fits, eval=TRUE, message=FALSE, warning=FALSE}
+suppressPackageStartupMessages(library(rethinking))
+
+animals_without_dinosaurs <- animals[-dinosaur_indices, ]
+
+m_animals_all <- quap(
+  alist(
+    log_brain ~ dnorm(mu, sigma),
+    mu <- a + b * log_body_c,
+    a ~ dnorm(0, 10),
+    b ~ dnorm(0, 10),
+    sigma ~ dexp(0.1)
+  ),
+  data = animals
+)
+
+m_animals_without_dinosaurs <- quap(
+  alist(
+    log_brain ~ dnorm(mu, sigma),
+    mu <- a + b * log_body_c,
+    a ~ dnorm(0, 10),
+    b ~ dnorm(0, 10),
+    sigma ~ dexp(0.1)
+  ),
+  data = animals_without_dinosaurs
+)
+
+precis(m_animals_all, digits = 2)
+precis(m_animals_without_dinosaurs, digits = 2)
+```
+
+Compare as estimativas posteriores da inclinação `b` e do desvio-padrão
+residual `sigma`. Quanto elas mudam quando os três dinossauros são
+retirados? Esta é uma análise de sensibilidade, não uma evidência de que
+essas espécies devam ser descartadas.
+
+## Visualizando a influência no ajuste
+
+As retas abaixo mostram as médias posteriores dos dois modelos no mesmo
+gráfico de dispersão. As espécies destacadas estão incluídas no ajuste
+com todos os dados e são excluídas juntas no segundo ajuste.
+
+```{r animals_fit_comparison, eval=TRUE, fig.asp=1}
+posterior_all <- extract.samples(m_animals_all)
+posterior_without_dinosaurs <- extract.samples(m_animals_without_dinosaurs)
+body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
+body_values_c <- body_values - body_center
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
+                       "firebrick", "grey35")
+
+plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
+  xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
+     labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
+lines(body_values,
+      mean(posterior_all$a) + mean(posterior_all$b) * body_values_c,
+      col = "navy", lwd = 2)
+lines(body_values,
+      mean(posterior_without_dinosaurs$a) +
+        mean(posterior_without_dinosaurs$b) * body_values_c,
+      col = "darkorange3", lwd = 2, lty = 2)
+legend("topleft",
+       legend = c("All species", "Without large dinosaurs", "Large dinosaurs"),
+       col = c("navy", "darkorange3", "firebrick"),
+       lty = c(1, 2, NA), pch = c(NA, NA, 19), bty = "n")
+```
+
+O que acontece com a inclinação quando os três dinossauros são
+retirados? Antes de excluir espécies influentes, investigue as medidas
+e considere se uma única reta alométrica é adequada para mamíferos e
+dinossauros. As retas representam médias posteriores e não mostram a
+incerteza de cada ajuste.
+
+# Modificando o modelo para reduzir a sensibilidade a observações atípicas
+
+Uma vantagem da modelagem Bayesiana é que podemos mudar a distribuição
+dos resíduos sem alterar o preditor linear. Um modelo com caudas mais
+pesadas pode reduzir a influência de observações muito distantes da
+reta ajustada. Modelos mais flexíveis também podem ficar
+desnecessariamente complexos; por isso, a flexibilidade adicional deve
+responder a um problema específico.
+
+Algumas observações atípicas são erros de medição; outras são
+observações legítimas de processos biológicos com variação mais extrema
+do que a permitida por um modelo Gaussiano. Excluir uma observação
+legítima pode descartar informação importante. Em vez disso, vamos
+manter os três dinossauros e substituir a distribuição Gaussiana dos
+resíduos por uma distribuição $t$ de Student. Em seguida, vamos
+comparar a sensibilidade dos modelos, ajustando cada um com e sem essas
+espécies.
+
+## Modelo com resíduos $t$ de Student
+
+A distribuição $t$ de Student tem caudas mais pesadas do que a normal.
+Seus graus de liberdade, $\nu$, controlam o peso dessas caudas: valores
+menores permitem maior probabilidade para observações distantes do valor
+esperado pelo modelo. À medida que $\nu$ aumenta, a distribuição se
+aproxima da normal. No modelo abaixo, $\nu = 2 +
+\exp(\text{log\_nu})$ mantém os graus de liberdade acima de 2, de modo
+que a variância dos resíduos seja finita.
+
+```{r animals_student_fits, eval=TRUE, message=FALSE, warning=FALSE}
+m_animals_student_all <- quap(
+  alist(
+    log_brain ~ dstudent(nu, mu, sigma),
+    mu <- a + b * log_body_c,
+    nu <- 2 + exp(log_nu),
+    a ~ dnorm(0, 10),
+    b ~ dnorm(0, 10),
+    sigma ~ dexp(0.1),
+    log_nu ~ dnorm(1, 1)
+  ),
+  data = animals
+)
+
+m_animals_student_without_dinosaurs <- quap(
+  alist(
+    log_brain ~ dstudent(nu, mu, sigma),
+    mu <- a + b * log_body_c,
+    nu <- 2 + exp(log_nu),
+    a ~ dnorm(0, 10),
+    b ~ dnorm(0, 10),
+    sigma ~ dexp(0.1),
+    log_nu ~ dnorm(1, 1)
+  ),
+  data = animals_without_dinosaurs
+)
+
+precis(m_animals_student_all, digits = 2)
+precis(m_animals_student_without_dinosaurs, digits = 2)
+```
+
+## Comparando a sensibilidade aos grandes dinossauros
+
+Compare a mudança na inclinação posterior média quando os três
+dinossauros são retirados, sob cada distribuição dos resíduos. Os
+cálculos abaixo usam amostras posteriores dos mesmos quatro modelos
+ajustados nas seções anteriores.
+
+```{r animals_sensitivity, eval=TRUE}
+set.seed(42)
+post_normal_all <- extract.samples(m_animals_all)
+post_normal_without <- extract.samples(m_animals_without_dinosaurs)
+post_student_all <- extract.samples(m_animals_student_all)
+post_student_without <- extract.samples(m_animals_student_without_dinosaurs)
+
+slope_change_normal <- abs(mean(post_normal_all$b) - mean(post_normal_without$b))
+slope_change_student <- abs(mean(post_student_all$b) - mean(post_student_without$b))
+
+data.frame(
+  residual_distribution = c("Normal", "Student-t"),
+  slope_all_cases = c(mean(post_normal_all$b), mean(post_student_all$b)),
+  slope_without_dinosaurs = c(mean(post_normal_without$b), mean(post_student_without$b)),
+  absolute_slope_change = c(slope_change_normal, slope_change_student)
+)
+```
+
+Sob o modelo com resíduos $t$ de Student, a mudança na inclinação é
+menor? Neste exemplo, sim, mas ela não desaparece: as caudas mais pesadas
+reduzem a influência de respostas incomuns, enquanto os valores extremos
+dos preditores ainda conferem alavancagem aos dinossauros.
+
+## Representando as quatro retas ajustadas
+
+As retas contínuas usam as 28 espécies; as tracejadas omitem os três
+dinossauros. Compare a distância entre cada par de retas com as mudanças
+nas inclinações apresentadas na tabela.
+
+```{r animals_student_comparison, eval=TRUE, fig.asp=1}
+body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
+body_values_c <- body_values - body_center
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
+                       "firebrick", "grey35")
+
+plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
+     xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
+  labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
+
+lines(body_values,
+  mean(post_normal_all$a) + mean(post_normal_all$b) * body_values_c,
+      col = "navy", lwd = 2)
+lines(body_values,
+  mean(post_normal_without$a) + mean(post_normal_without$b) * body_values_c,
+      col = "navy", lwd = 2, lty = 2)
+lines(body_values,
+  mean(post_student_all$a) + mean(post_student_all$b) * body_values_c,
+      col = "firebrick", lwd = 2)
+lines(body_values,
+  mean(post_student_without$a) + mean(post_student_without$b) * body_values_c,
+      col = "firebrick", lwd = 2, lty = 2)
+
+legend("topleft",
+  legend = c("Normal: all species", "Normal: without large dinosaurs",
+    "Student-t: all species", "Student-t: without large dinosaurs",
+    "Large dinosaurs"),
+       col = c("navy", "navy", "firebrick", "firebrick", "grey35"),
+       lty = c(1, 2, 1, 2, NA), pch = c(NA, NA, NA, NA, 19), bty = "n")
+```
+
+O modelo com resíduos $t$ de Student é menos sensível neste exemplo se
+suas duas retas ajustadas estiverem mais próximas entre si do que as
+duas retas do modelo Normal. Isso não significa que resíduos $t$ tornem
+inofensivas as espécies de alta alavancagem: eles reduzem principalmente
+o efeito de resíduos grandes. As medidas dos dinossauros são
+estimativas, e esses animais podem diferir sistematicamente dos
+mamíferos. Sempre investigue observações influentes e avalie se uma
+única relação alométrica é adequada para todos os grupos.
