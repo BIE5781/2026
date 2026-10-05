@@ -174,15 +174,14 @@ seguinte forma:
 library(rethinking)
 
 ## Código do `rethinking`
-m1 = ulam(alist(
-  y ~ normal(mu, sigma),     # Verossimilhança
+m1 = quap(alist(
+  y ~ dnorm(mu, sigma),     # Verossimilhança
   mu <- a + b * x,           # Modelo linear
-  a ~ normal(0, 1),          # Distribuição a priori do intercepto
-  b ~ normal(0, 1),          # Distribuição a priori da inclinação
-  sigma ~ exponential(1)),   # Distribuição a priori do desvio-padrão residual
-  data = list(y = y, x = x), # Lista de dados
-  iter = 2000, chains = 4, cores = 4, refresh = 0, cmdstan = TRUE) # Parâmetros de controle do amostrador
-
+  a ~ dnorm(0, 1),          # Distribuição a priori do intercepto
+  b ~ dnorm(0, 1),          # Distribuição a priori da inclinação
+  sigma ~ dexp(1)),   # Distribuição a priori do desvio-padrão residual
+  data = list(y = y, x = x) # Lista de dados
+) 
 ```
 
 A função `precis()` gera uma tabela resumida com as estimativas dos
@@ -292,15 +291,15 @@ algumas das distribuições a priori padrão usadas em aula.
 ```{r fit_rethinking, message=FALSE, eval=FALSE}
 suppressPackageStartupMessages(library(rethinking))
 
-mod_rethinking = ulam(
+mod_rethinking = quap(
   alist(
-    y ~ normal(mu, sigma),
+    y ~ dnorm(mu, sigma),
     mu <- a + b * x,
-    a ~ normal(0, 1),
-    b ~ normal(0, 1),
-    sigma ~ exponential(1)
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
   ),
-  data = data, chains = 4, cores = 4
+  data = data
 )
 precis(mod_rethinking)
 ```
@@ -316,15 +315,15 @@ antes de ajustar o modelo.
 data$x_scaled = scale(data$x)
 data$y_scaled = scale(data$y)
 
-mod_rethinking_scaled = ulam(
+mod_rethinking_scaled = quap(
   alist(
-    y_scaled ~ normal(mu, sigma),
+    y_scaled ~ dnorm(mu, sigma),
     mu <- a + b * x_scaled,
-    a ~ normal(0, 1),
-    b ~ normal(0, 1),
-    sigma ~ exponential(1)
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
   ),
-  data = data, chains = 4, cores = 4
+  data = data
 )
 mod_stanarm_scaled = stan_glm(y_scaled ~ x_scaled, data = data)
 mod_ols_scaled = lm(y_scaled ~ x_scaled, data = data)
@@ -388,16 +387,16 @@ Ajuste o modelo aditivo com `rethinking`:
 
 ```{r fit_model}
 # Ajusta o modelo usando quap
-m1 <- ulam(
+m1 <- quap(
   alist(
     Fruit ~ dnorm(mu, sigma),
     mu <- a + b * Grazing0 + c * Root,
-    a ~ normal(0, 1),  
-    b ~ normal(0, 1),   
+    a ~ dnorm(0, 1),  
+    b ~ dnorm(0, 1),   
     c ~ dnorm(0, 1),  
-    sigma ~ exponential(1)          
+    sigma ~ dexp(1)          
   ),
-  data = df, chains = 4, cores = 4
+  data = df
 )
 ```
 
