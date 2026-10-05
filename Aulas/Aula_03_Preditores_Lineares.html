@@ -52,7 +52,7 @@ class: center, middle, inverse, title-slide
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Uma expressão geral para modelos estatísticos**
 
-`$$Y\, \sim \, f(Y \mid \Theta=g(X_i))$$`
+`$$Y\, \sim \, f(Y \mid \theta=g_i(X))$$`
 ]
 
 --
@@ -62,10 +62,16 @@ class: center, middle, inverse, title-slide
 
 `\(Y\)` é uma variável aleatória, cujos valores têm probabilidades
 definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
-`\(\Theta\)` são uma função qualquer `\(g\)` de outras medidas
-(preditoras) `\(X_i\)`.
+`\(\theta\)` são funções qualquer `\(g_i\)` de outras medidas
+(preditoras) `\(X\)`.
 ]
 
+--
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+** Exemplo: regressão linear simples**
+
+`$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X~,~ \sigma)$$`
+]
 ---
 
 ## Preditores lineares
@@ -73,15 +79,8 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Todos que podem ser escritos na forma**
 
-`$$\theta \ = \ g(X_i) \ = \sum \beta_iX_i$$`
+`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
 ]
-
-sendo `\(\theta\)` uma resposta (que normalmente usamos para expressar a
-dependência que um parâmetro da distribuição tem com outras medidas).
-
----
-
-## Preditores lineares
 
 ### Exemplos
 
@@ -99,11 +98,76 @@ dependência que um parâmetro da distribuição tem com outras medidas).
 
 * `\(\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2\)` , pois podemos chamar `\(X_1X_2\)` de `\(X_3\)`
 
---
+---
 
-* `\(\ldots\)`
+## Preditores lineares
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Todos que podem ser escritos na forma**
+
+`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
+]
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Ou seja**, a derivada parcial em relação a cada parâmetro não depende de nenhum parâmetro:
+
+`$$\frac{\partial g(X_i)}{\partial \beta_i} = X_i$$`
+]
+
 
 ---
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* `\(g(X_i) = \beta_0X_1^{\beta_1}\)` :
+`\(\quad \frac{\partial g}{\partial \beta_0} = X_1^{\beta_1}\)` ,
+`\(\quad \frac{\partial g}{\partial \beta_1} = \beta_0 X_1^{\beta_1} \ln X_1\)`
+
+* `\(g(X_i) = \beta_0e^{\beta_1 X_1}\)` :
+`\(\quad \frac{\partial g}{\partial \beta_0} = e^{\beta_1 X_1}\)` ,
+`\(\quad \frac{\partial g}{\partial \beta_1} = \beta_0 X_1 e^{\beta_1 X_1}\)`
+
+* `\(g(X_i) = \frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)` :
+`\(\quad \frac{\partial g}{\partial \beta_1} = \frac{X_1}{(1+\beta_1\beta_2X_1)^2}\)` ,
+`\(\quad \frac{\partial g}{\partial \beta_2} = -\frac{\beta_1^2 X_1^2}{(1+\beta_1\beta_2X_1)^2}\)`
+
+* E muitas, muitas mais.
+]
+
+--
+
+Em todos os casos, as derivadas parciais dependem dos parâmetros.
+
+
+---
+## E o que são preditores não lineares?
+
+Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Exemplos**
+
+* `\(\beta_0X_1^{\beta_1}\)`
+
+* `\(\beta_0e^{\beta_1 X_1}\)`
+
+* `\(\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)`
+
+* E muitas, muitas mais.
+]
+
+---
+class: inverse, middle, center
+
+# Preditores lineares múltiplos aditivos
+---
+
 ## Modelos lineares múltiplos aditivos
 
 * O preditor é a soma de variáveis independentes isoladas, cada uma multiplicada por seu coeficiente.
@@ -124,7 +188,7 @@ dependência que um parâmetro da distribuição tem com outras medidas).
 
 ---
 
-## Interpretação dos coeficientes de modelos lineares múltiplos
+## Interpretação dos coeficientes
 
 .center[
 
@@ -136,7 +200,7 @@ Relação entre altura do primeiro filho e altura do pai e da mãe [(Galton, 188
 
 ---
 
-## Interpretação dos coeficientes de modelos lineares múltiplos
+## Interpretação dos coeficientes
 
 
 
@@ -167,7 +231,7 @@ lsigma  0.7477301 0.05376032  0.6618107  0.8336494
 ```
 
 ---
-## Interpretação dos coeficientes de modelos lineares múltiplos
+## Interpretação dos coeficientes
 
 
 ``` r
@@ -200,7 +264,7 @@ F-statistic: 40.11 on 2 and 170 DF,  p-value: 5.384e-15
 ```
 
 ---
-## Interpretação dos coeficientes de modelos lineares múltiplos
+## Interpretação dos coeficientes
 
 .center[
 &lt;img src="Aula_03_Preditores_Lineares_files/figure-html/coefs-pai-mae-1.png" alt="" width="75%" /&gt;
@@ -217,6 +281,7 @@ ln do volume de árvores de *Prunus serotina* em função dos logaritmos de sua 
 ]
 
 ---
+
 ## Coeficientes são efeitos parciais
 
 
@@ -280,47 +345,54 @@ class: inverse, middle, center
 
 ## Altura de filhas e filhos
 
-Para entrar no preditor linear, o gênero precisa virar um número. 
+.pull-left[
 
---
+Temos que converter o  gênero em  um número, para incluir no preditor linear. 
+	
+Solução: nova variável com valor `\(1\)` se menina e valor `\(0\)` se menino.
 
-Nós decidimos: **masculino = 0, feminino = 1**.
 
+|    | Altura mãe|Gênero | menina| Altura|
+|:---|----------:|:------|------:|------:|
+|22  |       4.02|F      |      1|   69.5|
+|29  |       2.52|F      |      1|   70.5|
+|32  |       2.02|F      |      1|   66.0|
+|886 |       2.02|M      |      0|   64.0|
+|889 |      -0.98|M      |      0|   66.5|
+|891 |       1.02|M      |      0|   72.0|
+]
 
-``` r
-&gt; gal$menina &lt;- ifelse(gal$Gender == "F", 1, 0)
-&gt; head(gal[, c("Height", "mae", "Gender", "menina")], 4)
-```
-
-```
-   Height        mae Gender menina
-1    73.2 3.01573604      M      0
-5    73.5 2.51573604      M      0
-9    71.0 0.01573604      M      0
-11   70.5 0.01573604      M      0
-```
+.pull-right[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/galton-aditivo-genero-1.png" alt="" width="100%" /&gt;
+]
 
 ---
+
 ## Altura de filhas e filhos
 
+Especifica o modelo
 
 ``` r
-&gt; m.gal &lt;- quap(
-+     alist(
-+         Height ~ dnorm(mu, exp(lsigma)),
-+         mu &lt;- a + bMae * mae + bMenina * menina
-+     ), data = gal,
-+     start = list(a = mean(gal$Height), bMae = 0, bMenina = 0,
+&gt; m.gal.f &lt;- alist(
++     Height ~ dnorm(mu, exp(lsigma) ),
++     mu &lt;- b0 + b1 * mae + b2 * menina
++ )
+```
+Ajuste do modelo
+
+``` r
+&gt; m.gal &lt;- quap(m.gal.f, data = gal,
++     start = list(b0 = mean(gal$Height), b1 = 0, b2 = 0,
 +                  lsigma = log(sd(gal$Height))))
 &gt; precis(m.gal)
 ```
 
 ```
-              mean         sd       5.5%      94.5%
-a       70.4409495 0.18397288 70.1469253 70.7349737
-bMae     0.3486614 0.07338628  0.2313759  0.4659468
-bMenina -5.1500658 0.52716955 -5.9925845 -4.3075470
-lsigma   0.8836568 0.05038493  0.8031319  0.9641816
+             mean         sd       5.5%      94.5%
+b0     70.4409495 0.18397288 70.1469253 70.7349737
+b1      0.3486614 0.07338628  0.2313759  0.4659468
+b2     -5.1500658 0.52716955 -5.9925845 -4.3075470
+lsigma  0.8836568 0.05038493  0.8031319  0.9641816
 ```
 
 ---
@@ -328,30 +400,32 @@ lsigma   0.8836568 0.05038493  0.8031319  0.9641816
 
 .pull-left[
 
-`$$\mu = \alpha + \beta_{\text{mãe}}\, \text{mae} + \beta_{\text{menina}}\, \text{menina}$$`
+`$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2, \text{menina}$$`
 
 {{content}}
 ]
 
 .pull-right[
-&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/galton-aditivo-genero-1.png" alt="" width="100%" /&gt;
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/galton-genero-1.png" alt="" width="100%" /&gt;
 ]
 
 --
 
-* **Meninos** ( `\(\text{menina} = 0\)` ): `\(\mu = \alpha + \beta_{\text{mãe}}\, \text{mae}\)`
+* **Meninos** ( `\(\text{menina} = 0\)` ): 
+`$$\mu = \beta_0 + \beta_1\, \text{mae}$$`
 
 {{content}}
 
 --
 
-* **Meninas** ( `\(\text{menina} = 1\)` ): `\(\mu = [\alpha + \beta_{\text{menina}}] + \beta_{\text{mãe}}\, \text{mae}\)`
+* **Meninas** ( `\(\text{menina} = 1\)` ): 
+`$$\mu = [\beta0 + \beta_2] + \beta_1\, \text{mae}$$`
 
 {{content}}
 
 --
 
-* `\(\beta_{\text{menina}}\)`: diferença entre meninas e meninos com mães de mesma altura.
+* `\(\beta_2\)`: diferença entre meninas e meninos com mães de mesma altura.
 
 {{content}}
 
@@ -363,11 +437,22 @@ lsigma   0.8836568 0.05038493  0.8031319  0.9641816
 ## E com três níveis?
 
 .pull-left[
-Peso seco de plantas em três grupos (`PlantGrowth`, 10 plantas por grupo):
+Objeto `datasets::PlantGrowth` : 
 
-* `ctrl`: controle
-* `trt1`: tratamento 1
-* `trt2`: tratamento 2
+Peso seco de plantas em três grupos experimentais (controle,
+tratamento 1 e 2) com 10 plantas por grupo:
+
+
+
+|   | weight|group |
+|:--|------:|:-----|
+|1  |   4.17|ctrl  |
+|2  |   5.58|ctrl  |
+|11 |   4.81|trt1  |
+|12 |   4.17|trt1  |
+|21 |   6.31|trt2  |
+|22 |   5.12|trt2  |
+
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt4[
 Que números atribuir a cada grupo?
@@ -380,42 +465,37 @@ Que números atribuir a cada grupo?
 
 ---
 
-## Tentação: uma coluna com 0, 1, 2
+## Uma nova variável com valores 0, 1, 2 ?
 
 .center[
 &lt;img src="Aula_03_Preditores_Lineares_files/figure-html/uma-coluna-1.png" alt="" width="90%" /&gt;
 ]
 
-Uma coluna só impõe uma **ordem** e **distâncias iguais** entre os grupos. Mudando os rótulos, muda o modelo.
-Além disso:  reta ignora a média do grupo do meio trt1 tem a menor média de todas, mas não influencia a inclinação.
+Uma variável só impõe uma **ordem** e **distâncias iguais** entre os grupos. Mudando os rótulos, muda o modelo.
+Relação linear:  perde que grupo `trt1`, tem a menor média de todas.
 
 ---
-## Solução: coluna indicadora para cada nível
 
-.pull-left[
+## Solução: uma variável para cada nível
 
-| grupo  | `\(x_1\)` | `\(x_2\)` | `\(x_3\)` |
-|:------:|:-----:|:-----:|:-----:|
-| `ctrl` | 1     | 0     | 0     |
-| `trt1` | 0     | 1     | 0     |
-| `trt2` | 0     | 0     | 1     |
+Três variáveis binárias ( `\(0\)` , `\(1\)` ), indicando cada nível do fator
 
-]
-
-.pull-right[
-
-`$$\mu = \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3$$`
-
-{{content}}
-]
+|    grupo     | `\(x_1\)` | `\(x_2\)` | `\(x_3\)` |
+|:------------:|:-----:|:-----:|:-----:|
+|   Controle   |   1   |   0   |   0   |
+| Tratamento 1 |   0   |   1   |   0   |
+| Tratamento 2 |   0   |   0   |   1   |
 
 --
 
-* `ctrl`: `\(\mu = \beta_1\)`
-* `trt1`: `\(\mu = \beta_2\)`
-* `trt2`: `\(\mu = \beta_3\)`
+Como fica o preditor `\(\mu = \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3\)`
 
-{{content}}
+--
+
+* Controle : `\(\mu = \beta_1 \times 1 + \beta_2 \times 0  + \beta_3 \times 0 ~=~ \beta_1\)`
+* Tratamento 1 : `\(\mu = \beta_1 \times 0 + \beta_2 \times 1  + \beta_3 \times 0 ~=~ \beta_2\)`
+* Tratamento 2 : `\(\mu = \beta_1 \times 0 + \beta_2 \times 0  + \beta_3 \times 1 ~=~ \beta_3\)`
+
 
 --
 
@@ -424,19 +504,42 @@ Cada coeficiente é a média de um grupo.
 ]
 
 ---
-## Uma coluna indicadora para cada nível
+
+## Ajuste do modelo
+
+Cria as variáveis indicadoras
 
 
 ``` r
 &gt; pg$x1 &lt;- ifelse(pg$group == "ctrl", 1, 0)
 &gt; pg$x2 &lt;- ifelse(pg$group == "trt1", 1, 0)
 &gt; pg$x3 &lt;- ifelse(pg$group == "trt2", 1, 0)
-&gt; m.ind &lt;- quap(
-+     alist(
-+         weight ~ dnorm(mu, exp(lsigma)),
-+         mu &lt;- b1 * x1 + b2 * x2 + b3 * x3
-+     ), data = pg,
-+     start = list(b1 = 5, b2 = 5, b3 = 5, lsigma = 0))
+```
+
+Especifica o modelo
+
+
+``` r
+&gt; m.ind.f &lt;- alist(
++     weight ~ dnorm(mu, exp(lsigma)),
++     mu &lt;- b1 * x1 + b2 * x2 + b3 * x3
++ )
+```
+
+Ajuste 
+
+
+``` r
+&gt; m.ind &lt;- quap(m.ind.f, data = pg, start = list(b1 = 5, b2 = 5, b3 = 5, lsigma = 0))
+```
+
+---
+
+## Ajuste do modelo: estimativas
+
+
+
+``` r
 &gt; precis(m.ind)
 ```
 
@@ -448,39 +551,91 @@ b3      5.5260304 0.1870121  5.2271490  5.8249119
 lsigma -0.5252895 0.1290991 -0.7316149 -0.3189641
 ```
 
+Médias dos grupos
+
+
+``` r
+&gt; tapply(pg$weight, pg$group, mean)
+```
+
+```
+ ctrl  trt1  trt2 
+5.032 4.661 5.526 
+```
+
+
 ---
+
 ## O mesmo modelo, com uma variável índice
 
-No rethinking, podemos escrever o modelo de médias de forma compacta:
+No *rethinking* podemos usar uma variável que atribui um índice
+numérico a cada nível do fator, que internamente é transformada nas
+variáveis indicadoras:
 
 
 ``` r
 &gt; pg$g &lt;- as.integer(pg$group)   # ctrl = 1, trt1 = 2, trt2 = 3
-&gt; m.idx &lt;- quap(
-+     alist(
-+         weight ~ dnorm(mu, exp(lsigma)),
-+         mu &lt;- a[g]
-+     ), data = pg,
-+     start = list(a = rep(5, 3), lsigma = 0))
+&gt; head(pg[, c("group", "g", "weight")])
+```
+
+```
+  group g weight
+1  ctrl 1   4.17
+2  ctrl 1   5.58
+3  ctrl 1   5.18
+4  ctrl 1   6.11
+5  ctrl 1   4.50
+6  ctrl 1   4.61
+```
+
+--
+
+Fórmula do modelo com a notação `b[índice]`:
+
+
+``` r
+&gt; m.ind.f2 &lt;- alist(
++     weight ~ dnorm(mu, exp(lsigma)),
++     mu &lt;- b[g]
++ )
+```
+
+
+---
+## O mesmo modelo, com uma variável índice
+
+
+Ajuste:
+
+
+``` r
+&gt; m.idx &lt;- quap(m.ind.f2, data = pg,
++     start = list(b = rep(5, 3), lsigma = 0))
 &gt; precis(m.idx, depth = 2)
 ```
 
 ```
              mean        sd       5.5%      94.5%
-a[1]    5.0319607 0.1870121  4.7330792  5.3308421
-a[2]    4.6610357 0.1870121  4.3621542  4.9599171
-a[3]    5.5260304 0.1870121  5.2271490  5.8249119
+b[1]    5.0319607 0.1870121  4.7330792  5.3308421
+b[2]    4.6610357 0.1870121  4.3621542  4.9599171
+b[3]    5.5260304 0.1870121  5.2271490  5.8249119
 lsigma -0.5252895 0.1290991 -0.7316149 -0.3189641
 ```
 
 ---
+
 ## E se incluirmos um intercepto?
+
+* Intercepto: constante numérica no preditor linear (`\(\beta_0\)`)
+* Útil para como valor de referência em comparações
+* Necessário quando há mais de uma preditora categórica
 
 `$$\mu = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3$$`
 
 --
 
-Como `\(x_1 + x_2 + x_3 = 1\)` sempre, há infinitas soluções para as mesmas médias:
+Se apenas adicionamos um intercepto, a média de cada grupo é a soma de um coeficiente a mais que o número de
+grupos. Há infinitas maneiras de descrever as médias dos grupos:
 
 | Solução | `\(\beta_0\)` | `\(\beta_1\)` | `\(\beta_2\)` | `\(\beta_3\)` |
 |:-------:|:--------:|:---------:|:---------:|:---------:|
@@ -491,39 +646,44 @@ Como `\(x_1 + x_2 + x_3 = 1\)` sempre, há infinitas soluções para as mesmas m
 --
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Com intercepto, bastam `\(k-1\)` colunas. Mas que valores colocar nelas?
+Portanto, com intercepto, bastam `\(k-1\)` variáveis binárias. Mas que valores colocar nelas?
 ]
 
 ---
+
 ## Contrastes
 
-.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Contraste**: uma regra para reescrever as `\(k\)` médias como um intercepto e `\(k-1\)` coeficientes.
-]
+.pull-left[
+**Contraste**: regra para reescrever as `\(k\)` médias como um intercepto e `\(k-1\)` coeficientes binários, que chamaremos de `\(c_i\)`.
 
-`$$\mu = \beta_0 + \beta_1 c_1 + \beta_2 c_2$$`
-
---
-
-* A regra é uma **matriz**: os valores de `\(c_1\)` e `\(c_2\)` em cada grupo.
-
---
+* O contraste é expresso por  uma **matriz** com o níveis da variável categórica nas linhas, e as variáveis binárias `\(c_i\)` em cada coluna. Esta matriz tem sempre uma coluna a menos que o número de linhas.
 
 * Contrastes diferentes dão as **mesmas médias** e a **mesma verossimilhança**.
 
---
-
 * O que muda é o **significado dos coeficientes**.
 
---
+* Que pode facilitar a usar coeficientes para responder diferentes **perguntas**.
+]
 
-* Escolher o contraste é escolher que **perguntas** os coeficientes respondem.
+.pull-right[
+
+`$$\mu = \beta_0 + \beta_1 c_1 + \beta_2 c_2$$`
+
+| grupo  | `\(c_1\)` | `\(c_2\)` |
+|:------:|:-----:|:-----:|
+| `ctrl` | 0     | 0     |
+| `trt1` | 1     | 0     |
+| `trt2` | 0     | 1     |
+
+]
 
 ---
 
 ## Contraste de controle
 
 .pull-left[
+
+`$$\mu = \beta_0 + \beta_1 c_1 + \beta_2 c_2$$`
 
 | grupo  | `\(c_1\)` | `\(c_2\)` | `\(\mu\)` |
 |:------:|:-----:|:-----:|:-----:|
@@ -547,41 +707,66 @@ Com intercepto, bastam `\(k-1\)` colunas. Mas que valores colocar nelas?
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+
 Cada coeficiente é a diferença de um grupo em relação ao grupo de **referência**.
+
+A média do grupo de referência equivale ao intercepto `\(\beta_0\)`
 
 A coluna `menina` do exemplo do Galton era um contraste de controle, com os meninos como referência.
 ]
 
 ---
-## Contraste de controle
 
-A matriz de contraste vira colunas no `data`:
+## Exemplo de ajuste com contraste de controle
+
+Adicionamos as variaveis `\(c1\)` e `\(c2\)` aos dados
 
 
 ``` r
-&gt; C.trat &lt;- rbind(ctrl = c(0, 0), trt1 = c(1, 0), trt2 = c(0, 1))
-&gt; colunas &lt;- function(C, grupo, y)
-+     data.frame(y = y, c1 = C[as.character(grupo), 1], c2 = C[as.character(grupo), 2])
-&gt; ## Modelo e valores iniciais: os mesmos para todos os contrastes
-&gt; f.contr &lt;- alist(y ~ dnorm(mu, exp(lsigma)),
-+                  mu &lt;- a + b1 * c1 + b2 * c2)
-&gt; inicio &lt;- list(a = 5, b1 = 0, b2 = 0, lsigma = 0)
-&gt; m.trat &lt;- quap(f.contr, data = colunas(C.trat, pg$group, pg$weight), start = inicio)
+&gt; pg &lt;- mutate(pg,
++              c1 = case_match(group, "ctrl"~0, "trt1" ~ 1, "trt2" ~ 0),
++              c2 = case_match(group, "ctrl"~0, "trt1" ~ 0, "trt2" ~ 1))
+```
+
+Especifica o modelo
+
+
+``` r
+&gt; f.contr &lt;- alist(weight ~ dnorm(mu, exp(lsigma)),
++                  mu &lt;- b0 + b1 * c1 + b2 * c2)
+```
+
+---
+
+## Exemplo de ajuste com contraste de controle
+
+Ajusta o modelo
+
+
+``` r
+&gt; ## Valores iniciais
+&gt; inicio &lt;- list(b0 = 5, b1 = 0, b2 = 0, lsigma = 0)
+&gt; ## Ajuste
+&gt; m.trat &lt;- quap(f.contr, data = pg, start = inicio)
+&gt; ## Estimativas
 &gt; precis(m.trat)
 ```
 
 ```
              mean        sd        5.5%       94.5%
-a       5.0319936 0.1870100  4.73311549  5.33087161
+b0      5.0319936 0.1870100  4.73311549  5.33087161
 b1     -0.3709760 0.2644720 -0.79365342  0.05170139
 b2      0.4939948 0.2644720  0.07131739  0.91667220
 lsigma -0.5253008 0.1290977 -0.73162382 -0.31897773
 ```
 
 ---
+
 ## Contraste de soma
 
 .pull-left[
+
+`$$\mu = \beta_0 + \beta_1 c_1 + \beta_2 c_2$$`
 
 | grupo  | `\(c_1\)` | `\(c_2\)` | `\(\mu\)` |
 |:------:|:-----:|:-----:|:-----:|
@@ -601,28 +786,34 @@ lsigma -0.5253008 0.1290977 -0.73162382 -0.31897773
 
 ]
 
---
+
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+
 Cada coeficiente é o desvio de um grupo em relação à **média das médias**.
 
 O desvio do último grupo não tem coeficiente próprio: é `\(-(\beta_1 + \beta_2)\)`.
 ]
 
 ---
+
 ## Contraste de soma
+
+Ajuste do modelo
 
 
 ``` r
-&gt; C.soma &lt;- rbind(ctrl = c(1, 0), trt1 = c(0, 1), trt2 = c(-1, -1))
-&gt; m.soma &lt;- quap(f.contr, data = colunas(C.soma, pg$group, pg$weight), start = inicio)
+&gt; pg &lt;- mutate(pg,
++              c1 = case_match(group, "ctrl"~1, "trt1" ~ 0, "trt2" ~ -1),
++              c2 = case_match(group, "ctrl"~0, "trt1" ~ 1, "trt2" ~ -1))
+&gt; m.soma &lt;- quap(f.contr, pg, start = inicio)
 &gt; precis(m.soma)
 ```
 
 ```
               mean        sd       5.5%      94.5%
-a       5.07300094 0.1079720  4.9004408  5.2455610
+b0      5.07300094 0.1079720  4.9004408  5.2455610
 b1     -0.04099719 0.1526955 -0.2850340  0.2030396
 b2     -0.41199771 0.1526955 -0.6560345 -0.1679609
 lsigma -0.52528473 0.1290998 -0.7316111 -0.3189584
@@ -642,17 +833,20 @@ Média das médias:
 ```
 
 ---
+
 ## Contraste de Helmert
 
 Cada grupo comparado com a média dos grupos **anteriores**. Com a ordem `trt1`, `trt2`, `ctrl`:
 
 .pull-left[
 
+`$$\mu = \beta_0 + \beta_1 c_1 + \beta_2 c_2$$`
+
 | grupo  | `\(c_1\)` | `\(c_2\)` | `\(\mu\)` |
 |:------:|:-----:|:-----:|:-----:|
-| `trt1` | −1    | −1    | `\(\beta_0 - \beta_1 - \beta_2\)` |
-| `trt2` | 1     | −1    | `\(\beta_0 + \beta_1 - \beta_2\)` |
-| `ctrl` | 0     | 2     | `\(\beta_0 + 2\beta_2\)` |
+| `trt1` | `\(-\frac{1}{2}\)` | `\(-\frac{1}{3}\)` | `\(\beta_0 - \frac{1}{2}\beta_1 - \frac{1}{3}\beta_2\)` |
+| `trt2` | `\(\frac{1}{2}\)`  | `\(-\frac{1}{3}\)` | `\(\beta_0 + \frac{1}{2}\beta_1 - \frac{1}{3}\beta_2\)` |
+| `ctrl` | 0              | `\(\frac{2}{3}\)`  | `\(\beta_0 + \frac{2}{3}\beta_2\)` |
 
 ]
 
@@ -660,52 +854,43 @@ Cada grupo comparado com a média dos grupos **anteriores**. Com a ordem `trt1`,
 
 * `\(\beta_0 =\)` média das médias
 
-* `\(\beta_1 = \frac{1}{2}(\mu_{trt2} - \mu_{trt1})\)`
+* `\(\beta_1 = \mu_{trt2} - \mu_{trt1}\)`
 
-* `\(\beta_2 = \frac{1}{3}\left(\mu_{ctrl} - \frac{\mu_{trt1} + \mu_{trt2}}{2}\right)\)`
+* `\(\beta_2 = \mu_{ctrl} - \frac{\mu_{trt1} + \mu_{trt2}}{2}\)`
 
 ]
 
---
+
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 `\(\beta_1\)`: os tratamentos diferem entre si? `\(\beta_2\)`: o controle difere da média dos tratamentos?
 ]
 
+
+
 ---
 ## Contraste de Helmert
 
+Ajuste do modelo
+
 
 ``` r
-&gt; C.helm &lt;- rbind(trt1 = c(-1, -1), trt2 = c(1, -1), ctrl = c(0, 2))
-&gt; m.helm &lt;- quap(f.contr, data = colunas(C.helm, pg$group, pg$weight), start = inicio)
+&gt; pg &lt;- mutate(pg,
++              c1 = case_match(group, "trt1"~-1/2, "trt2" ~ 1/2, "ctrl" ~ 0),
++              c2 = case_match(group, "trt1"~-1/3, "trt2" ~ -1/3, "ctrl" ~ 2/3))
+&gt; m.helm &lt;- quap(f.contr, data = pg, start = inicio)
 &gt; precis(m.helm)
 ```
 
 ```
-              mean         sd       5.5%      94.5%
-a       5.07299931 0.10797187  4.9004394  5.2455592
-b1      0.43249963 0.13223800  0.2211578  0.6438415
-b2     -0.02050016 0.07634764 -0.1425184  0.1015181
-lsigma -0.52528584 0.12909962 -0.7316120 -0.3189597
+              mean        sd       5.5%      94.5%
+b0      5.07297974 0.1079743  4.9004160  5.2455435
+b1      0.86508587 0.2644818  0.4423928  1.2877789
+b2     -0.06150705 0.2290480 -0.4275700  0.3045559
+lsigma -0.52526376 0.1291025 -0.7315944 -0.3189331
 ```
 
---
-
-Conferindo com as médias dos grupos:
-
-
-``` r
-&gt; m &lt;- tapply(pg$weight, pg$group, mean)
-&gt; c(b1 = (m["trt2"] - m["trt1"]) / 2,
-+   b2 = (m["ctrl"] - (m["trt1"] + m["trt2"]) / 2) / 3)
-```
-
-```
-b1.trt2 b2.ctrl 
- 0.4325 -0.0205 
-```
 
 ---
 ## O mesmo modelo, colunas diferentes
@@ -715,7 +900,7 @@ b1.trt2 b2.ctrl
 |:--------|---------:|---------:|---------:|------------:|------------:|------------:|-------------:|
 |Controle |      5.03|     -0.37|      0.49|         5.03|         4.66|         5.53|        -26.81|
 |Soma     |      5.07|     -0.04|     -0.41|         5.03|         4.66|         5.53|        -26.81|
-|Helmert  |      5.07|      0.43|     -0.02|         5.03|         4.66|         5.53|        -26.81|
+|Helmert  |      5.07|      0.87|     -0.06|         5.03|         4.66|         5.53|        -26.81|
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
@@ -725,14 +910,14 @@ Mesma fórmula no `quap()`, mesmas médias, mesma verossimilhança. Só mudam os
 ---
 class: inverse, middle, center
 
-# Como o R faz isso
+# Contrastes na sintaxe de modelos do R
 
 ---
 ## Fatores no `lm()`
 
 
 ``` r
-&gt; coef(lm(Height ~ mae + Gender, data = gal))
+&gt; lm(Height ~ mae + Gender, data = gal) |&gt; coef()
 ```
 
 ```
@@ -742,7 +927,7 @@ class: inverse, middle, center
 
 --
 
-* O coeficiente se chama `GenderM` e tem o sinal trocado em relação ao `bMenina` do `quap()`.
+* O coeficiente se chama `GenderM` e tem o sinal trocado em relação ao `\(\beta_2\)` que usamos para ajustar o modelo com a função `rethinking::quap()`.
 
 --
 
@@ -758,7 +943,7 @@ class: inverse, middle, center
 
 ``` r
 &gt; gal$Gender &lt;- relevel(factor(gal$Gender), ref = "M")
-&gt; coef(lm(Height ~ mae + Gender, data = gal))
+&gt; lm(Height ~ mae + Gender, data = gal) |&gt; coef()
 ```
 
 ```
@@ -770,7 +955,7 @@ class: inverse, middle, center
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Agora `GenderF` é o mesmo `bMenina` do `quap()`: o R construiu a mesma coluna que fizemos à mão.
+Agora `GenderF` é o mesmo `\(\beta_2\)` do `quap()`: o R construiu a mesma coluna que fizemos à mão.
 ]
 
 ---
@@ -820,14 +1005,20 @@ trt2    0    1
 --
 
 &lt;br&gt;
-São as matrizes `C.trat`, `C.soma` e `C.helm` que usamos com o `quap()`.
+Controle e soma: os mesmos valores de `\(c_1\)` e `\(c_2\)` que usamos com o `quap()`. 
+
+Helmert: os mesmos sinais, mas valores inteiros ( `\(-1, 1, 0\)` e $-1,
+-1, 2$ ). Com `contr.helmert()` os coeficientes ficam divididos por 2
+e por 3: `\(\beta_1/2\)` e `\(\beta_2/3\)`.
+
 
 ---
-## Trocando o contraste no `lm()`
+
+## Ajuste de modelos com os diferentes constrastes
 
 
 ``` r
-&gt; coef(lm(weight ~ group, data = pg))
+&gt; lm(weight ~ group, data = pg) |&gt; coef()
 ```
 
 ```
@@ -836,8 +1027,8 @@ São as matrizes `C.trat`, `C.soma` e `C.helm` que usamos com o `quap()`.
 ```
 
 ``` r
-&gt; coef(lm(weight ~ group, data = pg,
-+         contrasts = list(group = "contr.sum")))
+&gt; lm(weight ~ group, data = pg,
++    contrasts = list(group = "contr.sum")) |&gt; coef()
 ```
 
 ```
@@ -847,8 +1038,8 @@ São as matrizes `C.trat`, `C.soma` e `C.helm` que usamos com o `quap()`.
 
 ``` r
 &gt; pg$group.h &lt;- factor(pg$group, levels = c("trt1", "trt2", "ctrl"))
-&gt; coef(lm(weight ~ group.h, data = pg,
-+         contrasts = list(group.h = "contr.helmert")))
+&gt; lm(weight ~ group.h, data = pg,
++         contrasts = list(group.h = "contr.helmert")) |&gt; coef()
 ```
 
 ```
@@ -857,9 +1048,10 @@ São as matrizes `C.trat`, `C.soma` e `C.helm` que usamos com o `quap()`.
 ```
 
 ---
+
 ## O que o R faz por baixo: `model.matrix()`
 
-As colunas que o R gera, uma planta de cada grupo:
+As colunas que o R gera a aprtir da definição de contrastes, para uma planta de cada grupo:
 
 
 ``` r
@@ -895,9 +1087,14 @@ As mesmas colunas `\(c_1\)` e `\(c_2\)` que passamos ao `quap()`.
 O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perguntas que queremos que os coeficientes respondam.
 ]
 
+---
 
+class: inverse, middle, center
+
+# Interações
 
 ---
+
 
 ## Modelos lineares múltiplos com interações
 
@@ -948,26 +1145,13 @@ O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perg
 ]
 
 ---
+class: inverse, middle, center
 
-## E o que são preditores não lineares?
-
-Todos que não podem ser reduzidos à forma `\(\Theta \ = \ \sum \beta_iX_i\)`.
-
-.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Exemplos**
-
-* `\(\beta_0X_1^{\beta_1}\)`
-
-* `\(\beta_0e^{\beta_1 X_1}\)`
-
-* `\(\frac{\beta_1 X_1}{1+\beta_1\beta_2X_1}\)`
-
-* E muitas, muitas mais.
-]
+# Cálculo de previstos e avaliação de efeitos
 
 ---
 
-## Cálculo de previstos e avaliação de efeitos
+## Avaliação dos efeitos pelos previstos
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
