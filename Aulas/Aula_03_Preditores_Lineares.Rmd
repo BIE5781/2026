@@ -107,9 +107,24 @@ galton <- read.table("Galton.txt", header = TRUE)
 ## Primeiro(a) filho(a) de cada família, altura da mãe centrada
 gal <- galton[!duplicated(galton$Family), ]
 gal$mae <- gal$Mother - mean(gal$Mother)
+gal$pai <- gal$Father - mean(gal$Father)
 ```
 
-## Recapitulando
+## Conceitos-chave
+
+* Preditor linear
+
+* Preditores lineares aditivos
+
+* Variáveis categóricas e contrastes lineares
+
+* Preditores lineares com interação
+
+* Uso do preditor para ... fazer previsões :)
+
+--
+
+## O preditor linear
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Uma expressão geral para modelos estatísticos**
@@ -124,7 +139,7 @@ $$Y\, \sim \, f(Y \mid \theta=g_i(X))$$
 
 $Y$ é uma variável aleatória, cujos valores têm probabilidades
 definidas pela função de densidade $f(Y)$, cujos parâmetros
-$\theta$ são funções qualquer $g_i$ de outras medidas
+$\theta$ são funções $g_i$ de outras medidas
 (preditoras) $X$.
 ]
 
@@ -132,7 +147,7 @@ $\theta$ são funções qualquer $g_i$ de outras medidas
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 ** Exemplo: regressão linear simples**
 
-$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X~,~ \sigma)$$
+$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X_1~,~ \sigma)$$
 ]
 ---
 
@@ -180,9 +195,9 @@ $$\frac{\partial g(X_i)}{\partial \beta_i} = X_i$$
 ]
 
 ---
-## E o que são preditores não lineares?
+## E o que são preditores **não** lineares?
 
-Todos que não podem ser reduzidos à forma $g(X_i) \ = \ \sum \beta_iX_i$.
+Todos que **não podem** ser reduzidos à forma $g(X_i) \ = \ \sum \beta_iX_i$.
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Exemplos**
@@ -199,9 +214,10 @@ Todos que não podem ser reduzidos à forma $g(X_i) \ = \ \sum \beta_iX_i$.
 Em todos os casos, as derivadas parciais dependem dos parâmetros.
 
 ---
-## E o que são preditores não lineares?
 
-Todos que não podem ser reduzidos à forma $g(X_i) \ = \ \sum \beta_iX_i$.
+## E o que são preditores **não** lineares?
+
+Todos que **não podem** ser reduzidos à forma $g(X_i) \ = \ \sum \beta_iX_i$.
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Exemplos**
@@ -521,6 +537,32 @@ p.A + p.B
 
 **1:** o que sobra da altura depois de descontar o diâmetro. **2:** o volume (também descontado o diâmetro) em função desse resto. A inclinação é o coeficiente da altura na regressão múltipla.
 
+---
+## Teorema de Frisch–Waugh–Lovell
+
+.pull-left[
+Em um modelo ajustado pelo método dos mínimos quadrados com preditor linear
+
+$$\mu = \beta_0 + \beta_1 X_1 + \sum_{i=2}^n \beta_i X_i$$
+
+Os seguintes estimadores de $\beta_1$ são equivalentes:
+
+1. A estimativa obtida de uma regressão múltipla com todas as variáveis preditoras
+
+2. O coeficiente da regressão da resposta $\mu$ em função do **resíduo de $X_1$** em relação a todas os $X_i$
+
+3. O coeficiente da regressão do **resíduo da resposta $\mu$** em função do **resíduo de $X_i$**, cada um em relação a todos os $X_i$
+
+]
+.pull-right[
+.center[
+![](Ragnar_Frisch.jpg)
+
+Ragnar Frisch (1895-1973)
+]
+<br>
+.right[Veja [Wikipedia](https://en.wikipedia.org/wiki/Frisch%E2%80%93Waugh%E2%80%93Lovell_theorem) e [Lovell 2018](https://www.jstor.org/stable/41426805)] 
+]
 ---
 class: inverse, middle, center
 
@@ -1264,5 +1306,270 @@ class: inverse, middle, center
 # Cálculo de previstos e avaliação de efeitos
 
 ---
+## Valores previstos: um caso
 
-## Avaliação dos efeitos pelos previstos
+```{r previstos-setup, include=FALSE}
+
+## Coeficientes do modelo aditivo de altura (m.gal)
+cf <- coef(m.gal)
+## Formatação dos números para o LaTeX (negativos entre parênteses)
+f2 <- function(x) formatC(unname(x), format = "f", digits = 2)
+fp <- function(x) ifelse(x < 0, paste0("(", f2(x), ")"), f2(x))
+## Caso: filha de mãe com 1 polegada acima da média
+prev1 <- cf["b0"] + cf["b1"] * 1 + cf["b2"] * 1
+## Escreve uma matriz em LaTeX
+mat_tex <- function(m, digits = 2) {
+    m <- as.matrix(m)
+    linhas <- apply(m, 1, function(r)
+        paste(formatC(r, format = "f", digits = digits), collapse = " & "))
+    paste0("\\begin{bmatrix}", paste(linhas, collapse = " \\\\ "), "\\end{bmatrix}")
+}
+```
+
+### Filha de mãe com 1 polegada acima da média :
+
+$$
+\begin{align}
+\mu &= \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}\\[.4em]
+\mu &= `r f2(cf["b0"])` ~+~ `r fp(cf["b1"])` \times 1 ~+~ `r fp(cf["b2"])` \times 1 \\[.4em]
+\mu &= `r f2(prev1)` \text{ polegadas}
+\end{align}
+$$
+
+No R:
+
+```{r , echo=TRUE}
+(cf <- coef(m.gal))
+cf["b0"] + cf["b1"] * 1 + cf["b2"] * 1
+```
+
+---
+## Valores previstos para vários casos
+
+```{r tabela-previstos}
+## Combinações de altura da mãe (centrada) e gênero
+novos <- data.frame(mae    = rep(c(1, 1.5), times = 2),
+                    menina = rep(c(0, 1), each = 2))
+novos$mu <- cf["b0"] + cf["b1"] * novos$mae + cf["b2"] * novos$menina
+
+tab.prev <- data.frame(
+    "Gênero"                 = ifelse(novos$menina == 1, "Menina", "Menino"),
+    "Altura da mãe (in)"     = mean(gal$Mother) + novos$mae,
+    "mae (centrada)"         = novos$mae,
+    "menina"                 = novos$menina,
+    "Altura prevista (in)"   = novos$mu,
+    check.names = FALSE)
+kable(tab.prev, digits = 2, align = "c")
+```
+
+<br>
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Cada linha: $\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}$ , com os valores de $\text{mae}$ e $\text{menina}$ daquela linha.
+]
+
+---
+## Valores previstos: multiplicação de matrizes
+
+```{r matriz-previstos, include=FALSE}
+X <- cbind(1, novos$mae, novos$menina)        # matriz do modelo
+beta <- cf[c("b0", "b1", "b2")]                # vetor de coeficientes
+mu.mat <- X %*% beta                           # previstos
+```
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Matriz do modelo** $\mathbf{X}$: uma linha para cada caso e uma coluna para cada parâmetro. A primeira coluna é sempre 1 (o intercepto); as demais têm os valores das preditoras ( $\text{mae}$ e $\text{menina}$ ).
+]
+
+--
+
+$$\boldsymbol{\mu} = \mathbf{X}\, \boldsymbol{\beta}$$
+
+$$\underbrace{`r mat_tex(mu.mat, 2)`}_{\boldsymbol{\mu}} = \underbrace{`r mat_tex(X, 1)`}_{\mathbf{X}} \underbrace{`r mat_tex(beta, 2)`}_{\boldsymbol{\beta}}$$
+
+--
+
+Multiplicação da matriz do modelo pelo vetor de coeficientes: um vetor com os previstos.
+
+---
+
+## Valores previstos com o *rethinking*
+### 1. Crie uma tabela com os valores de $X_i$
+.pull-left[
+```{r , echo=TRUE}
+## Grade de valores das preditoras
+grade <- expand.grid(
+    mae = seq(min(gal$mae),
+              max(gal$mae),
+              length.out = 50),
+    menina = c(0, 1)
+)
+```
+]
+
+.pull-right[
+
+```{r }
+rbind(head(grade), tail(grade))
+```
+]
+
+---
+
+## Valores previstos com o *rethinking*
+
+.pull-left[
+### 2. Passe para a função `link()`
+`link()` retorna `n` previstos para cada valor de $X_i$, usando `n` valores de $\beta_i$ com variação devido à incerteza da estimativa.
+
+```{r , echo=TRUE}
+## Amostras de mu para cada caso
+mu <- link(m.gal, data = grade, n=1000)
+## 1000 valores para Xi
+dim(mu)
+```
+
+```{r , echo=TRUE}
+## Média e intervalo de 95%
+grade$media <- colMeans(mu)
+IC <- apply(mu, 2, PI, prob = 0.95)
+grade$inf <- IC[1, ]
+grade$sup <- IC[2, ]
+```
+]
+
+.pull-right[
+```{r previstos-rethinking, fig.width = 5, fig.asp = 1, out.width = "100%"}
+grade$genero <- ifelse(grade$menina == 1, "Meninas", "Meninos")
+ggplot(grade, aes(mae, media)) +
+    geom_point(data = gal, aes(mae, Height, colour = genero),
+               size = 1.5, alpha = 0.25) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = genero), alpha = 0.4) +
+    geom_line(aes(colour = genero), linewidth = 1) +
+    scale_colour_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    scale_fill_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    labs(x = "Altura da mãe (centrada, in)", y = "Altura prevista (in)") +
+    theme_Publication(18)
+```
+]
+
+---
+
+## Valores previstos com `predict()`
+
+O mesmo modelo ajustado com `lm()`:
+
+```{r , echo=TRUE}
+lm.gal <- lm(Height ~ mae + menina, data = gal)
+```
+
+Calcula previstos
+
+```{r , echo=TRUE}
+lm.gal.p <- predict(lm.gal, newdata = grade, interval ="confidence")
+## Preditoras e previsão
+cbind(grade[,1:2], lm.gal.p)|> head()
+```
+
+--
+
+Com `interval = "prediction"`, o intervalo inclui também a variação gaussiana entre indivíduos na populaçao (equivale ao `sim()` do *rethinking*).
+
+---
+# Um mdeolo com muitos coeficientes
+
+Especifica o modelo
+
+```{r ,echo=TRUE}
+mgal2.f <- alist(
+    Height ~ dnorm(mu, exp(lsigma)),
+    mu <- b0 + b1 * mae + b2 * pai + b3 * menina +
+        b4 * mae * pai + b5 * mae * menina + b6 * pai * menina +
+        b7 * mae * pai * menina)
+```
+
+Ajusta o modelo
+
+```{r , echo =TRUE}
+m.gal2 <- quap(mgal2.f, data = gal,
+    start = list(b0 = mean(gal$Height),
+                 b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0,
+                 lsigma = log(sd(gal$Height))))
+precis(m.gal2)
+```
+
+---
+## Coeficientes podem ser  difíceis de interpretar
+
+```{r , echo =TRUE}
+precis(m.gal2)
+```
+
+---
+
+## Uma solução: previstos condicionais
+ Começamos criando uma grade com `expand.grid` combinando:
+* 50 valores de altura centradas do pai, entre $-7$ e $7$ polegadas
+* Os dois valores de gênero atribuído ao nascer
+* Dois valores de altura centrada da mãe:  $-7$ e $7$
+
+```{r, echo=TRUE }
+grade2 <- expand.grid(pai    = seq(-7, 7, length.out = 50),
+                      menina = c(0, 1),
+                      mae    = c(-7, 7))
+```
+
+Primeiras e últimas linhas da grade:
+
+```{r, echo=TRUE }
+rbind( head(grade2,3), tail(grade2,3))
+```
+
+---
+
+## Previstos condicionais
+
+Calculamos os previstos para cada combinação com `link()`
+
+.pull-left[
+
+Mil amostras de $\mu$ para cada combinação de valores da grade:
+
+```{r, echo=TRUE }
+mu2 <- link(m.gal2, data = grade2)
+```
+
+Média e IC das amostras para cada combinação
+
+```{r, echo=TRUE }
+grade2$media <- colMeans(mu2)
+IC2 <- apply(mu2, 2, PI, prob = 0.95)
+grade2$inf <- IC2[1, ]
+grade2$sup <- IC2[2, ]
+```
+]
+
+.pull-right[
+```{r ,fig.width = 5, fig.asp = 1.3, out.width = NULL, out.height = "550px", out.extra = 'style="margin-top: -50px;"'}
+grade2$genero <- ifelse(grade2$menina == 1, "Meninas", "Meninos")
+grade2$painel <- factor(grade2$mae, levels = c(-7, 7),
+                        labels = c("Mãe 7 in abaixo da média",
+                                   "Mãe 7 in acima da média"))
+ggplot(grade2, aes(pai, media)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = genero), alpha = 0.3) +
+    geom_line(aes(colour = genero), linewidth = 1) +
+    facet_wrap(~ painel, nrow=2) +
+    scale_colour_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    scale_fill_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    labs(x = "Altura do pai (centrada, in)", y = "Altura prevista (in)") +
+    theme_Publication(18) +
+    theme(plot.margin = margin(1, 5, 5, 5, "mm"))
+```
+]
+
+
+---
+
+```{r }
+lm.gal2 <- lm(Height ~ mae*pai + mae*pai*menina, data = gal)
+predictorEffect("pai", lm.gal2, xlevels = list(menina=0:1, mae=c(-5,5))) |> plot()
+```

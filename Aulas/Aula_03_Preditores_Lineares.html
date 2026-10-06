@@ -47,7 +47,21 @@ class: center, middle, inverse, title-slide
 
 
 
-## Recapitulando
+## Conceitos-chave
+
+* Preditor linear
+
+* Preditores lineares aditivos
+
+* Variáveis categóricas e contrastes lineares
+
+* Preditores lineares com interação
+
+* Uso do preditor para ... fazer previsões :)
+
+--
+
+## O preditor linear
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Uma expressão geral para modelos estatísticos**
@@ -62,7 +76,7 @@ class: center, middle, inverse, title-slide
 
 `\(Y\)` é uma variável aleatória, cujos valores têm probabilidades
 definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
-`\(\theta\)` são funções qualquer `\(g_i\)` de outras medidas
+`\(\theta\)` são funções `\(g_i\)` de outras medidas
 (preditoras) `\(X\)`.
 ]
 
@@ -70,7 +84,7 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 ** Exemplo: regressão linear simples**
 
-`$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X~,~ \sigma)$$`
+`$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X_1~,~ \sigma)$$`
 ]
 ---
 
@@ -118,9 +132,9 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 ]
 
 ---
-## E o que são preditores não lineares?
+## E o que são preditores **não** lineares?
 
-Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
+Todos que **não podem** ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Exemplos**
@@ -137,9 +151,10 @@ Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
 Em todos os casos, as derivadas parciais dependem dos parâmetros.
 
 ---
-## E o que são preditores não lineares?
 
-Todos que não podem ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
+## E o que são preditores **não** lineares?
+
+Todos que **não podem** ser reduzidos à forma `\(g(X_i) \ = \ \sum \beta_iX_i\)`.
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Exemplos**
@@ -337,6 +352,32 @@ lsigma -2.559442e+00 0.12700009 -2.76241285 -2.35647152
 
 **1:** o que sobra da altura depois de descontar o diâmetro. **2:** o volume (também descontado o diâmetro) em função desse resto. A inclinação é o coeficiente da altura na regressão múltipla.
 
+---
+## Teorema de Frisch–Waugh–Lovell
+
+.pull-left[
+Em um modelo ajustado pelo método dos mínimos quadrados com preditor linear
+
+`$$\mu = \beta_0 + \beta_1 X_1 + \sum_{i=2}^n \beta_i X_i$$`
+
+Os seguintes estimadores de `\(\beta_1\)` são equivalentes:
+
+1. A estimativa obtida de uma regressão múltipla com todas as variáveis preditoras
+
+2. O coeficiente da regressão da resposta `\(\mu\)` em função do **resíduo de `\(X_1\)`** em relação a todas os `\(X_i\)`
+
+3. O coeficiente da regressão do **resíduo da resposta `\(\mu\)`** em função do **resíduo de `\(X_i\)`**, cada um em relação a todos os `\(X_i\)`
+
+]
+.pull-right[
+.center[
+![](Ragnar_Frisch.jpg)
+
+Ragnar Frisch (1895-1973)
+]
+&lt;br&gt;
+.right[Veja [Wikipedia](https://en.wikipedia.org/wiki/Frisch%E2%80%93Waugh%E2%80%93Lovell_theorem) e [Lovell 2018](https://www.jstor.org/stable/41426805)] 
+]
 ---
 class: inverse, middle, center
 
@@ -1153,8 +1194,307 @@ class: inverse, middle, center
 # Cálculo de previstos e avaliação de efeitos
 
 ---
+## Valores previstos: um caso
 
-## Avaliação dos efeitos pelos previstos
+
+
+### Filha de mãe com 1 polegada acima da média :
+
+$$
+`\begin{align}
+\mu &amp;= \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}\\[.4em]
+\mu &amp;= 70.44 ~+~ 0.35 \times 1 ~+~ (-5.15) \times 1 \\[.4em]
+\mu &amp;= 65.64 \text{ polegadas}
+\end{align}`
+$$
+
+No R:
+
+
+``` r
+&gt; (cf &lt;- coef(m.gal))
+```
+
+```
+        b0         b1         b2     lsigma 
+70.4409495  0.3486614 -5.1500658  0.8836568 
+```
+
+``` r
+&gt; cf["b0"] + cf["b1"] * 1 + cf["b2"] * 1
+```
+
+```
+      b0 
+65.63955 
+```
+
+---
+## Valores previstos para vários casos
+
+
+| Gênero | Altura da mãe (in) | mae (centrada) | menina | Altura prevista (in) |
+|:------:|:------------------:|:--------------:|:------:|:--------------------:|
+| Menino |       64.98        |      1.0       |   0    |        70.79         |
+| Menino |       65.48        |      1.5       |   0    |        70.96         |
+| Menina |       64.98        |      1.0       |   1    |        65.64         |
+| Menina |       65.48        |      1.5       |   1    |        65.81         |
+
+&lt;br&gt;
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Cada linha: `\(\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}\)` , com os valores de `\(\text{mae}\)` e `\(\text{menina}\)` daquela linha.
+]
+
+---
+## Valores previstos: multiplicação de matrizes
+
+
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Matriz do modelo** `\(\mathbf{X}\)`: uma linha para cada caso e uma coluna para cada parâmetro. A primeira coluna é sempre 1 (o intercepto); as demais têm os valores das preditoras ( `\(\text{mae}\)` e `\(\text{menina}\)` ).
+]
+
+--
+
+`$$\boldsymbol{\mu} = \mathbf{X}\, \boldsymbol{\beta}$$`
+
+`$$\underbrace{\begin{bmatrix}70.79 \\ 70.96 \\ 65.64 \\ 65.81\end{bmatrix}}_{\boldsymbol{\mu}} = \underbrace{\begin{bmatrix}1.0 &amp; 1.0 &amp; 0.0 \\ 1.0 &amp; 1.5 &amp; 0.0 \\ 1.0 &amp; 1.0 &amp; 1.0 \\ 1.0 &amp; 1.5 &amp; 1.0\end{bmatrix}}_{\mathbf{X}} \underbrace{\begin{bmatrix}70.44 \\ 0.35 \\ -5.15\end{bmatrix}}_{\boldsymbol{\beta}}$$`
+
+--
+
+Multiplicação da matriz do modelo pelo vetor de coeficientes: um vetor com os previstos.
+
+---
+
+## Valores previstos com o *rethinking*
+### 1. Crie uma tabela com os valores de `\(X_i\)`
+.pull-left[
+
+``` r
+&gt; ## Grade de valores das preditoras
+&gt; grade &lt;- expand.grid(
++     mae = seq(min(gal$mae),
++               max(gal$mae),
++               length.out = 50),
++     menina = c(0, 1)
++ )
+```
+]
+
+.pull-right[
+
+
+```
+          mae menina
+1   -5.984264      0
+2   -5.729162      0
+3   -5.474060      0
+4   -5.218958      0
+5   -4.963856      0
+6   -4.708754      0
+95   5.240226      1
+96   5.495328      1
+97   5.750430      1
+98   6.005532      1
+99   6.260634      1
+100  6.515736      1
+```
+]
+
+---
+
+## Valores previstos com o *rethinking*
+
+.pull-left[
+### 2. Passe para a função `link()`
+`link()` retorna `n` previstos para cada valor de `\(X_i\)`, usando `n` valores de `\(\beta_i\)` com variação devido à incerteza da estimativa.
+
+
+``` r
+&gt; ## Amostras de mu para cada caso
+&gt; mu &lt;- link(m.gal, data = grade, n=1000)
+&gt; ## 1000 valores para Xi
+&gt; dim(mu)
+```
+
+```
+[1] 1000  100
+```
+
+
+``` r
+&gt; ## Média e intervalo de 95%
+&gt; grade$media &lt;- colMeans(mu)
+&gt; IC &lt;- apply(mu, 2, PI, prob = 0.95)
+&gt; grade$inf &lt;- IC[1, ]
+&gt; grade$sup &lt;- IC[2, ]
+```
+]
+
+.pull-right[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/previstos-rethinking-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Valores previstos com `predict()`
+
+O mesmo modelo ajustado com `lm()`:
+
+
+``` r
+&gt; lm.gal &lt;- lm(Height ~ mae + menina, data = gal)
+```
+
+Calcula previstos
+
+
+``` r
+&gt; lm.gal.p &lt;- predict(lm.gal, newdata = grade, interval ="confidence")
+&gt; ## Preditoras e previsão
+&gt; cbind(grade[,1:2], lm.gal.p)|&gt; head()
+```
+
+```
+        mae menina      fit      lwr      upr
+1 -5.984264      0 68.35446 67.41049 69.29842
+2 -5.729162      0 68.44343 67.53365 69.35321
+3 -5.474060      0 68.53241 67.65657 69.40824
+4 -5.218958      0 68.62138 67.77921 69.46355
+5 -4.963856      0 68.71035 67.90153 69.51918
+6 -4.708754      0 68.79933 68.02351 69.57515
+```
+
+--
+
+Com `interval = "prediction"`, o intervalo inclui também a variação gaussiana entre indivíduos na populaçao (equivale ao `sim()` do *rethinking*).
+
+---
+# Um mdeolo com muitos coeficientes
+
+Especifica o modelo
+
+
+``` r
+&gt; mgal2.f &lt;- alist(
++     Height ~ dnorm(mu, exp(lsigma)),
++     mu &lt;- b0 + b1 * mae + b2 * pai + b3 * menina +
++         b4 * mae * pai + b5 * mae * menina + b6 * pai * menina +
++         b7 * mae * pai * menina)
+```
+
+Ajusta o modelo
+
+
+``` r
+&gt; m.gal2 &lt;- quap(mgal2.f, data = gal,
++     start = list(b0 = mean(gal$Height),
++                  b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0,
++                  lsigma = log(sd(gal$Height))))
+&gt; precis(m.gal2)
+```
+
+```
+              mean         sd        5.5%       94.5%
+b0     70.58447533 0.16138522 70.32655057 70.84240008
+b1      0.28461479 0.06755261  0.17665267  0.39257691
+b2      0.48410405 0.06365678  0.38236823  0.58583987
+b3     -5.94251639 0.60744853 -6.91333646 -4.97169631
+b4     -0.02666409 0.02641725 -0.06888397  0.01555578
+b5     -0.04243042 0.27180493 -0.47682720  0.39196636
+b6     -0.13094881 0.21741601 -0.47842158  0.21652397
+b7      0.11678184 0.09261535 -0.03123539  0.26479906
+lsigma  0.73938128 0.05037883  0.65886618  0.81989637
+```
+
+---
+## Coeficientes podem ser  difíceis de interpretar
+
+
+``` r
+&gt; precis(m.gal2)
+```
+
+```
+              mean         sd        5.5%       94.5%
+b0     70.58447533 0.16138522 70.32655057 70.84240008
+b1      0.28461479 0.06755261  0.17665267  0.39257691
+b2      0.48410405 0.06365678  0.38236823  0.58583987
+b3     -5.94251639 0.60744853 -6.91333646 -4.97169631
+b4     -0.02666409 0.02641725 -0.06888397  0.01555578
+b5     -0.04243042 0.27180493 -0.47682720  0.39196636
+b6     -0.13094881 0.21741601 -0.47842158  0.21652397
+b7      0.11678184 0.09261535 -0.03123539  0.26479906
+lsigma  0.73938128 0.05037883  0.65886618  0.81989637
+```
+
+---
+
+## Uma solução: previstos condicionais
+ Começamos criando uma grade com `expand.grid` combinando:
+* 50 valores de altura centradas do pai, entre `\(-7\)` e `\(7\)` polegadas
+* Os dois valores de gênero atribuído ao nascer
+* Dois valores de altura centrada da mãe:  `\(-7\)` e `\(7\)`
+
+
+``` r
+&gt; grade2 &lt;- expand.grid(pai    = seq(-7, 7, length.out = 50),
++                       menina = c(0, 1),
++                       mae    = c(-7, 7))
+```
+
+Primeiras e últimas linhas da grade:
+
+
+``` r
+&gt; rbind( head(grade2,3), tail(grade2,3))
+```
+
+```
+          pai menina mae
+1   -7.000000      0  -7
+2   -6.714286      0  -7
+3   -6.428571      0  -7
+198  6.428571      1   7
+199  6.714286      1   7
+200  7.000000      1   7
+```
+
+---
+
+## Previstos condicionais
+
+Calculamos os previstos para cada combinação com `link()`
+
+.pull-left[
+
+Mil amostras de `\(\mu\)` para cada combinação de valores da grade:
+
+
+``` r
+&gt; mu2 &lt;- link(m.gal2, data = grade2)
+```
+
+Média e IC das amostras para cada combinação
+
+
+``` r
+&gt; grade2$media &lt;- colMeans(mu2)
+&gt; IC2 &lt;- apply(mu2, 2, PI, prob = 0.95)
+&gt; grade2$inf &lt;- IC2[1, ]
+&gt; grade2$sup &lt;- IC2[2, ]
+```
+]
+
+.pull-right[
+.center[
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-46-1.png" alt="" height="550px" style="margin-top: -50px;" /&gt;
+]
+]
+
+---
+
+&lt;img src="Aula_03_Preditores_Lineares_files/figure-html/unnamed-chunk-47-1.png" alt="" width="85%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

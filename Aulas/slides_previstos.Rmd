@@ -1,0 +1,138 @@
+---
+## Valores previstos: um caso
+
+```{r previstos-setup, include=FALSE}
+## Coeficientes do modelo aditivo de altura (m.gal)
+cf <- coef(m.gal)
+## Formatação dos números para o LaTeX (negativos entre parênteses)
+f2 <- function(x) formatC(unname(x), format = "f", digits = 2)
+fp <- function(x) ifelse(x < 0, paste0("(", f2(x), ")"), f2(x))
+## Caso: filha de mãe com 1 polegada acima da média
+prev1 <- cf["b0"] + cf["b1"] * 1 + cf["b2"] * 1
+## Escreve uma matriz em LaTeX
+mat_tex <- function(m, digits = 2) {
+    m <- as.matrix(m)
+    linhas <- apply(m, 1, function(r)
+        paste(formatC(r, format = "f", digits = digits), collapse = " & "))
+    paste0("\\begin{bmatrix}", paste(linhas, collapse = " \\\\ "), "\\end{bmatrix}")
+}
+```
+
+Filha ( $\text{menina} = 1$ ) de mãe com 1 polegada acima da média ( $\text{mae} = 1$ ):
+
+.pull-left[
+
+$$\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}$$
+
+$$\mu = `r f2(cf["b0"])` + `r fp(cf["b1"])` \times 1 + `r fp(cf["b2"])` \times 1$$
+
+$$\mu = `r f2(prev1)` \text{ polegadas}$$
+
+]
+
+.pull-right[
+
+```{r , echo=TRUE}
+cf <- coef(m.gal)
+cf["b0"] + cf["b1"] * 1 + cf["b2"] * 1
+```
+
+]
+
+---
+## Valores previstos para vários casos
+
+```{r tabela-previstos}
+## Combinações de altura da mãe (centrada) e gênero
+novos <- data.frame(mae    = rep(c(1, 1.5), times = 2),
+                    menina = rep(c(0, 1), each = 2))
+novos$mu <- cf["b0"] + cf["b1"] * novos$mae + cf["b2"] * novos$menina
+
+tab.prev <- data.frame(
+    "Gênero"                 = ifelse(novos$menina == 1, "Menina", "Menino"),
+    "Altura da mãe (in)"     = mean(gal$Mother) + novos$mae,
+    "mae (centrada)"         = novos$mae,
+    "menina"                 = novos$menina,
+    "Altura prevista (in)"   = novos$mu,
+    check.names = FALSE)
+kable(tab.prev, digits = 2, align = "c")
+```
+
+<br>
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Cada linha: $\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}$ , com os valores de $\text{mae}$ e $\text{menina}$ daquela linha.
+]
+
+---
+## Valores previstos: multiplicação de matrizes
+
+```{r matriz-previstos, include=FALSE}
+X <- cbind(1, novos$mae, novos$menina)        # matriz do modelo
+beta <- cf[c("b0", "b1", "b2")]                # vetor de coeficientes
+mu.mat <- X %*% beta                           # previstos
+```
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Matriz do modelo** $\mathbf{X}$: uma linha para cada caso e uma coluna para cada parâmetro. A primeira coluna é sempre 1 (o intercepto); as demais têm os valores das preditoras ( $\text{mae}$ e $\text{menina}$ ).
+]
+
+--
+
+$$\boldsymbol{\mu} = \mathbf{X}\, \boldsymbol{\beta}$$
+
+$$\underbrace{`r mat_tex(mu.mat, 2)`}_{\boldsymbol{\mu}} = \underbrace{`r mat_tex(X, 1)`}_{\mathbf{X}} \underbrace{`r mat_tex(beta, 2)`}_{\boldsymbol{\beta}}$$
+
+--
+
+Cada previsto é uma linha de $\mathbf{X}$ multiplicada por $\boldsymbol{\beta}$: $\mu = 1 \times \beta_0 + \text{mae} \times \beta_1 + \text{menina} \times \beta_2$. No R: `X %*% beta`, e `model.matrix()` constrói $\mathbf{X}$ a partir da fórmula do modelo.
+
+---
+## Valores previstos com o *rethinking*
+
+.pull-left[
+```{r , echo=TRUE}
+## Grade de valores das preditoras
+grade <- expand.grid(
+    mae = seq(min(gal$mae), max(gal$mae),
+              length.out = 50),
+    menina = c(0, 1))
+## Amostras de mu para cada caso
+mu <- link(m.gal, data = grade)
+## Média e intervalo de 95%
+grade$media <- colMeans(mu)
+IC <- apply(mu, 2, PI, prob = 0.95)
+grade$inf <- IC[1, ]
+grade$sup <- IC[2, ]
+```
+]
+
+.pull-right[
+```{r previstos-rethinking, fig.width = 5, fig.asp = 1, out.width = "100%"}
+grade$genero <- ifelse(grade$menina == 1, "Meninas", "Meninos")
+ggplot(grade, aes(mae, media)) +
+    geom_point(data = gal, aes(mae, Height, colour = genero),
+               size = 1.5, alpha = 0.25) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = genero), alpha = 0.4) +
+    geom_line(aes(colour = genero), linewidth = 1) +
+    scale_colour_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    scale_fill_manual(values = c(Meninas = "blue", Meninos = "deeppink"), name = NULL) +
+    labs(x = "Altura da mãe (centrada, in)", y = "Altura prevista (in)") +
+    theme_Publication(18)
+```
+]
+
+---
+## Valores previstos com `predict()`
+
+O mesmo modelo ajustado com `lm()`:
+
+```{r , echo=TRUE}
+lm.gal <- lm(Height ~ mae + menina, data = gal)
+novos <- data.frame(mae    = rep(c(1, 1.5), times = 2),
+                    menina = rep(c(0, 1), each = 2))
+cbind(novos, predict(lm.gal, newdata = novos, interval = "confidence"))
+```
+
+--
+
+Com `interval = "prediction"`, o intervalo inclui também a variação entre indivíduos (equivale ao `sim()` do *rethinking*).
