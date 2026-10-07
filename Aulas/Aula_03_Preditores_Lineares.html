@@ -82,7 +82,7 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 
 --
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-** Exemplo: regressão linear simples**
+**Exemplo: regressão linear simples**
 
 `$$Y\, \sim \, \text{Normal}(Y \mid \mu = \beta_0 + \beta_1 X_1~,~ \sigma)$$`
 ]
@@ -93,12 +93,12 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Todos que podem ser escritos na forma**
 
-`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
+`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
 ]
 
 ### Exemplos
 
-* `\(\beta_0+\beta_1X_1\)` , sendo `\(X_0=1\)`
+* `\(\beta_0+\beta_1X_1\)` , pois `\(\beta_0 = \beta_0 X_0\)` , sendo `\(X_0=1\)`
 
 --
 
@@ -120,7 +120,7 @@ definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
 
 **Todos que podem ser escritos na forma**
 
-`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
+`$$g(X_i) \ = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n ~=~\sum \beta_iX_i$$`
 ]
 
 &lt;br&gt;
@@ -192,7 +192,7 @@ class: inverse, middle, center
 
 * A soma **não** inclui variáveis independentes que são produtos de outras presentes no modelo:
 
-`$$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_iX_i$$`
+`$$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_nX_n$$`
 
 --
 
@@ -200,7 +200,8 @@ class: inverse, middle, center
 
 --
 
-* Ou seja, diferenças associadas a cada preditora são **aditivas**. Não são afetadas pelo valor das demais variáveis.
+* Ou seja, diferenças da resposta associadas a cada preditora são
+  **aditivas**. Não são afetadas pelo valor das demais variáveis.
 
 ---
 
@@ -364,9 +365,9 @@ Os seguintes estimadores de `\(\beta_1\)` são equivalentes:
 
 1. A estimativa obtida de uma regressão múltipla com todas as variáveis preditoras
 
-2. O coeficiente da regressão da resposta `\(\mu\)` em função do **resíduo de `\(X_1\)`** em relação a todas os `\(X_i\)`
+2. O coeficiente da regressão da resposta `\(Y\)` em função do **resíduo de `\(X_1\)`** em relação às demais preditoras ( `\(X_2, \ldots, X_n\)` )
 
-3. O coeficiente da regressão do **resíduo da resposta `\(\mu\)`** em função do **resíduo de `\(X_i\)`**, cada um em relação a todos os `\(X_i\)`
+3. O coeficiente da regressão do **resíduo da resposta `\(Y\)`** em função do **resíduo de `\(X_1\)`**, ambos em relação às demais preditoras
 
 ]
 .pull-right[
@@ -391,8 +392,8 @@ class: inverse, middle, center
 
 .pull-left[
 
-Temos que converter o  gênero em  um número, para incluir no preditor linear. 
-	
+Temos que converter o gênero em um número, para incluir no preditor linear.
+
 Solução: nova variável com valor `\(1\)` se menina e valor `\(0\)` se menino.
 
 
@@ -515,7 +516,7 @@ Que números atribuir a cada grupo?
 &lt;img src="Aula_03_Preditores_Lineares_files/figure-html/uma-coluna-1.png" alt="" width="90%" /&gt;
 ]
 
-Codificar em uma única variável impõe: (i) uma **ordem** e **distâncias iguais** entre os grupos, (ii) relação linear com as categorias.  Modelo muda com os ŕotulos e ignora diferenças não montônicas entre grupos. 
+Codificar em uma única variável impõe: (i) uma **ordem** e **distâncias iguais** entre os grupos, (ii) relação linear com as categorias.  O modelo muda com os rótulos e ignora diferenças não monotônicas entre grupos. 
 
 ---
 
@@ -612,8 +613,8 @@ Médias dos grupos
 ## O mesmo modelo, com uma variável índice
 
 No *rethinking* podemos usar uma variável que atribui um índice
-numérico a cada nível do fator, que internamente é transformada nas
-variáveis indicadoras:
+numérico a cada nível do fator. Cada nível tem seu próprio coeficiente,
+como no modelo com variáveis indicadoras:
 
 
 ``` r
@@ -670,15 +671,15 @@ lsigma -0.5252895 0.1290991 -0.7316149 -0.3189641
 ## E se incluirmos um intercepto?
 
 * Intercepto: constante numérica no preditor linear (`\(\beta_0\)`)
-* Útil para como valor de referência em comparações
-* Necessário quando há mais de uma preditora categórica
+* Útil como valor de referência em comparações
+* Com mais de uma preditora categórica, apenas uma pode ter uma variável para cada nível
 
 `$$\mu = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3$$`
 
 --
 
-Se apenas adicionamos um intercepto, a média de cada grupo é a soma de um coeficiente a mais que o número de
-grupos. Há infinitas maneiras de descrever as médias dos grupos:
+Se apenas adicionamos um intercepto, temos um coeficiente a mais que o número de
+grupos (quatro coeficientes para três médias). Há infinitas maneiras de descrever as médias dos grupos:
 
 | Solução | `\(\beta_0\)` | `\(\beta_1\)` | `\(\beta_2\)` | `\(\beta_3\)` |
 |:-------:|:--------:|:---------:|:---------:|:---------:|
@@ -689,7 +690,7 @@ grupos. Há infinitas maneiras de descrever as médias dos grupos:
 --
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Portanto, com intercepto, bastam `\(k-1\)` variáveis binárias. Mas que valores colocar nelas?
+Portanto, com intercepto, bastam `\(k-1\)` variáveis. Mas que valores colocar nelas?
 ]
 
 ---
@@ -697,15 +698,15 @@ Portanto, com intercepto, bastam `\(k-1\)` variáveis binárias. Mas que valores
 ## Contrastes
 
 .pull-left[
-**Contraste**: regra para reescrever as `\(k\)` médias como um intercepto e `\(k-1\)` coeficientes binários, que chamaremos de `\(c_i\)`.
+**Contraste**: regra para reescrever as `\(k\)` médias como um intercepto e `\(k-1\)` coeficientes, associados a `\(k-1\)` variáveis numéricas, que chamaremos de `\(c_i\)`.
 
-* O contraste é expresso por  uma **matriz** com o níveis da variável categórica nas linhas, e as variáveis binárias `\(c_i\)` em cada coluna. Esta matriz tem sempre uma coluna a menos que o número de linhas.
+* O contraste é expresso por uma **matriz** com os níveis da variável categórica nas linhas, e as variáveis `\(c_i\)` nas colunas. Esta matriz tem sempre uma coluna a menos que o número de linhas.
 
 * Contrastes diferentes dão as **mesmas médias** e a **mesma verossimilhança**.
 
 * O que muda é o **significado dos coeficientes**.
 
-* Que pode facilitar a usar coeficientes para responder diferentes **perguntas**.
+* O que permite usar os coeficientes para responder a diferentes **perguntas**.
 ]
 
 .pull-right[
@@ -762,7 +763,7 @@ A coluna `menina` do exemplo do Galton era um contraste de controle, com os meni
 
 ## Exemplo de ajuste com contraste de controle
 
-Adicionamos as variaveis `\(c1\)` e `\(c2\)` aos dados
+Adicionamos as variáveis `\(c_1\)` e `\(c_2\)` aos dados
 
 
 ``` r
@@ -1057,7 +1058,7 @@ e por 3: `\(\beta_1/2\)` e `\(\beta_2/3\)`.
 
 ---
 
-## Ajuste de modelos com os diferentes constrastes
+## Ajuste de modelos com os diferentes contrastes
 
 
 ``` r
@@ -1127,11 +1128,10 @@ As mesmas colunas `\(c_1\)` e `\(c_2\)` que passamos ao `quap()`.
 
 &lt;br&gt;
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perguntas que queremos que os coeficientes respondam.
+O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perguntas que queremos que os coeficientes respondam. Muito usado em análise de dados experimentais.
 ]
 
 ---
-
 class: inverse, middle, center
 
 # Interações
@@ -1152,7 +1152,7 @@ class: inverse, middle, center
 
 --
 
-* Ou seja, diferenças aasociadas a uma preditora dependem do valor de outra(s). Há uma **interação** estatística.
+* Ou seja, diferenças da resposta associadas a uma preditora dependem do valor de outra(s). Há uma **interação** estatística.
 
 ---
 
@@ -1173,11 +1173,11 @@ class: inverse, middle, center
 
 --
 
-* **masculino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 0 + \beta_3X_1\times 0 \ = \ \beta_0 + \beta_1X_1\)`
+* **meninos**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 0 + \beta_3X_1\times 0 \ = \ \beta_0 + \beta_1X_1\)`
 
 --
 
-* **feminino**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 1 + \beta_3X_1\times 1 \ = \ [\beta_0 + \beta_2] + [\beta_1 + \beta_3]X_1\)`
+* **meninas**: `\(\beta_0 + \beta_1X_1 + \beta_2\times 1 + \beta_3X_1\times 1 \ = \ [\beta_0 + \beta_2] + [\beta_1 + \beta_3]X_1\)`
 
 ---
 
@@ -1251,7 +1251,7 @@ Cada linha: `\(\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}\)`
 
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Matriz do modelo** `\(\mathbf{X}\)`: uma linha para cada caso e uma coluna para cada parâmetro. A primeira coluna é sempre 1 (o intercepto); as demais têm os valores das preditoras ( `\(\text{mae}\)` e `\(\text{menina}\)` ).
+**Matriz do modelo** `\(\mathbf{X}\)`: uma linha para cada caso e uma coluna para cada coeficiente. A primeira coluna é sempre 1 (o intercepto); as demais têm os valores das preditoras ( `\(\text{mae}\)` e `\(\text{menina}\)` ).
 ]
 
 &lt;br&gt;
@@ -1265,7 +1265,7 @@ Cada linha: `\(\mu = \beta_0 + \beta_1\, \text{mae} + \beta_2\, \text{menina}\)`
 ## Valores previstos: multiplicação de matrizes
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Multiplicação da matriz do modelo pelo vetor-coluna de coeficientes da regressão resulta em um vetor-coluna com os valores previstos.]
+A multiplicação da matriz do modelo pelo vetor-coluna de coeficientes da regressão resulta em um vetor-coluna com os valores previstos.]
 
 &lt;br&gt;
 
@@ -1330,7 +1330,7 @@ Funções que facilitam criar grades de previsão: `base::expand.grid()`, `tidyr
 ``` r
 &gt; ## Amostras de mu para cada caso
 &gt; mu &lt;- link(m.gal, data = grade, n=1000)
-&gt; ## 1000 valores para Xi
+&gt; ## 1000 amostras (linhas) para cada caso da grade (colunas)
 &gt; dim(mu)
 ```
 
@@ -1384,7 +1384,7 @@ Calcula previstos
 
 --
 
-Com `interval = "prediction"`, o intervalo inclui também a variação gaussiana entre indivíduos na populaçao (equivale ao `sim()` do *rethinking*).
+Com `interval = "prediction"`, o intervalo inclui também a variação gaussiana entre indivíduos na população (equivale ao `sim()` do *rethinking*).
 
 ---
 
@@ -1412,7 +1412,7 @@ Ajusta o modelo
 ```
 
 ---
-## Coeficientes podem ser  difíceis de interpretar
+## Coeficientes podem ser difíceis de interpretar
 
 
 ``` r
@@ -1444,7 +1444,7 @@ lsigma  0.73938128 0.05037883  0.65886618  0.81989637
 ## Uma solução: previstos condicionais
 
  Começamos criando uma grade com `expand.grid` combinando:
-* 50 valores de altura centradas do pai, entre `\(-7\)` e `\(9\)` polegadas
+* 50 valores de altura centrada do pai, entre `\(-7\)` e `\(9\)` polegadas
 * Os dois valores de gênero atribuído ao nascer
 * Dois valores de altura centrada da mãe:  `\(-6\)` e `\(6\)`
 
@@ -1513,13 +1513,13 @@ Média e IC das amostras para cada combinação
 
 .f3[
 * Em preditores aditivos, as diferenças na resposta devido a cada
-  variável preditora independe dos valores das demais: a diferença é
+  variável preditora independem dos valores das demais: a diferença é
   apenas de interceptos.]
 
 --
 .f3[
 * Em preditores com interação, as diferenças na resposta devido a uma
-  variável preditora depende do valor de outra(s): há diferenças de
+  variável preditora dependem do valor de outra(s): há diferenças de
   inclinações.]
 
 --
@@ -1527,7 +1527,7 @@ Média e IC das amostras para cada combinação
 .f3[
 * Os coeficientes de preditores lineares são condicionais: expressam
   as diferenças na resposta associada a diferenças nas preditoras,
-  descontados as diferenças devido às outras variáveis.]
+  descontadas as diferenças devidas às outras variáveis.]
   
 ---
 
@@ -1535,13 +1535,13 @@ Média e IC das amostras para cada combinação
 
 .f3[
 * Variáveis categóricas são incluídas nos preditores como
-  **contrastes**: `\(k-1\)` variáveis numéricas indicadores , `\(k\)` é o
+  **contrastes**: `\(k-1\)` variáveis numéricas, em que `\(k\)` é o
   número de categorias da variável.]
 
 --
 
 .f3[
-* Há muitas maneiras de definir constrastes, o que pode ser útil para
+* Há muitas maneiras de definir contrastes, o que pode ser útil para
   interpretar coeficientes e/ou responder diferentes perguntas com os
   coeficientes.]
 
@@ -1554,8 +1554,8 @@ Média e IC das amostras para cada combinação
 
 --
 .f3[
-* Para previstos com muitos coeficientes, os previstos em função de
-  algumas variáveis, condicionadas a outras são uma recurso
+* Para modelos com muitos coeficientes, os previstos em função de
+  algumas variáveis, condicionados a outras, são um recurso
   importante para interpretar o modelo.
 ]
 ---
@@ -1569,6 +1569,8 @@ Média e IC das amostras para cada combinação
 * Fox, J., &amp; Weisberg, S. (2018). Visualizing fit and lack of fit in complex regression models with predictor effect plots and partial residuals. Journal of statistical software, 87, 1-27.
 
 * Gelman, A., Hill, J., &amp; Vehtari, A. (2020). Regression and other stories. Cambridge University Press.
+
+* McElreath, R. (2016). Statistical rethinking: A Bayesian course with examples in R and Stan (Vol. 122). Boca Raton, FL: CRC press.
 
 * Schad, D. J., Vasishth, S., Hohenstein, S., &amp; Kliegl, R. (2020). How to capitalize on a priori contrasts in linear (mixed) models: A tutorial. Journal of memory and language, 110, 104038.
     </textarea>
