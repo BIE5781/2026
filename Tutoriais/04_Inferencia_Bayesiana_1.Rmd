@@ -511,13 +511,15 @@ portanto, um ponto influente pode refletir diferenças biológicas ou
 incerteza nos dados de origem, e não necessariamente um erro de
 registro.
 
-Primeiro, vamos usar um modelo linear comum como diagnóstico para
-identificar os casos com maior alavancagem. A alavancagem depende de
-quão incomum é o valor do preditor; ela não é a mesma coisa que um
-resíduo grande. A regra $2p/n$ é apenas uma heurística para sinalizar
-observações, não um critério para excluí-las.
+## Ajustando os modelos com `ulam`
 
-```{r animals_diagnostic, eval=TRUE}
+Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
+sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
+priori fracamente informativas.
+
+```{r animals_ulam_fits, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+suppressPackageStartupMessages(library(rethinking))
+
 animals <- MASS::Animals
 animals$log_body <- log(animals$body)
 animals$log_brain <- log(animals$brain)
@@ -526,38 +528,9 @@ animals$log_body_c <- animals$log_body - body_center
 large_dinosaurs <- c("Brachiosaurus", "Dipliodocus", "Triceratops")
 dinosaur_labels <- c("Brachiosaurus", "Diplodocus", "Triceratops")
 dinosaur_indices <- match(large_dinosaurs, rownames(animals))
-stopifnot(!anyNA(dinosaur_indices))
-diagnostic_fit <- lm(log_brain ~ log_body_c, data = animals)
-leverage_reference <- 2 * length(coef(diagnostic_fit)) / nrow(animals)
-
-data.frame(
-  species = dinosaur_labels,
-  body_kg = animals$body[dinosaur_indices],
-  brain_g = animals$brain[dinosaur_indices],
-  leverage = hatvalues(diagnostic_fit)[dinosaur_indices],
-  reference_2p_over_n = leverage_reference,
-  cooks_distance = cooks.distance(diagnostic_fit)[dinosaur_indices]
-)
-```
-
-Esses três grandes dinossauros apresentam medidas de influência
-elevadas; Brachiosaurus tem a maior alavancagem e a maior distância de
-Cook. Vamos manter todas as espécies no primeiro modelo e retirar os
-três dinossauros juntos apenas em uma análise de sensibilidade. A regra
-$2p/n$ serve como sinalização, não como regra para excluir dados.
-
-## Ajustando os modelos com `quap`
-
-Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
-sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
-priori fracamente informativas.
-
-```{r animals_quap_fits, eval=TRUE, message=FALSE, warning=FALSE}
-suppressPackageStartupMessages(library(rethinking))
-
 animals_without_dinosaurs <- animals[-dinosaur_indices, ]
 
-m_animals_all <- quap(
+m_animals_all <- ulam(
   alist(
     log_brain ~ dnorm(mu, sigma),
     mu <- a + b * log_body_c,
@@ -565,10 +538,11 @@ m_animals_all <- quap(
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1)
   ),
-  data = animals
+  data = animals,
+  chains = 4, cores = 4, iter = 2000, refresh = 0
 )
 
-m_animals_without_dinosaurs <- quap(
+m_animals_without_dinosaurs <- ulam(
   alist(
     log_brain ~ dnorm(mu, sigma),
     mu <- a + b * log_body_c,
@@ -576,9 +550,13 @@ m_animals_without_dinosaurs <- quap(
     b ~ dnorm(0, 10),
     sigma ~ dexp(0.1)
   ),
-  data = animals_without_dinosaurs
+  data = animals_without_dinosaurs,
+  chains = 4, cores = 4, iter = 2000, refresh = 0
 )
 
+```
+
+```{r animals_ulam_summaries, eval=TRUE}
 precis(m_animals_all, digits = 2)
 precis(m_animals_without_dinosaurs, digits = 2)
 ```
@@ -654,9 +632,9 @@ aproxima da normal. No modelo abaixo, $\nu = 2 +
 que a variância dos resíduos seja finita.
 
 ```{r animals_student_fits, eval=TRUE, message=FALSE, warning=FALSE}
-m_animals_student_all <- quap(
+m_animals_student_all <- ulam(
   alist(
-    log_brain ~ dstudent(nu, mu, sigma),
+    log_brain ~ student_t(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
     a ~ dnorm(0, 10),
@@ -664,12 +642,13 @@ m_animals_student_all <- quap(
     sigma ~ dexp(0.1),
     log_nu ~ dnorm(1, 1)
   ),
-  data = animals
+  data = animals,
+  chains = 4, cores = 4, iter = 2000, refresh = 0
 )
 
-m_animals_student_without_dinosaurs <- quap(
+m_animals_student_without_dinosaurs <- ulam(
   alist(
-    log_brain ~ dstudent(nu, mu, sigma),
+    log_brain ~ student_t(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
     a ~ dnorm(0, 10),
@@ -677,7 +656,8 @@ m_animals_student_without_dinosaurs <- quap(
     sigma ~ dexp(0.1),
     log_nu ~ dnorm(1, 1)
   ),
-  data = animals_without_dinosaurs
+  data = animals_without_dinosaurs,
+  chains = 4, cores = 4, iter = 2000, refresh = 0
 )
 
 precis(m_animals_student_all, digits = 2)
