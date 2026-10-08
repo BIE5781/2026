@@ -263,8 +263,7 @@ $$\beta_0+\beta_1X_1+\beta_2X_2 + \cdots + \beta_nX_n$$
 
 --
 
-* Ou seja, diferenças da resposta associadas a cada preditora são
-  **aditivas**. Não são afetadas pelo valor das demais variáveis.
+* Ou seja, diferenças associadas a cada preditora são **aditivas**. Não são afetadas pelo valor das demais variáveis.
 
 ---
 
@@ -872,7 +871,7 @@ grupos (quatro coeficientes para três médias). Há infinitas maneiras de descr
 --
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Portanto, com intercepto, bastam $k-1$ variáveis. Mas que valores colocar nelas?
+Portanto, com intercepto, bastam $k-1$ variáveis binárias. Mas que valores colocar nelas?
 ]
 
 ---
@@ -1225,7 +1224,7 @@ As mesmas colunas $c_1$ e $c_2$ que passamos ao `quap()`.
 
 <br>
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perguntas que queremos que os coeficientes respondam. Muito usado em análise de dados experimentais.
+O contraste não é uma propriedade dos dados: é uma escolha, guiada pelas perguntas que queremos que os coeficientes respondam.
 ]
 
 ---
@@ -1249,7 +1248,7 @@ $$\beta_0+\beta_1X_1+\beta_2X_2 + \beta_3X_1X_2$$
 
 --
 
-* Ou seja, diferenças da resposta associadas a uma preditora dependem do valor de outra(s). Há uma **interação** estatística.
+* Ou seja, diferenças associadas a uma preditora dependem do valor de outra(s). Há uma **interação** estatística.
 
 ---
 
@@ -1673,22 +1672,4 @@ ggplot(grade2, aes(pai, media)) +
 
 * Gelman, A., Hill, J., & Vehtari, A. (2020). Regression and other stories. Cambridge University Press.
 
-* McElreath, R. (2016). Statistical rethinking: A Bayesian course with examples in R and Stan (Vol. 122). Boca Raton, FL: CRC press.
-
 * Schad, D. J., Vasishth, S., Hohenstein, S., & Kliegl, R. (2020). How to capitalize on a priori contrasts in linear (mixed) models: A tutorial. Journal of memory and language, 110, 104038.
-
----
-
-## Pacotes em R
-
-* [effects](https://cran.r-project.org/package=effects): Effect Displays for Linear, Generalized Linear, and Other Models.
-
-* [emmeans](https://cran.r-project.org/package=emmeans): Obtain estimated marginal means (EMMs) for many linear, generalized linear, and mixed models. Compute contrasts or linear functions of EMMs, trends, and comparisons of slopes.
-
-* [hypr](https://cran.r-project.org/package=hypr) : Translation between experimental null hypotheses, hypothesis matrices, and contrast matrices as used in linear regression models.
-
-* [marginaleffects](https://cran.r-project.org/package=marginaleffects): Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis Tests
-
-
-
-
