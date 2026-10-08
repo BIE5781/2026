@@ -1,0 +1,322 @@
+---
+title: "Inferência Bayesiana 2"
+date: "2026-10-09"
+lang: "pt-BR"
+author: Diogo Melo
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+      mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+---
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, fig.asp = 1)
+# Área de transferência
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+```
+
+# Explorando a distribuição a posteriori
+
+Neste tutorial, vamos explorar quais possibilidades a distribuição a posteriori nos oferece, e como podemos extrair informações dela. Vamos utilizar o modelo ajustado no tutorial anterior, que relaciona o peso do cérebro com o peso do corpo de diferentes espécies de mamíferos.
+
+Primeiro, vamos carregar os dados usados no tutorial anterior, primeiro excluindo os dinossauros.
+
+```{r load_model}
+animals <- MASS::Animals
+animals$log_body <- log(animals$body) 
+animals$log_brain <- log(animals$brain)
+large_dinosaurs <- c("Brachiosaurus", "Dipliodocus", "Triceratops")
+dinosaur_labels <- c("Brachiosaurus", "Diplodocus", "Triceratops")
+dinosaur_indices <- match(large_dinosaurs, rownames(animals))
+animals_without_dinosaurs <- animals[-dinosaur_indices, ]
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
+                       "firebrick", "grey35")
+
+library(ggplot2)
+library(ggrepel)
+
+plot_animals <- ggplot(animals, aes(x = log_body, y = log_brain)) +
+  geom_point(aes(color = point_colors), size = 2) +
+  scale_color_identity() +
+  labs(x = "Log body weight (kg)", y = "Log brain weight (g)") +
+  geom_text_repel(aes(label = ifelse(seq_len(nrow(animals)) %in% dinosaur_indices, rownames(animals), "")), 
+                  color = "firebrick", size = 3, hjust = -0.1) +
+  theme_minimal()
+plot_animals
+```
+
+## Entendendo as priors
+
+Antes de ajustar o modelo, vamos explorar valores plausíveis para os parâmetros da reta. Para a inclinação, usamos a prior do tutorial anterior, $b \sim \mathcal{N}(0, 1)$. Também vamos simular o intercepto usando $a \sim \mathcal{N}(0, 1)$, mas poderiamos escolher uma prior mais forte, como $a \sim \mathcal{N}(0, 0{,}1)$, que concentra os valores de $a$ próximos de zero (já que centralizamos os dados).
+
+Vamos centralizar tanto o preditor quanto a resposta nos dados sem dinossauros. Assim, $a$ representa a resposta prevista para o tamanho corporal médio, e valores de $a$ próximos de zero mantêm as retas próximas do centro dos dados. Esta figura mostra médias previstas sob as priors escolhidas. Nesse momento, não vamos usar os dados para julgar os priors, mas vamos procurar referencias externas que ajudem a julgar se os valores simulados são plausíveis. Por exemplo, o cérebro do musaranho-pigmeu etrusco pesa cerca de 0,06 g, enquanto o do cachalote pode chegar a 9,2 kg. 
+
+```{r prior_slope_simulation, eval=FALSE, fig.width=7, fig.height=5}
+set.seed(123)
+
+n_prior_draws <- 30
+a_prior <- rnorm(n_prior_draws, mean = 0, sd = 1)
+b_prior <- rnorm(n_prior_draws, mean = 0, sd = 1)
+body_center <- mean(animals_without_dinosaurs$log_body)
+brain_center <- mean(animals_without_dinosaurs$log_brain)
+log_body_grid <- seq(
+  min(animals_without_dinosaurs$log_body) - body_center,
+  max(animals_without_dinosaurs$log_body) - body_center,
+  length.out = 100
+)
+
+prior_lines <- do.call(rbind, lapply(seq_along(b_prior), function(draw_index) {
+  data.frame(
+    log_body_c = log_body_grid,
+    log_brain_c = a_prior[draw_index] + b_prior[draw_index] * log_body_grid,
+    draw = draw_index
+  )
+}))
+external_brain_mass_g <- c(0.06, 9200)
+external_brain_limits <- data.frame(
+  log_brain_c = log(external_brain_mass_g) - brain_center,
+  reference = c("Musaranho (0,06 g)", "Cachalote (9,2 kg)")
+)
+
+ggplot() +
+  geom_line(data = prior_lines,
+            aes(x = log_body_c, y = log_brain_c, group = draw),
+            color = "steelblue", alpha = 0.3, linewidth = 0.7) +
+  geom_hline(data = external_brain_limits,
+             aes(yintercept = log_brain_c, linetype = reference),
+             color = "firebrick", linewidth = 0.6, alpha = 0.8,
+             inherit.aes = FALSE) +
+  scale_linetype_manual(
+    name = NULL,
+    values = c(
+      "Musaranho (0,06 g)" = "dashed",
+      "Cachalote (9,2 kg)" = "dotted"
+    )
+  ) +
+  labs(x = "Centered log body weight", y = "Centered log brain weight") +
+  theme_minimal() +
+  theme(legend.position = "right", legend.text = element_text(size = 8)) +
+  guides(linetype = guide_legend(ncol = 1))
+```
+
+Como você interpreta essas retas? Esse valor de desvio-padrão para a inclinação é razoável? E para o intercepto? Que outras informações você poderia usar para julgar se essas priors são razoáveis? 
+
+Altere os valores de desvio-padrão para o intercepto e a inclinação, e veja como isso afeta as retas simuladas. 
+
+No tutorial, vamos manter os valores de desvio-padrão para o intercepto e a inclinação, mas você pode explorar outras combinações.
+
+## Montando o modelo completo
+
+Agora, vamos usar nossos dados para ajustar o modelo. Tente montar o modelo usando as priors que definimos anteriormente. Poderiamos ajudar o modelo usando a função quap, mas vamos usar a função ulam para explorar as ferramentas de simulação e diagnóstico que ela oferece.
+
+```{r model_code, eval=FALSE, hide=TRUE}
+library(rethinking)
+
+# Centralizando os dados. Compare ess_bulk com e sem a centralização. 
+# A centralização ajuda a reduzir a correlação entre os parâmetros, o que melhora a eficiência do amostrador.
+animals_without_dinosaurs$log_body_c <- scale(animals_without_dinosaurs$log_body, center = TRUE, scale = FALSE)
+animals_without_dinosaurs$log_brain_c <- scale(animals_without_dinosaurs$log_brain, center = TRUE, scale = FALSE)
+
+fit <- ulam(
+  alist(
+    log_brain_c ~ dnorm(mu, sigma),
+    mu <- a + b * log_body_c,
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = animals_without_dinosaurs,
+  chains = 4, cores = 4, iter = 2000
+)
+```
+
+## Avaliando a convergência do modelo
+
+O primeiro passo é verificar se o modelo convergiu. Para isso, podemos usar a função `precis` do pacote `rethinking`, que mostra os valores de Rhat e ess_bulk para cada parâmetro. Valores de Rhat próximos de 1 indicam que o modelo convergiu, enquanto valores maiores que 1,1 indicam problemas de convergência. Em um modelo bem ajustado, o ess_bulk deve ser da mesma ordem de magnitude do número de amostras a posteriori (nesse caso, 4000^[Com `iter = 2000`, cada cadeia executa 2.000 iterações. Dessas, 1.000 são de aquecimento e descartadas, e 1.000 geram amostras a posteriori. Nas 4 cadeias, isso totaliza $1.000 \times 4 = 4.000$ amostras a posteriori.]).
+
+```{r model_diagnostics, eval=FALSE}
+precis(fit) 
+```
+
+O pacote bayesplot oferece funções para diagnosticar a convergência do modelo. A função `mcmc_trace` mostra o traço das cadeias para cada parâmetro, permitindo verificar se as cadeias convergiram ao conjunto típico da distribuição e explorando bem o espaço de parâmetros. A função `mcmc_dens_overlay` mostra a densidade das amostras a posteriori para cada parâmetro, permitindo verificar se as distribuições são semelhantes entre as cadeias.
+
+Como ajustamos o modelo com `ulam` usando CmdStan, podemos extrair os draws como um array que mantém separadas as iterações, cadeias e parâmetros.
+
+```{r extract_chain_draws, eval=FALSE}
+draws <- attr(fit, "cstanfit")$draws(format = "draws_array")
+```
+
+No gráfico de traço das cadeias, verifique se as cadeias oscilam sem tendências persistentes, se não estão travadas em algum valor, e que percorram regiões semelhantes dos parâmetros. Uma cadeia presa em uma região ou com tendência visível pode indicar convergência insuficiente ou, mais provavelmente, um modelo mal especificado.^[O "folk theorem of statistical computing", frequentemente associado ao estatístico Andrew Gelman, afirma que dificuldades computacionais graves para ajustar um modelo Bayesiano costumam estar ligadas a um modelo mal especificado, superparametrizado, fracamente identificado ou mal escalonado. Nesse caso, em vez de começar procurando um amostrador mais rápido ou complexo, investigue o modelo. Simplificá-lo, reparametrizar as variáveis, ajustar as priors e reduzir correlações fortes entre parâmetros são alternativas com muito mais chance de melhorar o ajuste computacional do modelo.]
+
+```{r trace_plot, eval=FALSE}
+bayesplot::mcmc_trace(draws, pars = c("a", "b", "sigma"))
+```
+
+No gráfico de densidades sobrepostas, as curvas das cadeias devem ter formas e posições semelhantes. Diferenças marcantes entre elas podem indicar que as cadeias ainda não exploraram a mesma distribuição.
+
+```{r density_overlay, eval=FALSE}
+bayesplot::mcmc_dens_overlay(draws, pars = c("a", "b", "sigma"))
+```
+
+Esses gráficos são ferramentas visuais. Interprete-os junto com Rhat, ESS e eventuais avisos do amostrador. Nenhum deles, isoladamente, comprova convergência.
+
+## Vizualizando e interpretando os coeficientes do modelo
+
+Vamos agora voltar para o output da função `precis` e interpretar os coeficientes do modelo. A função `precis` mostra a média, desvio-padrão, intervalo de credibilidade para cada parâmetro. O output dessa função também pode ser passado para função plot para um gráfico rápido dos coeficientes do modelo. A função `plot` mostra a média e o intervalo de credibilidade para cada parâmetro.
+
+```{r precis_output, eval=FALSE}  
+precis(fit)
+plot(precis(fit))
+```
+
+Podemos usar as funções do bayesplot para fazer gráficos mais chiques dos parâmetros do modelo. A função `mcmc_intervals` mostra os intervalos de credibilidade para cada parâmetro, enquanto a função `mcmc_areas` mostra a densidade das amostras a posteriori para cada parâmetro. Os parâmetros `prob` e `prob_outer` controlam o intervalo de credibilidade mostrado no gráfico de pontos da função `mcmc_intervals`. O parâmetro `prob` controla o intervalo de credibilidade central, enquanto o parâmetro `prob_outer` controla o intervalo de credibilidade externo. Experimente brincar com esses parâmetros para ver como eles afetam o gráfico. O parâmetro `prob` da função `mcmc_areas` controla o intervalo de credibilidade mostrado no gráfico de densidade.
+
+```{r mcmc_intervals, eval=FALSE}
+bayesplot::mcmc_intervals(draws, pars = c("a", "b", "sigma"), 
+prob = 0.5, prob_outer = 0.95)
+bayesplot::mcmc_areas(draws, pars = c("a", "b", "sigma"), 
+prob = 0.95)
+```
+
+## Interpretando os coeficientes do modelo
+
+Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade. A inclinação $b$ representa a elasticidade da massa do cérebro em relação à massa do corpo. Por exemplo, se $b = 0{,}75$, um aumento de 1% na massa do corpo está associado a um aumento de 0,75% na massa do cérebro. 
+
+## Usando simulações para comparar a posteriori e o prior
+
+Uma forma de verificar se o modelo aprendeu algo com os dados é comparar a distribuição a posteriori com a distribuição a priori. Se a distribuição a posteriori for muito diferente da distribuição a priori, isso indica que o modelo aprendeu algo com os dados. Se a distribuição a posteriori for muito semelhante à distribuição a priori, isso indica que o modelo não aprendeu nada com os dados. Nesse caso, provavelmente os dados não são informativos o suficiente para atualizar as priors, ou o modelo está mal especificado.
+
+```{r prior_posterior_comparison, eval=FALSE}
+set.seed(123)
+prior <- list(a = rnorm(4000, 0, 1), b = rnorm(4000, 0, 1), sigma = rexp(4000, 1))
+posterior <- rethinking::extract.samples(fit)
+
+draws_to_long <- function(samples, distribution) {
+  do.call(rbind, lapply(names(samples), function(parameter) {
+    data.frame(parameter, value = as.numeric(samples[[parameter]]), distribution)
+  }))
+}
+
+draws <- rbind(draws_to_long(prior, "A priori"),
+               draws_to_long(posterior, "A posteriori"))
+
+ggplot(draws, aes(value, color = distribution, fill = distribution)) +
+  geom_density(alpha = 0.15) +
+  facet_wrap(~parameter, scales = "free") +
+  scale_color_manual(values = c("A priori" = "firebrick", "A posteriori" = "steelblue")) +
+  scale_fill_manual(values = c("A priori" = "firebrick", "A posteriori" = "steelblue")) +
+  labs(x = "Valor do parâmetro", y = "Densidade", color = NULL, fill = NULL) +
+  theme_minimal()
+```
+
+Podemos também comparar as distribuições com linhas de regressão simuladas a partir das priors e da posteriori. O gráfico usa `log_body` e `log_brain` sem centralização, na escala logarítmica do modelo. As linhas mostram a média prevista e não incluem o erro residual.
+
+```{r prior_posterior_regression, eval=FALSE}
+
+# prior
+prior_draws <- data.frame(a = rnorm(50, 0, 1), 
+                          b = rnorm(50, 0, 1),
+                          distribution = "A priori")
+
+# posterior
+posterior <- rethinking::extract.samples(fit)
+posterior_index <- sample(seq_along(posterior$a), 50)
+posterior_draws <- data.frame(
+  a = as.numeric(posterior$a[posterior_index]),
+  b = as.numeric(posterior$b[posterior_index]),
+  distribution = "A posteriori"
+)
+draws <- rbind(prior_draws, posterior_draws)
+
+body_center <- mean(animals_without_dinosaurs$log_body)
+brain_center <- mean(animals_without_dinosaurs$log_brain)
+log_body_grid <- seq(min(animals_without_dinosaurs$log_body),
+                     max(animals_without_dinosaurs$log_body), length.out = 100)
+regression_lines <- do.call(rbind, lapply(seq_len(nrow(draws)), function(i) {
+  data.frame(
+    log_body = log_body_grid,
+    log_brain = brain_center + draws$a[i] + draws$b[i] * (log_body_grid - body_center),
+    distribution = draws$distribution[i],
+    draw = i
+  )
+}))
+
+ggplot() +
+  geom_point(data = animals_without_dinosaurs,
+             aes(log_body, log_brain), color = "grey30", size = 2) +
+  geom_line(data = regression_lines,
+            aes(log_body, log_brain, group = draw, color = distribution),
+            alpha = 0.2, linewidth = 0.6) +
+  scale_color_manual(values = c("A priori" = "firebrick", "A posteriori" = "steelblue")) +
+  labs(x = "Log body weight (kg)", y = "Log brain weight (g)", color = NULL) +
+  theme_minimal()
+```
+
+## Simulações preditivas
+
+Finalmente, podemos usar o modelo para fazer simulações preditivas. Podemos comparar, por exemplo, a densidade observada com a densidade predita pelo modelo. A função `link` do pacote `rethinking` permite calcular a média prevista para cada observação, enquanto a função `sim` permite simular novas observações a partir da distribuição preditiva.
+
+```{r predictive_simulation, eval=FALSE}
+set.seed(123)
+prediction_data <- animals_without_dinosaurs
+y_rep <- rethinking::sim(fit, data = prediction_data)
+mean_posterior <- colMeans(y_rep)
+replicate_index <- sample(seq_len(nrow(y_rep)), 30)
+y_rep <- y_rep[replicate_index, , drop = FALSE]
+replicated_density <- data.frame(
+  log_brain_c = as.vector(y_rep),
+  replicate = factor(rep(seq_len(nrow(y_rep)), times = ncol(y_rep)))
+)
+mean_posterior_density <- data.frame(log_brain_c = as.vector(mean_posterior))
+
+ggplot() +
+  geom_density(data = replicated_density,
+               aes(log_brain_c, group = replicate, color = "Réplicas preditivas"),
+               alpha = 0.1, linewidth = 0.1) +
+  geom_density(data = prediction_data,
+               aes(log_brain_c, color = "Observado"), linewidth = 1) +
+  geom_density(data = mean_posterior_density,
+               aes(log_brain_c, color = "Média posterior preditiva"),
+               linetype = "dashed", linewidth = 1) +
+  scale_color_manual(values = c(
+    "Observado" = "grey20",
+    "Média posterior preditiva" = "firebrick",
+    "Réplicas preditivas" = "steelblue"
+  )) +
+  labs(x = "Log brain weight, centered", y = "Density", color = NULL) +
+  theme_minimal()
+```
+
+Agora vamos comparar pares de `log_body` e `log_brain` sem centralização. Para cada tamanho corporal observado, simulamos valores de `log_brain` da posterior preditiva. Como o modelo usa `log_brain_c`, somamos `brain_center` às réplicas para voltar à escala logarítmica não centrada.
+
+```{r predictive_simulation_original_scale, eval=FALSE}
+set.seed(123)
+prediction_data <- animals_without_dinosaurs
+
+# 100 amostras da posterior preditiva para cada valor do preditor
+y_rep <- rethinking::sim(fit, data = prediction_data)[sample(1:1000, 100), ]
+brain_center <- mean(prediction_data$log_brain)
+simulated_pairs <- data.frame(
+  log_body = rep(prediction_data$log_body, each = nrow(y_rep)),
+  log_brain = brain_center + as.vector(y_rep)
+)
+
+ggplot() +
+  geom_point(data = simulated_pairs,
+             aes(log_body, log_brain, color = "Simulado"), alpha = 0.12, size = 0.8) +
+  geom_point(data = prediction_data,
+             aes(log_body, log_brain, color = "Observado"), size = 2) +
+  scale_color_manual(values = c("Simulado" = "steelblue", "Observado" = "grey20"), name = NULL) +
+  labs(x = "Log body weight (kg)", y = "Log brain weight (g)") +
+  theme_minimal()
+```
+
