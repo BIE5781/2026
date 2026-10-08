@@ -35,7 +35,7 @@ while IFS= read -r -d '' source_file; do
 done < <(find . -type f -name '*.Rmd' -not -path './.git/*' -print0 | sort -z)
 
 if ((${#render_failures[@]} > 0)); then
-  printf 'Falha ao renderizar os seguintes arquivos:\n' >&2
+  printf 'Arquivos com erro:\n' >&2
   printf '  - %s\n' "${render_failures[@]}" >&2
   exit 1
 fi
