@@ -487,12 +487,11 @@ legend("topright", legend = c("Shade 1", "Shade 2", "Shade 3"), col = 2:4, pch =
 # Regressão robusta
 
 Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
-a sintaxe usada nos exemplos simples. Essa flexibilidade, porém, pode
-levar a modelos excessivamente complexos, feitos sob medida para
+a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para
 problemas específicos.
 
 Vamos ilustrar essa ideia com a regressão robusta. Em modelos lineares,
-observações atípicas podem resultar de erros de medição ou de processos
+observações atípicas (_outliers_) podem resultar de erros de medição ou de processos
 biológicos reais que produzem valores fora da faixa esperada por uma
 distribuição normal. Nesse segundo caso, excluí-las pode descartar
 informação importante.
@@ -506,20 +505,13 @@ O conjunto `Animals`, do pacote `MASS`, contém as massas corporal e
 cerebral de 28 espécies de animais terrestres. Vamos modelar o
 logaritmo da massa cerebral como uma função linear do logaritmo da massa
 corporal, uma relação alométrica simples usada para comparar espécies.
-O conjunto inclui grandes dinossauros cujas medidas são estimativas;
-portanto, um ponto influente pode refletir diferenças biológicas ou
-incerteza nos dados de origem, e não necessariamente um erro de
-registro.
+O conjunto inclui grandes dinossauros cujas medidas são claramente discordantes dos demais.
+Esses indivíduos possuem massas corporais muito altas e massas cerebrais relativamente baixas, 
+o que os torna observações distoantes das demais. 
 
-## Ajustando os modelos com `ulam`
+Primeiro, vamos visualizar os dados:
 
-Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
-sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
-priori fracamente informativas.
-
-```{r animals_ulam_fits, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
-suppressPackageStartupMessages(library(rethinking))
-
+```{r animals_visualize, eval=TRUE}
 animals <- MASS::Animals
 animals$log_body <- log(animals$body)
 animals$log_brain <- log(animals$brain)
@@ -529,14 +521,33 @@ large_dinosaurs <- c("Brachiosaurus", "Dipliodocus", "Triceratops")
 dinosaur_labels <- c("Brachiosaurus", "Diplodocus", "Triceratops")
 dinosaur_indices <- match(large_dinosaurs, rownames(animals))
 animals_without_dinosaurs <- animals[-dinosaur_indices, ]
+point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
+                       "firebrick", "grey35")
+
+plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
+  xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
+     labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
+``` 
+
+Como você espera que a inclusão dessas espécies influencie a inclinação da reta ajustada? E o desvio-padrão residual?
+
+## Ajustando os modelos com `ulam`
+
+Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
+sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
+priori fracamente informativas.
+
+```{r animals_ulam_fits, eval=FALSE, message=FALSE, warning=FALSE, results='hide'}
+suppressPackageStartupMessages(library(rethinking))
 
 m_animals_all <- ulam(
   alist(
     log_brain ~ dnorm(mu, sigma),
     mu <- a + b * log_body_c,
-    a ~ dnorm(0, 10),
-    b ~ dnorm(0, 10),
-    sigma ~ dexp(0.1)
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
   ),
   data = animals,
   chains = 4, cores = 4, iter = 2000, refresh = 0
@@ -546,9 +557,9 @@ m_animals_without_dinosaurs <- ulam(
   alist(
     log_brain ~ dnorm(mu, sigma),
     mu <- a + b * log_body_c,
-    a ~ dnorm(0, 10),
-    b ~ dnorm(0, 10),
-    sigma ~ dexp(0.1)
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1)
   ),
   data = animals_without_dinosaurs,
   chains = 4, cores = 4, iter = 2000, refresh = 0
@@ -556,7 +567,7 @@ m_animals_without_dinosaurs <- ulam(
 
 ```
 
-```{r animals_ulam_summaries, eval=TRUE}
+```{r animals_ulam_summaries, eval=FALSE}
 precis(m_animals_all, digits = 2)
 precis(m_animals_without_dinosaurs, digits = 2)
 ```
@@ -568,11 +579,12 @@ essas espécies devam ser descartadas.
 
 ## Visualizando a influência no ajuste
 
-As retas abaixo mostram as médias posteriores dos dois modelos no mesmo
+O codigo abaixo mostra graficamente as médias posteriores dos dois modelos no mesmo
 gráfico de dispersão. As espécies destacadas estão incluídas no ajuste
 com todos os dados e são excluídas juntas no segundo ajuste.
 
-```{r animals_fit_comparison, eval=TRUE, fig.asp=1}
+```{r animals_fit_comparison, eval=FALSE, fig.asp=1}
+
 posterior_all <- extract.samples(m_animals_all)
 posterior_without_dinosaurs <- extract.samples(m_animals_without_dinosaurs)
 body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
@@ -600,19 +612,16 @@ legend("topleft",
 O que acontece com a inclinação quando os três dinossauros são
 retirados? Antes de excluir espécies influentes, investigue as medidas
 e considere se uma única reta alométrica é adequada para mamíferos e
-dinossauros. As retas representam médias posteriores e não mostram a
-incerteza de cada ajuste.
+dinossauros. 
 
 # Modificando o modelo para reduzir a sensibilidade a observações atípicas
 
 Uma vantagem da modelagem Bayesiana é que podemos mudar a distribuição
 dos resíduos sem alterar o preditor linear. Um modelo com caudas mais
 pesadas pode reduzir a influência de observações muito distantes da
-reta ajustada. Modelos mais flexíveis também podem ficar
-desnecessariamente complexos; por isso, a flexibilidade adicional deve
-responder a um problema específico.
+reta ajustada. 
 
-Algumas observações atípicas são erros de medição; outras são
+Algumas observações atípicas são erros de medição, outras são
 observações legítimas de processos biológicos com variação mais extrema
 do que a permitida por um modelo Gaussiano. Excluir uma observação
 legítima pode descartar informação importante. Em vez disso, vamos
@@ -621,25 +630,57 @@ resíduos por uma distribuição $t$ de Student. Em seguida, vamos
 comparar a sensibilidade dos modelos, ajustando cada um com e sem essas
 espécies.
 
-## Modelo com resíduos $t$ de Student
+## Entendendo a distribuição $t$ de Student 
 
-A distribuição $t$ de Student tem caudas mais pesadas do que a normal.
-Seus graus de liberdade, $\nu$, controlam o peso dessas caudas: valores
-menores permitem maior probabilidade para observações distantes do valor
-esperado pelo modelo. À medida que $\nu$ aumenta, a distribuição se
-aproxima da normal. No modelo abaixo, $\nu = 2 +
-\exp(\text{log\_nu})$ mantém os graus de liberdade acima de 2, de modo
-que a variância dos resíduos seja finita.
+Na distribuição $t$, o parâmetro $\nu$ (graus de liberdade) controla o
+peso das caudas. Uma intuição útil é pensar que a $t$ combina uma normal
+com uma variância incerta. Essa incerteza sobre a variância
+permite que alguns valores fiquem muito mais dispersos do que outros.
+Com $\nu$ baixo, essa incerteza é maior e valores extremos recebem mais
+probabilidade. Com $\nu$ alto, a variância fica mais concentrada e a
+$t$ se aproxima da normal.
 
-```{r animals_student_fits, eval=TRUE, message=FALSE, warning=FALSE}
+O gráfico compara distribuições com a mesma localização e escala. A
+escala vertical logarítmica deixa visível a diferença entre as caudas.
+
+```{r student_t_tails, eval=TRUE, fig.width=7, fig.height=5}
+x <- seq(-8, 8, length.out = 1000)
+curve_normal <- dnorm(x)
+curve_t_low <- dt(x, df = 3)
+curve_t_high <- dt(x, df = 10)
+curve_colors <- c("gray25", "tomato3", "steelblue")
+
+plot(x, curve_normal, type = "l", log = "y", ylim = c(1e-6, 1),
+     col = curve_colors[1], lwd = 2,
+     xlab = "Valor do resíduo", ylab = "Densidade (escala logarítmica)")
+lines(x, curve_t_low, col = curve_colors[2], lwd = 2)
+lines(x, curve_t_high, col = curve_colors[3], lwd = 2, lty = 2)
+legend("topright",
+       legend = c("Normal", "Student-t (nu = 3)", "Student-t (nu = 10)"),
+       col = curve_colors, lwd = 2, lty = c(1, 1, 2), bty = "n")
+```
+
+## Incluindo a distribuição $t$ de Student no modelo
+
+No modelo abaixo, vamos incluir um parâmetro adicional no modelo que controla os graus de liberdade da distribuição $t$ dos resíduos. 
+O parâmetro $\nu = 2 + \exp(\text{log_nu})$ mantém os graus de liberdade acima de 2, de modo que a variância dos resíduos 
+seja finita.^[Quando $\nu=1$, a distribuição $t$ é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras. 
+Por exemplo, a distribuição de Cauchy não tem média nem variância definidas. Se você amostrar valores de uma distribuição de Cauchy, os valores serão extremamente 
+dispersos e a média das amostras nunca vai convergir pra um valor, mesmo com muitas amostras, ela vai só crescer indefinidamente.  
+Voltando para a $t$-student, a média da distribuição $t$ só existe para $\nu>1$, e a variância só para $\nu>2$. Além disso, o parâmetro $\sigma$ que aparece na distribuição $t$ 
+é um parâmetro de escala, não o desvio-padrão. Para $\nu>2$, o desvio-padrão é dado por $\sigma\sqrt{\nu/(\nu-2)}$. 
+Esse fator é a razão entre o desvio-padrão e $\sigma$. Por exemplo, com $\nu=3$ e $\sigma=1$, o desvio-padrão é $\sqrt{3}\approx1{,}73$, não 1. 
+À medida que $\nu$ aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com $\sigma$.]
+
+```{r animals_student_fits, eval=FALSE, message=FALSE, warning=FALSE}
 m_animals_student_all <- ulam(
   alist(
     log_brain ~ student_t(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
-    a ~ dnorm(0, 10),
-    b ~ dnorm(0, 10),
-    sigma ~ dexp(0.1),
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1),
     log_nu ~ dnorm(1, 1)
   ),
   data = animals,
@@ -651,9 +692,9 @@ m_animals_student_without_dinosaurs <- ulam(
     log_brain ~ student_t(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
-    a ~ dnorm(0, 10),
-    b ~ dnorm(0, 10),
-    sigma ~ dexp(0.1),
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    sigma ~ dexp(1),
     log_nu ~ dnorm(1, 1)
   ),
   data = animals_without_dinosaurs,
@@ -671,7 +712,7 @@ dinossauros são retirados, sob cada distribuição dos resíduos. Os
 cálculos abaixo usam amostras posteriores dos mesmos quatro modelos
 ajustados nas seções anteriores.
 
-```{r animals_sensitivity, eval=TRUE}
+```{r animals_sensitivity, eval=FALSE}
 set.seed(42)
 post_normal_all <- extract.samples(m_animals_all)
 post_normal_without <- extract.samples(m_animals_without_dinosaurs)
@@ -690,9 +731,7 @@ data.frame(
 ```
 
 Sob o modelo com resíduos $t$ de Student, a mudança na inclinação é
-menor? Neste exemplo, sim, mas ela não desaparece: as caudas mais pesadas
-reduzem a influência de respostas incomuns, enquanto os valores extremos
-dos preditores ainda conferem alavancagem aos dinossauros.
+menor? Como você interpreta essa diferença?
 
 ## Representando as quatro retas ajustadas
 
@@ -700,7 +739,7 @@ As retas contínuas usam as 28 espécies; as tracejadas omitem os três
 dinossauros. Compare a distância entre cada par de retas com as mudanças
 nas inclinações apresentadas na tabela.
 
-```{r animals_student_comparison, eval=TRUE, fig.asp=1}
+```{r animals_student_comparison, eval=FALSE, fig.asp=1}
 body_values <- seq(min(animals$log_body), max(animals$log_body), length.out = 100)
 body_values_c <- body_values - body_center
 point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
@@ -734,9 +773,9 @@ legend("topleft",
 
 O modelo com resíduos $t$ de Student é menos sensível neste exemplo se
 suas duas retas ajustadas estiverem mais próximas entre si do que as
-duas retas do modelo Normal. Isso não significa que resíduos $t$ tornem
-inofensivas as espécies de alta alavancagem: eles reduzem principalmente
-o efeito de resíduos grandes. As medidas dos dinossauros são
-estimativas, e esses animais podem diferir sistematicamente dos
-mamíferos. Sempre investigue observações influentes e avalie se uma
-única relação alométrica é adequada para todos os grupos.
+duas retas do modelo com resíduos normais. Isso não significa que resíduos $t$ seja imunes a outliers, 
+apenas mais robusto e capaz de lidar com observaçõs extremas sem grandes mudanças nas estimativas de regressão. 
+Além disso, as medidas dos dinossauros são estimativas, e esses animais podem diferir sistematicamente dos
+mamíferos. Outra opção aqui seria modelar diretamente essa diferença, incluindo mais preditores no modelo. 
+A escolha entre essas abordagens depende do problema e dos dados disponíveis, nem sempre temos acesso a informações
+que expliquem as diferenças entre observações. 

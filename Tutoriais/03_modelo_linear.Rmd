@@ -580,7 +580,8 @@ Vamos dividir `blooms` pelo seu valor máximo e centralizar `water` e
 mais fáceis de interpretar.
 
 ```{r tulips_data}
-tulips <- read.csv("tulips.csv")
+tulips <- read.csv2("http://raw.githubusercontent.com/rmcelreath/rethinking/refs/heads/master/data/tulips.csv")
+tulips$blooms <- as.numeric(tulips$blooms)
 tulips$blooms <- tulips$blooms / max(tulips$blooms)
 tulips$water <- as.numeric(scale(tulips$water, scale = FALSE))
 tulips$shade <- as.numeric(scale(tulips$shade, scale = FALSE))
