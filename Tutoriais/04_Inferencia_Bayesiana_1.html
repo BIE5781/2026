@@ -2538,6 +2538,10 @@ distill-header .nav a {
 <ul>
 <li><a href="#ajustando-o-modelo" id="toc-ajustando-o-modelo">Ajustando o modelo</a></li>
 <li><a href="#visualizando-previsões" id="toc-visualizando-previsões">Visualizando previsões</a></li>
+<li><a href="#comparando-a-magnitude-dos-coeficientes" id="toc-comparando-a-magnitude-dos-coeficientes">Comparando a magnitude dos coeficientes</a>
+<ul>
+<li><a href="#desvio-padrão-de-uma-variável-binária" id="toc-desvio-padrão-de-uma-variável-binária">Desvio-padrão de uma variável binária</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#regressão-robusta" id="toc-regressão-robusta">Regressão robusta</a>
 <ul>
@@ -2964,6 +2968,47 @@ produção de frutos e o diâmetro do caule na base.</p>
 <span>       pch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">17</span>, <span class="fl">16</span><span class="op">)</span>, lty <span class="op">=</span> <span class="fl">1</span>, bty <span class="op">=</span> <span class="st">&quot;n&quot;</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
+<h2 id="comparando-a-magnitude-dos-coeficientes">Comparando a magnitude dos coeficientes</h2>
+<p>O gráfico de <code>precis</code> resume as distribuições posteriores dos coeficientes:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>O coeficiente <code>b</code> corresponde à diferença entre os tratamentos codificados
+como 0 e 1. Já <code>c</code> corresponde à mudança esperada na produção de frutos
+associada a um aumento de um desvio-padrão no diâmetro, pois <code>Root</code> foi
+padronizada. Como os preditores estão em escalas diferentes, não podemos
+comparar diretamente a magnitude desses dois coeficientes.</p>
+<h3 id="desvio-padrão-de-uma-variável-binária">Desvio-padrão de uma variável binária</h3>
+<p>Considere uma variável binária <span class="math inline">\(X\)</span>, codificada como 0 e 1, cuja
+probabilidade de assumir o valor 1 é <span class="math inline">\(p\)</span>. Sua esperança é <span class="math inline">\(E[X]=p\)</span> e,
+como <span class="math inline">\(X^2=X\)</span>, sua variância é:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mathrm{Var}(X) &amp;= E[X^2] - E[X]^2 \\
+                 &amp;= p - p^2 \\
+                 &amp;= p(1-p).
+\end{aligned}
+\]</span></p>
+<p>Portanto, <span class="math inline">\(\mathrm{sd}(X)=\sqrt{p(1-p)}\)</span>. Quando os grupos têm
+frequências aproximadamente iguais, <span class="math inline">\(p\approx0{,}5\)</span>, o desvio-padrão da
+codificação 0/1 é aproximadamente <span class="math inline">\(0{,}5\)</span>. Podemos recodificar o contraste usando a transformação z, que padroniza a variável para ter média zero e desvio-padrão 1. A transformação z de <span class="math inline">\(X\)</span> é:</p>
+<p><span class="math display">\[
+C = \frac{X-E[X]}{\mathrm{sd}(X)}
+  = \frac{X-p}{\sqrt{p(1-p)}}.
+\]</span></p>
+<p>Quando <span class="math inline">\(p=0{,}5\)</span>, essa transformação altera os valores do preditor de <span class="math inline">\(0\)</span> e <span class="math inline">\(1\)</span> para valores <span class="math inline">\(-1\)</span> e <span class="math inline">\(1\)</span>.</p>
+<p>Com essa codificação e grupos aproximadamente equilibrados, o coeficiente
+de <span class="math inline">\(b\)</span> representa a mudança esperada por um desvio-padrão do preditor e
+pode ser comparado, em magnitude, ao coeficiente de <code>Root</code>, também medido
+na escala de desvio-padrão. O coeficiente de <span class="math inline">\(b\)</span> é metade da diferença entre as
+médias dos grupos. Essa recodificação muda a escala do coeficiente, não o ajuste do modelo. A vantagem de usar essa codificação dos dois tratamentos é que agora o coeficiente do tratamento e o coeficiente associado ao diâmetro das plantas pode, potencialmente<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>, ser comparado diretamente. Ajuste o modelo novamente e interprete os coeficientes. Usando essa escala comprarável e supondo que os efeitos são boas estimativas causais, qual dos dois efeitos tem influência maior na resposta?</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">df</span><span class="op">$</span><span class="va">Grazing_contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Grazing0</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">1</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
 <h1 id="regressão-robusta">Regressão robusta</h1>
 <p>Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
 a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para
@@ -3128,7 +3173,7 @@ escala vertical logarítmica deixa visível a diferença entre as caudas.</p>
 <h2 id="incluindo-a-distribuição-t-de-student-no-modelo">Incluindo a distribuição <span class="math inline">\(t\)</span> de Student no modelo</h2>
 <p>No modelo abaixo, vamos incluir um parâmetro adicional no modelo que controla os graus de liberdade da distribuição <span class="math inline">\(t\)</span> dos resíduos.
 O parâmetro <span class="math inline">\(\nu = 2 + \exp(\text{log_nu})\)</span> mantém os graus de liberdade acima de 2, de modo que a variância dos resíduos
-seja finita.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+seja finita.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">&lt;-</span> <span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span><span class="op">)</span></span>
@@ -3240,13 +3285,14 @@ que expliquem as diferenças entre observações.</p>
 <hr />
 <ol>
 <li id="fn1"><p>Péssimas!<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
+<li id="fn2"><p>Os coeficientes padronizados dependem da população usada para definir cada desvio-padrão. Se a população de plantas protegidas for muito diferente da população de plantas não protegidas, o desvio-padrão do contraste pode não ser representativo da população geral. Por isso, é importante interpretar as comparações entre coeficientes padronizados com cautela. Da mesma forma, a dedução que usamos supôs um numero similar de plantas em cada grupo. Se os grupos forem muito desbalanceados, a interpretação do coeficiente do contraste como uma mudança por desvio-padrão pode não ser adequada.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
 Por exemplo, a distribuição de Cauchy não tem média nem variância definidas. Se você amostrar valores de uma distribuição de Cauchy, os valores serão extremamente
 dispersos e a média das amostras nunca vai convergir pra um valor, mesmo com muitas amostras, ela vai só crescer indefinidamente.<br />
 Voltando para a <span class="math inline">\(t\)</span>-student, a média da distribuição <span class="math inline">\(t\)</span> só existe para <span class="math inline">\(\nu&gt;1\)</span>, e a variância só para <span class="math inline">\(\nu&gt;2\)</span>. Além disso, o parâmetro <span class="math inline">\(\sigma\)</span> que aparece na distribuição <span class="math inline">\(t\)</span>
 é um parâmetro de escala, não o desvio-padrão. Para <span class="math inline">\(\nu&gt;2\)</span>, o desvio-padrão é dado por <span class="math inline">\(\sigma\sqrt{\nu/(\nu-2)}\)</span>.
 Esse fator é a razão entre o desvio-padrão e <span class="math inline">\(\sigma\)</span>. Por exemplo, com <span class="math inline">\(\nu=3\)</span> e <span class="math inline">\(\sigma=1\)</span>, o desvio-padrão é <span class="math inline">\(\sqrt{3}\approx1{,}73\)</span>, não 1.
-À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 <!--radix_placeholder_article_footer-->

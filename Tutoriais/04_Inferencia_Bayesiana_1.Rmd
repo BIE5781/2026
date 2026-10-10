@@ -483,6 +483,56 @@ legend("topleft", legend = c("Fenced", "Control"), col = c("red", "black"),
 
 ```
 
+## Comparando a magnitude dos coeficientes
+
+O gráfico de `precis` resume as distribuições posteriores dos coeficientes:
+
+```{r coefficient_effects}
+plot(precis(m1))
+```
+
+O coeficiente `b` corresponde à diferença entre os tratamentos codificados
+como 0 e 1. Já `c` corresponde à mudança esperada na produção de frutos
+associada a um aumento de um desvio-padrão no diâmetro, pois `Root` foi
+padronizada. Como os preditores estão em escalas diferentes, não podemos
+comparar diretamente a magnitude desses dois coeficientes.
+
+### Desvio-padrão de uma variável binária
+
+Considere uma variável binária $X$, codificada como 0 e 1, cuja
+probabilidade de assumir o valor 1 é $p$. Sua esperança é $E[X]=p$ e,
+como $X^2=X$, sua variância é:
+
+$$
+\begin{aligned}
+\mathrm{Var}(X) &= E[X^2] - E[X]^2 \\
+                 &= p - p^2 \\
+                 &= p(1-p).
+\end{aligned}
+$$
+
+Portanto, $\mathrm{sd}(X)=\sqrt{p(1-p)}$. Quando os grupos têm
+frequências aproximadamente iguais, $p\approx0{,}5$, o desvio-padrão da
+codificação 0/1 é aproximadamente $0{,}5$. Podemos recodificar o contraste usando a transformação z, que padroniza a variável para ter média zero e desvio-padrão 1. A transformação z de $X$ é:
+
+$$
+C = \frac{X-E[X]}{\mathrm{sd}(X)}
+  = \frac{X-p}{\sqrt{p(1-p)}}.
+$$
+
+Quando $p=0{,}5$, essa transformação altera os valores do preditor de $0$ e $1$ para valores $-1$ e $1$.
+
+Com essa codificação e grupos aproximadamente equilibrados, o coeficiente
+de $b$ representa a mudança esperada por um desvio-padrão do preditor e
+pode ser comparado, em magnitude, ao coeficiente de `Root`, também medido
+na escala de desvio-padrão. O coeficiente de $b$ é metade da diferença entre as
+médias dos grupos. Essa recodificação muda a escala do coeficiente, não o ajuste do modelo. A vantagem de usar essa codificação dos dois tratamentos é que agora o coeficiente do tratamento e o coeficiente associado ao diâmetro das plantas pode, potencialmente^[Os coeficientes padronizados dependem da população usada para definir cada desvio-padrão. Se a população de plantas protegidas for muito diferente da população de plantas não protegidas, o desvio-padrão do contraste pode não ser representativo da população geral. Por isso, é importante interpretar as comparações entre coeficientes padronizados com cautela. Da mesma forma, a dedução que usamos supôs um numero similar de plantas em cada grupo. Se os grupos forem muito desbalanceados, a interpretação do coeficiente do contraste como uma mudança por desvio-padrão pode não ser adequada.], ser comparado diretamente. Ajuste o modelo novamente e interprete os coeficientes. Usando essa escala comprarável e supondo que os efeitos são boas estimativas causais, qual dos dois efeitos tem influência maior na resposta?
+
+
+```{r binary_contrast}
+df$Grazing_contrast <- ifelse(df$Grazing0 == 1, 1, -1)
+```
+
 # Regressão robusta
 
 Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
