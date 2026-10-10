@@ -60,7 +60,7 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 | 28/10 | **9. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico | Reprodução de modelo dos macacos | Diogo |
 | 04/11 | **10. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [LOO, WAIC e validação cruzada](Tutoriais/loo_cross.html) | Paulo Inácio |
 | 06/11 | **11. Pensamento causal I** | Variáveis de confusão e o critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo |
-| 08/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio |
+| 11/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio |
 | 13/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  |
 | 18/11 | **14. Modelos mistos contínuos** | Modelos animais, filogenéticos e espaciais | [Modelo animal univariado](Tutoriais/modelo_animal_uni.html); [bivariado](Tutoriais/modelo_animal_multi.html) | Diogo |
 | 25/11 | **15. Modelos avançados** | Processos geradores explícitos e processos Gaussianos | Equações diferenciais, captura-marcação-recaptura, movimento ou processos Gaussianos | Diogo e Paulo Inácio |
