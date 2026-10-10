@@ -2523,7 +2523,10 @@ distill-header .nav a {
 <nav class="l-text toc figcaption" id="TOC">
 <h3>Contents</h3>
 <ul>
-<li><a href="#definindo-uma-posterior-muito-simples" id="toc-definindo-uma-posterior-muito-simples">Definindo uma posterior muito simples</a></li>
+<li><a href="#definindo-uma-posterior-muito-simples" id="toc-definindo-uma-posterior-muito-simples">Definindo uma posterior muito simples</a>
+<ul>
+<li><a href="#quando-o-desvio-padrão-também-é-desconhecido" id="toc-quando-o-desvio-padrão-também-é-desconhecido">Quando o desvio-padrão também é desconhecido</a></li>
+</ul></li>
 <li><a href="#instalando-o-pacote-rethinking" id="toc-instalando-o-pacote-rethinking">Instalando o pacote <code>rethinking</code></a></li>
 <li><a href="#especificando-um-modelo-com-o-pacote-rethinking" id="toc-especificando-um-modelo-com-o-pacote-rethinking">Especificando um modelo com o pacote <code>rethinking</code></a></li>
 <li><a href="#ajustando-modelos-com-métodos-bayesianos" id="toc-ajustando-modelos-com-métodos-bayesianos">Ajustando modelos com métodos Bayesianos</a>
@@ -2536,7 +2539,6 @@ distill-header .nav a {
 <li><a href="#ajustando-o-modelo" id="toc-ajustando-o-modelo">Ajustando o modelo</a></li>
 <li><a href="#visualizando-previsões" id="toc-visualizando-previsões">Visualizando previsões</a></li>
 </ul></li>
-<li><a href="#incluindo-interações-no-modelo" id="toc-incluindo-interações-no-modelo">Incluindo interações no modelo</a></li>
 <li><a href="#regressão-robusta" id="toc-regressão-robusta">Regressão robusta</a>
 <ul>
 <li><a href="#observações-de-alta-alavancagem-em-dados-reais" id="toc-observações-de-alta-alavancagem-em-dados-reais">Observações de alta alavancagem em dados reais</a></li>
@@ -2557,17 +2559,16 @@ distill-header .nav a {
 
 </div>
 <h1 id="definindo-uma-posterior-muito-simples">Definindo uma posterior muito simples</h1>
-<p>Considere o seguinte modelo:</p>
+<p>Considere o seguinte modelo. No primeiro exemplo, vamos considerar o
+desvio-padrão conhecido e fixá-lo em 1. Assim, o único parâmetro
+desconhecido é a média <span class="math inline">\(\mu\)</span>.</p>
 <p>Verossimilhança:</p>
 <p><span class="math display">\[
 y_i \sim Normal(\mu, \sigma = 1)
 \]</span></p>
-<p>Distribuições a priori:</p>
+<p>Distribuição a priori:</p>
 <p><span class="math display">\[
-\begin{aligned}
-\mu &amp;\sim Normal(0, 1) \\
-\sigma &amp;\sim Exponential(1)
-\end{aligned}
+\mu \sim Normal(0, 1)
 \]</span></p>
 <p>Para modelos muito simples, como este, podemos escrever e calcular a
 posterior diretamente. Em seguida, usamos os valores calculados para
@@ -2584,11 +2585,11 @@ representar e examinar para tirar conclusões.</p>
 <span><span class="co"># Dados:</span></span>
 <span><span class="va">y</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, mean <span class="op">=</span> <span class="fl">2</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Posterior na escala logarítmica, para estabilidade numérica</span></span>
-<span><span class="va">logP_theta_y</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">data</span> <span class="op">=</span> <span class="va">y</span><span class="op">)</span><span class="op">{</span></span>
-<span>  <span class="va">ll</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">mu</span>, <span class="va">sigma</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">logprior</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">mu</span>, <span class="fl">0</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="va">sigma</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="va">logprior</span> <span class="op">+</span> <span class="va">ll</span> <span class="co"># P(theta)P(y|theta)</span></span>
+<span><span class="co"># Log-posterior de mu, com sigma conhecido e fixado em 1</span></span>
+<span><span class="va">logP_mu_y</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">mu</span>, <span class="va">data</span> <span class="op">=</span> <span class="va">y</span><span class="op">)</span><span class="op">{</span></span>
+<span>  <span class="va">ll</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">data</span>, mean <span class="op">=</span> <span class="va">mu</span>, sd <span class="op">=</span> <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">logprior</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">mu</span>, mean <span class="op">=</span> <span class="fl">0</span>, sd <span class="op">=</span> <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">logprior</span> <span class="op">+</span> <span class="va">ll</span></span>
 <span><span class="op">}</span></span></code></pre>
 </div>
 </div>
@@ -2597,13 +2598,61 @@ representar e examinar para tirar conclusões.</p>
 elevadas, porém, essa estratégia deixa de ser viável.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">x</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">4</span>, <span class="fl">0.01</span><span class="op">)</span></span>
-<span><span class="va">px</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Vectorize.html">Vectorize</a></span><span class="op">(</span><span class="va">logP_theta_y</span><span class="op">)</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">px</span> <span class="op">~</span> <span class="va">x</span>, pch <span class="op">=</span> <span class="fl">19</span>, col <span class="op">=</span> <span class="fl">2</span>, xlab <span class="op">=</span> <span class="st">&quot;mean parameter (mu)&quot;</span>, ylab <span class="op">=</span> <span class="st">&quot;proportional to P(mu|y)&quot;</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">x</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">0.01</span><span class="op">)</span></span>
+<span><span class="va">log_posterior</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Vectorize.html">Vectorize</a></span><span class="op">(</span><span class="va">logP_mu_y</span><span class="op">)</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span><span class="va">posterior_density</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">log_posterior</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html">max</a></span><span class="op">(</span><span class="va">log_posterior</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">posterior_density</span> <span class="op">=</span> <span class="va">posterior_density</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">posterior_density</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html">diff</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">posterior_density</span> <span class="op">~</span> <span class="va">x</span>, type <span class="op">=</span> <span class="st">&quot;l&quot;</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">&quot;Média (mu)&quot;</span>, ylab <span class="op">=</span> <span class="st">&quot;Densidade posterior&quot;</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fl">2</span>, lty <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Com base nessa posterior, qual é o valor mais provável do parâmetro?</p>
+<p>Com base nessa posterior, qual é o valor mais provável do parâmetro?
+Altere os parâmetros do prior e veja como a posteriori de comporta.</p>
+<h2 id="quando-o-desvio-padrão-também-é-desconhecido">Quando o desvio-padrão também é desconhecido</h2>
+<p>Agora vamos usar os mesmos dados, mas tratar <span class="math inline">\(\sigma\)</span> como um parâmetro
+desconhecido. Atribuímos a ele uma distribuição a priori exponencial
+com taxa 1. Como os parâmetros são contínuos, avaliamos a densidade numa
+grade suficientemente fina de combinações de <span class="math inline">\(\mu\)</span> e <span class="math inline">\(\sigma\)</span>. Essa
+avaliação exaustiva da grade aproxima a superfície da posterior conjunta.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">logP_mu_sigma_y</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span>, <span class="va">data</span> <span class="op">=</span> <span class="va">y</span><span class="op">)</span><span class="op">{</span></span>
+<span>  <span class="va">ll</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">data</span>, mean <span class="op">=</span> <span class="va">mu</span>, sd <span class="op">=</span> <span class="va">sigma</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">logprior_mu</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">mu</span>, mean <span class="op">=</span> <span class="fl">0</span>, sd <span class="op">=</span> <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">logprior_sigma</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="va">sigma</span>, rate <span class="op">=</span> <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">ll</span> <span class="op">+</span> <span class="va">logprior_mu</span> <span class="op">+</span> <span class="va">logprior_sigma</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">mu_grid</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span>, length.out <span class="op">=</span> <span class="fl">250</span><span class="op">)</span></span>
+<span><span class="va">sigma_grid</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">3</span>, length.out <span class="op">=</span> <span class="fl">250</span><span class="op">)</span></span>
+<span><span class="va">parameter_grid</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html">expand.grid</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="va">mu_grid</span>, sigma <span class="op">=</span> <span class="va">sigma_grid</span><span class="op">)</span></span>
+<span><span class="va">log_posterior_grid</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mapply.html">mapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">logP_mu_sigma_y</span>,</span>
+<span>  mu <span class="op">=</span> <span class="va">parameter_grid</span><span class="op">$</span><span class="va">mu</span>,</span>
+<span>  sigma <span class="op">=</span> <span class="va">parameter_grid</span><span class="op">$</span><span class="va">sigma</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">posterior_density</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">log_posterior_grid</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html">max</a></span><span class="op">(</span><span class="va">log_posterior_grid</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">posterior_density</span> <span class="op">=</span> <span class="va">posterior_density</span> <span class="op">/</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">posterior_density</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html">diff</a></span><span class="op">(</span><span class="va">mu_grid</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html">diff</a></span><span class="op">(</span><span class="va">sigma_grid</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">parameter_grid</span><span class="op">$</span><span class="va">posterior_density</span> <span class="op">=</span> <span class="va">posterior_density</span></span>
+<span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">parameter_grid</span>,</span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">mu</span>, y <span class="op">=</span> <span class="va">sigma</span>, fill <span class="op">=</span> <span class="va">posterior_density</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_tile.html">geom_raster</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html">xlim</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">2.3</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html">ylim</a></span><span class="op">(</span><span class="fl">0.9</span>, <span class="fl">1.4</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_viridis.html">scale_fill_viridis_c</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">&quot;Densidade posterior&quot;</span>, option <span class="op">=</span> <span class="st">&quot;A&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Média (mu)&quot;</span>, y <span class="op">=</span> <span class="st">&quot;Desvio-padrão (sigma)&quot;</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Cada ponto da superfície corresponde à densidade posterior de uma
+combinação de <span class="math inline">\(\mu\)</span> e <span class="math inline">\(\sigma\)</span>. Valores mais altos indicam combinações
+mais compatíveis com os dados e com as distribuições a priori. Claro que
+essa estratégia é inviável quando não sabemos qual a região com
+probabilidade alta inicialmente e quando temos um número maior de parâmetros.</p>
 <h1 id="instalando-o-pacote-rethinking">Instalando o pacote <code>rethinking</code></h1>
 <p>Estas instruções foram adaptadas de
 <a href="https://github.com/rmcelreath/rethinking">https://github.com/rmcelreath/rethinking</a>.
@@ -2646,13 +2695,15 @@ três parâmetros.</p>
 <p>Distribuição normal com <span class="math inline">\(\mu = 0\)</span> e <span class="math inline">\(\sigma = 1\)</span>:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">x</span>, mean <span class="op">=</span> <span class="fl">0</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span></span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">x</span>, mean <span class="op">=</span> <span class="fl">0</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="fl">2</span>, </span>
+<span>            ylab <span class="op">=</span> <span class="st">&quot;Densidade&quot;</span>, xlab <span class="op">=</span> <span class="st">&quot;Valor do parâmetro&quot;</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>Distribuição exponencial com <span class="math inline">\(\lambda = 1\)</span>:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="va">x</span>, rate <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">0</span>, <span class="fl">3</span><span class="op">)</span></span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="va">x</span>, rate <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">0</span>, <span class="fl">3</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="fl">2</span>, </span>
+<span>            ylab <span class="op">=</span> <span class="st">&quot;Densidade&quot;</span>, xlab <span class="op">=</span> <span class="st">&quot;Valor do parâmetro&quot;</span> <span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>O que essas distribuições a priori nos dizem? Que valores são
@@ -2692,7 +2743,7 @@ seguinte forma:</p>
 coeficientes:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m1</span>, digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="co"># Resumo do ajuste</span></span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m1</span>, digits <span class="op">=</span> <span class="fl">2</span>, prob <span class="op">=</span> <span class="fl">0.93</span><span class="op">)</span> <span class="co"># Resumo do ajuste</span></span></code></pre>
 </div>
 </div>
 <p><strong>Exercício:</strong> ajuste o mesmo modelo com a função <code>lm()</code> do R e compare
@@ -2705,8 +2756,10 @@ uma que mude substancialmente as estimativas? Em seguida, reduza o
 tamanho da amostra, alterando <code>N</code>. As distribuições a priori fazem mais
 diferença agora?</p>
 <h1 id="ajustando-modelos-com-métodos-bayesianos">Ajustando modelos com métodos Bayesianos</h1>
-<p>Na seção anterior, ajustamos um modelo linear pelo método OLS. Agora,
-vamos ajustar o mesmo modelo usando uma abordagem Bayesiana.</p>
+<p>Nos tutoriais anteriores, ajustamos modelos lineares pelo método OLS. Agora,
+vamos ajustar o mesmo modelo usando algumas abordagens diferentes,
+e comparar as estimativas de cada uma. Vamos usar OLS, um pacote que utiliza a
+a mesma sintaxe de fórmulas do lm(), mas usando uma maquinaria Bayesiana, e o pacote rethinking, que permite especificar modelos de forma mais explícita.</p>
 <p>A abordagem Bayesiana para a regressão linear se baseia na distribuição
 posterior dos parâmetros <span class="math inline">\(\alpha\)</span> e <span class="math inline">\(\beta\)</span>. Essa posterior é
 proporcional ao produto entre a verossimilhança dos dados, condicionada
@@ -2797,11 +2850,11 @@ algumas das distribuições a priori padrão usadas em aula.</p>
 <span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">mod_rethinking</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Como ficaram as estimativas agora? Péssimas!</p>
+<p>Como ficaram as estimativas agora?<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>Isso acontece porque as distribuições a priori padrão usadas no código
 de <code>rethinking</code> estão muito distantes dos valores verdadeiros dos
 parâmetros. Uma forma de evitar esse problema é padronizar as variáveis
-antes de ajustar o modelo.</p>
+antes de ajustar o modelo. O pacote rstanarm faz esse tipo de padronização automaticamente, e usa priors padrões que são melhores em lidar com diferenças de escalas entre os dados. Como nós estamos trabalhando com o pacote Rethinking e montando nossos modelos de forma mais artesanal, precisamos pensar nesse tipo de questão.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">data</span><span class="op">$</span><span class="va">x_scaled</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">x</span><span class="op">)</span></span>
@@ -2830,7 +2883,7 @@ antes de ajustar o modelo.</p>
 </div>
 </div>
 <p>Padronizar as variáveis é uma boa prática ao ajustar modelos
-Bayesianos. Isso pode melhorar a eficiência computacional e facilitar a
+Bayesianos. O escalonamento melhora a eficiência computacional e facilita a
 definição de distribuições a priori razoáveis.</p>
 <h1 id="estendendo-a-regressão-linear">Estendendo a regressão linear</h1>
 <p>Podemos estender a regressão linear simples para incluir vários
@@ -2909,58 +2962,6 @@ produção de frutos e o diâmetro do caule na base.</p>
 <span><span class="co"># Adiciona a legenda</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html">legend</a></span><span class="op">(</span><span class="st">&quot;topleft&quot;</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Fenced&quot;</span>, <span class="st">&quot;Control&quot;</span><span class="op">)</span>, col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;red&quot;</span>, <span class="st">&quot;black&quot;</span><span class="op">)</span>, </span>
 <span>       pch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">17</span>, <span class="fl">16</span><span class="op">)</span>, lty <span class="op">=</span> <span class="fl">1</span>, bty <span class="op">=</span> <span class="st">&quot;n&quot;</span><span class="op">)</span></span></code></pre>
-</div>
-</div>
-<h1 id="incluindo-interações-no-modelo">Incluindo interações no modelo</h1>
-<p>Uma interação permite que a relação entre um preditor e a variável
-resposta mude conforme o valor de outro preditor. Por exemplo, podemos
-modelar a interação entre umidade do solo (<code>water</code>) e sombra (<code>shade</code>)
-no conjunto de dados <code>tulips</code>.</p>
-<p>Prepare os dados:</p>
-<div class="layout-chunk" data-layout="l-body">
-<div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html">data</a></span><span class="op">(</span><span class="va">tulips</span><span class="op">)</span></span>
-<span><span class="va">tulips</span><span class="op">$</span><span class="va">blooms</span> <span class="op">&lt;-</span> <span class="va">tulips</span><span class="op">$</span><span class="va">blooms</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html">max</a></span><span class="op">(</span><span class="va">tulips</span><span class="op">$</span><span class="va">blooms</span><span class="op">)</span></span>
-<span><span class="va">tulips</span><span class="op">$</span><span class="va">water</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">tulips</span><span class="op">$</span><span class="va">water</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="va">tulips</span><span class="op">$</span><span class="va">shade</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">tulips</span><span class="op">$</span><span class="va">shade</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre>
-</div>
-</div>
-<p>Ajuste o modelo com interação:</p>
-<div class="layout-chunk" data-layout="l-body">
-<div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/quap.html">quap</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
-<span>    <span class="va">blooms</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
-<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">b0</span> <span class="op">+</span> <span class="va">b1</span> <span class="op">*</span> <span class="va">water</span> <span class="op">+</span> <span class="va">b2</span> <span class="op">*</span> <span class="va">shade</span> <span class="op">+</span> <span class="va">b3</span> <span class="op">*</span> <span class="va">water</span> <span class="op">*</span> <span class="va">shade</span>,</span>
-<span>    <span class="va">b0</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">b1</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">b2</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">b3</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">sigma</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">tulips</span></span>
-<span><span class="op">)</span></span></code></pre>
-</div>
-</div>
-<p>Resuma o modelo com interação:</p>
-<div class="layout-chunk" data-layout="l-body">
-<div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m2</span><span class="op">)</span></span></code></pre>
-</div>
-</div>
-<p>Visualize a interação:</p>
-<div class="layout-chunk" data-layout="l-body">
-<div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">post</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">m2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">blooms</span> <span class="op">~</span> <span class="va">water</span>, col <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span>, pch <span class="op">=</span> <span class="fl">16</span>, data <span class="op">=</span> <span class="va">tulips</span><span class="op">)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">s</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html">unique</a></span><span class="op">(</span><span class="va">tulips</span><span class="op">$</span><span class="va">shade</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span></span>
-<span>    a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post</span><span class="op">$</span><span class="va">b0</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post</span><span class="op">$</span><span class="va">b2</span><span class="op">)</span> <span class="op">*</span> <span class="va">s</span>,</span>
-<span>    b <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post</span><span class="op">$</span><span class="va">b1</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post</span><span class="op">$</span><span class="va">b3</span><span class="op">)</span> <span class="op">*</span> <span class="va">s</span>,</span>
-<span>    col <span class="op">=</span> <span class="va">s</span> <span class="op">+</span> <span class="fl">1</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html">legend</a></span><span class="op">(</span><span class="st">&quot;topright&quot;</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Shade 1&quot;</span>, <span class="st">&quot;Shade 2&quot;</span>, <span class="st">&quot;Shade 3&quot;</span><span class="op">)</span>, col <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span>, pch <span class="op">=</span> <span class="fl">16</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <h1 id="regressão-robusta">Regressão robusta</h1>
@@ -3127,10 +3128,11 @@ escala vertical logarítmica deixa visível a diferença entre as caudas.</p>
 <h2 id="incluindo-a-distribuição-t-de-student-no-modelo">Incluindo a distribuição <span class="math inline">\(t\)</span> de Student no modelo</h2>
 <p>No modelo abaixo, vamos incluir um parâmetro adicional no modelo que controla os graus de liberdade da distribuição <span class="math inline">\(t\)</span> dos resíduos.
 O parâmetro <span class="math inline">\(\nu = 2 + \exp(\text{log_nu})\)</span> mantém os graus de liberdade acima de 2, de modo que a variância dos resíduos
-seja finita.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+seja finita.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m_animals_student_all</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">&lt;-</span> <span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span><span class="op">)</span></span>
+<span><span class="va">m_animals_student_all</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
 <span>    <span class="va">log_brain</span> <span class="op">~</span> <span class="fu"><a href="https://mc-stan.org/rstanarm/reference/priors.html">student_t</a></span><span class="op">(</span><span class="va">nu</span>, <span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
 <span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="va">b</span> <span class="op">*</span> <span class="va">log_body_c</span>,</span>
@@ -3189,7 +3191,7 @@ ajustados nas seções anteriores.</p>
 <p>Sob o modelo com resíduos <span class="math inline">\(t\)</span> de Student, a mudança na inclinação é
 menor? Como você interpreta essa diferença?</p>
 <h2 id="representando-as-quatro-retas-ajustadas">Representando as quatro retas ajustadas</h2>
-<p>As retas contínuas usam as 28 espécies; as tracejadas omitem os três
+<p>As retas contínuas usam as 28 espécies. As tracejadas omitem os três
 dinossauros. Compare a distância entre cada par de retas com as mudanças
 nas inclinações apresentadas na tabela.</p>
 <div class="layout-chunk" data-layout="l-body">
@@ -3237,13 +3239,14 @@ que expliquem as diferenças entre observações.</p>
 <section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
+<li id="fn1"><p>Péssimas!<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
 Por exemplo, a distribuição de Cauchy não tem média nem variância definidas. Se você amostrar valores de uma distribuição de Cauchy, os valores serão extremamente
 dispersos e a média das amostras nunca vai convergir pra um valor, mesmo com muitas amostras, ela vai só crescer indefinidamente.<br />
 Voltando para a <span class="math inline">\(t\)</span>-student, a média da distribuição <span class="math inline">\(t\)</span> só existe para <span class="math inline">\(\nu&gt;1\)</span>, e a variância só para <span class="math inline">\(\nu&gt;2\)</span>. Além disso, o parâmetro <span class="math inline">\(\sigma\)</span> que aparece na distribuição <span class="math inline">\(t\)</span>
 é um parâmetro de escala, não o desvio-padrão. Para <span class="math inline">\(\nu&gt;2\)</span>, o desvio-padrão é dado por <span class="math inline">\(\sigma\sqrt{\nu/(\nu-2)}\)</span>.
 Esse fator é a razão entre o desvio-padrão e <span class="math inline">\(\sigma\)</span>. Por exemplo, com <span class="math inline">\(\nu=3\)</span> e <span class="math inline">\(\sigma=1\)</span>, o desvio-padrão é <span class="math inline">\(\sqrt{3}\approx1{,}73\)</span>, não 1.
-À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 <!--radix_placeholder_article_footer-->

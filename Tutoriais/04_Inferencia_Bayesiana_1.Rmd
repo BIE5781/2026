@@ -26,7 +26,9 @@ htmltools::tagList(
 
 # Definindo uma posterior muito simples
 
-Considere o seguinte modelo:
+Considere o seguinte modelo. No primeiro exemplo, vamos considerar o
+desvio-padrão conhecido e fixá-lo em 1. Assim, o único parâmetro
+desconhecido é a média $\mu$.
 
 Verossimilhança:
 
@@ -34,13 +36,10 @@ $$
 y_i \sim Normal(\mu, \sigma = 1) 
 $$
 
-Distribuições a priori:
+Distribuição a priori:
 
 $$
-\begin{aligned}
-\mu &\sim Normal(0, 1) \\
-\sigma &\sim Exponential(1)
-\end{aligned}
+\mu \sim Normal(0, 1)
 $$
 
 Para modelos muito simples, como este, podemos escrever e calcular a
@@ -60,11 +59,11 @@ set.seed(2)
 # Dados:
 y = rnorm(100, mean = 2, sd = 1)
 
-# Posterior na escala logarítmica, para estabilidade numérica
-logP_theta_y = function(mu, sigma = 1, data = y){
-  ll = sum(dnorm(data, mu, sigma, log = TRUE))
-  logprior = dnorm(mu, 0, 1, log = TRUE) + dexp(sigma, 1, log = TRUE)
-  logprior + ll # P(theta)P(y|theta)
+# Log-posterior de mu, com sigma conhecido e fixado em 1
+logP_mu_y = function(mu, data = y){
+  ll = sum(dnorm(data, mean = mu, sd = 1, log = TRUE))
+  logprior = dnorm(mu, mean = 0, sd = 1, log = TRUE)
+  logprior + ll
 }
 ```
 
@@ -73,13 +72,63 @@ $\mu$ e identificar aqueles com maior probabilidade. Em dimensões
 elevadas, porém, essa estratégia deixa de ser viável.
 
 ```{r}
-x = seq(0, 4, 0.01)
-px = Vectorize(logP_theta_y)(x)
-plot(px ~ x, pch = 19, col = 2, xlab = "mean parameter (mu)", ylab = "proportional to P(mu|y)")
-abline(v = 2)
+x = seq(1, 3, 0.01)
+log_posterior = Vectorize(logP_mu_y)(x)
+posterior_density = exp(log_posterior - max(log_posterior))
+posterior_density = posterior_density / sum(posterior_density * diff(x)[1])
+plot(posterior_density ~ x, type = "l", lwd = 2, col = 2,
+     xlab = "Média (mu)", ylab = "Densidade posterior")
+abline(v = 2, lty = 2)
 ```
 
-Com base nessa posterior, qual é o valor mais provável do parâmetro?
+Com base nessa posterior, qual é o valor mais provável do parâmetro? 
+Altere os parâmetros do prior e veja como a posteriori de comporta.
+
+## Quando o desvio-padrão também é desconhecido
+
+Agora vamos usar os mesmos dados, mas tratar $\sigma$ como um parâmetro
+desconhecido. Atribuímos a ele uma distribuição a priori exponencial
+com taxa 1. Como os parâmetros são contínuos, avaliamos a densidade numa
+grade suficientemente fina de combinações de $\mu$ e $\sigma$. Essa
+avaliação exaustiva da grade aproxima a superfície da posterior conjunta.
+
+```{r}
+logP_mu_sigma_y = function(mu, sigma, data = y){
+  ll = sum(dnorm(data, mean = mu, sd = sigma, log = TRUE))
+  logprior_mu = dnorm(mu, mean = 0, sd = 1, log = TRUE)
+  logprior_sigma = dexp(sigma, rate = 1, log = TRUE)
+  ll + logprior_mu + logprior_sigma
+}
+
+mu_grid = seq(1, 3, length.out = 250)
+sigma_grid = seq(0.1, 3, length.out = 250)
+parameter_grid = expand.grid(mu = mu_grid, sigma = sigma_grid)
+log_posterior_grid = mapply(
+  logP_mu_sigma_y,
+  mu = parameter_grid$mu,
+  sigma = parameter_grid$sigma
+)
+
+posterior_density = exp(log_posterior_grid - max(log_posterior_grid))
+posterior_density = posterior_density /
+  sum(posterior_density * diff(mu_grid)[1] * diff(sigma_grid)[1])
+parameter_grid$posterior_density = posterior_density
+
+library(ggplot2)
+
+ggplot(parameter_grid,
+    aes(x = mu, y = sigma, fill = posterior_density)) +
+  geom_raster() +
+  xlim(1.5, 2.3) + ylim(0.9, 1.4) +
+  scale_fill_viridis_c(name = "Densidade posterior", option = "A") +
+  labs(x = "Média (mu)", y = "Desvio-padrão (sigma)")
+```
+
+Cada ponto da superfície corresponde à densidade posterior de uma
+combinação de $\mu$ e $\sigma$. Valores mais altos indicam combinações
+mais compatíveis com os dados e com as distribuições a priori. Claro que 
+essa estratégia é inviável quando não sabemos qual a região com 
+probabilidade alta inicialmente e quando temos um número maior de parâmetros.
 
 # Instalando o pacote `rethinking`
 
@@ -139,13 +188,15 @@ três parâmetros.
 Distribuição normal com $\mu = 0$ e $\sigma = 1$:
 
 ```{r}
-curve(dnorm(x, mean = 0, sd = 1), -3, 3)
+curve(dnorm(x, mean = 0, sd = 1), -3, 3, lwd = 2, col = 2, 
+            ylab = "Densidade", xlab = "Valor do parâmetro")
 ```
 
 Distribuição exponencial com $\lambda = 1$:
 
 ```{r}
-curve(dexp(x, rate = 1), 0, 3)
+curve(dexp(x, rate = 1), 0, 3, lwd = 2, col = 2, 
+            ylab = "Densidade", xlab = "Valor do parâmetro" )
 ```
 
 O que essas distribuições a priori nos dizem? Que valores são
@@ -188,7 +239,7 @@ A função `precis()` gera uma tabela resumida com as estimativas dos
 coeficientes:
 
 ```{r }
-precis(m1, digits = 2) # Resumo do ajuste
+precis(m1, digits = 2, prob = 0.93) # Resumo do ajuste
 ```
 
 **Exercício:** ajuste o mesmo modelo com a função `lm()` do R e compare
@@ -206,8 +257,10 @@ diferença agora?
 
 # Ajustando modelos com métodos Bayesianos
 
-Na seção anterior, ajustamos um modelo linear pelo método OLS. Agora,
-vamos ajustar o mesmo modelo usando uma abordagem Bayesiana.
+Nos tutoriais  anteriores, ajustamos modelos lineares pelo método OLS. Agora,
+vamos ajustar o mesmo modelo usando algumas abordagens diferentes, 
+e comparar as estimativas de cada uma. Vamos usar OLS, um pacote que utiliza a 
+a mesma sintaxe de fórmulas do lm(), mas usando uma maquinaria Bayesiana, e o pacote rethinking, que permite especificar modelos de forma mais explícita.
 
 A abordagem Bayesiana para a regressão linear se baseia na distribuição
 posterior dos parâmetros $\alpha$ e $\beta$. Essa posterior é
@@ -304,12 +357,12 @@ mod_rethinking = quap(
 precis(mod_rethinking)
 ```
 
-Como ficaram as estimativas agora? Péssimas!
+Como ficaram as estimativas agora?^[Péssimas!]
 
 Isso acontece porque as distribuições a priori padrão usadas no código
 de `rethinking` estão muito distantes dos valores verdadeiros dos
 parâmetros. Uma forma de evitar esse problema é padronizar as variáveis
-antes de ajustar o modelo.
+antes de ajustar o modelo. O pacote rstanarm faz esse tipo de padronização automaticamente, e usa priors padrões que são melhores em lidar com diferenças de escalas entre os dados. Como nós estamos trabalhando com o pacote Rethinking e montando nossos modelos de forma mais artesanal, precisamos pensar nesse tipo de questão.
 
 ```{r scale, eval=FALSE}
 data$x_scaled = scale(data$x)
@@ -338,7 +391,7 @@ coef(mod_rethinking_scaled)
 ```
 
 Padronizar as variáveis é uma boa prática ao ajustar modelos
-Bayesianos. Isso pode melhorar a eficiência computacional e facilitar a
+Bayesianos. O escalonamento melhora a eficiência computacional e facilita a
 definição de distribuições a priori razoáveis.
 
 # Estendendo a regressão linear
@@ -428,60 +481,6 @@ abline(a = m1_coef["a", ] + m1_coef["c", ], b = m1_coef["b", ], col = "red", lwd
 legend("topleft", legend = c("Fenced", "Control"), col = c("red", "black"), 
        pch = c(17, 16), lty = 1, bty = "n")
 
-```
-
-# Incluindo interações no modelo
-
-Uma interação permite que a relação entre um preditor e a variável
-resposta mude conforme o valor de outro preditor. Por exemplo, podemos
-modelar a interação entre umidade do solo (`water`) e sombra (`shade`)
-no conjunto de dados `tulips`.
-
-Prepare os dados:
-
-```{r tulips_data}
-data(tulips)
-tulips$blooms <- tulips$blooms / max(tulips$blooms)
-tulips$water <- scale(tulips$water, scale = FALSE)
-tulips$shade <- scale(tulips$shade, scale = FALSE)
-```
-
-Ajuste o modelo com interação:
-
-```{r fit_interaction}
-m2 <- quap(
-  alist(
-    blooms ~ dnorm(mu, sigma),
-    mu <- b0 + b1 * water + b2 * shade + b3 * water * shade,
-    b0 ~ dnorm(0, 1),
-    b1 ~ dnorm(0, 1),
-    b2 ~ dnorm(0, 1),
-    b3 ~ dnorm(0, 1),
-    sigma ~ dexp(1)
-  ),
-  data = tulips
-)
-```
-
-Resuma o modelo com interação:
-
-```{r summarize_interaction}
-precis(m2)
-```
-
-Visualize a interação:
-
-```{r visualize_interaction}
-post <- extract.samples(m2)
-plot(blooms ~ water, col = 2:4, pch = 16, data = tulips)
-for (s in unique(tulips$shade)) {
-  abline(
-    a = mean(post$b0) + mean(post$b2) * s,
-    b = mean(post$b1) + mean(post$b3) * s,
-    col = s + 1
-  )
-}
-legend("topright", legend = c("Shade 1", "Shade 2", "Shade 3"), col = 2:4, pch = 16)
 ```
 
 # Regressão robusta
@@ -673,6 +672,8 @@ Esse fator é a razão entre o desvio-padrão e $\sigma$. Por exemplo, com $\nu=
 À medida que $\nu$ aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com $\sigma$.]
 
 ```{r animals_student_fits, eval=FALSE, message=FALSE, warning=FALSE}
+
+animals$log_brain <- animals$log_brain - mean(animals$log_brain)
 m_animals_student_all <- ulam(
   alist(
     log_brain ~ student_t(nu, mu, sigma),
@@ -735,7 +736,7 @@ menor? Como você interpreta essa diferença?
 
 ## Representando as quatro retas ajustadas
 
-As retas contínuas usam as 28 espécies; as tracejadas omitem os três
+As retas contínuas usam as 28 espécies. As tracejadas omitem os três
 dinossauros. Compare a distância entre cada par de retas com as mudanças
 nas inclinações apresentadas na tabela.
 
