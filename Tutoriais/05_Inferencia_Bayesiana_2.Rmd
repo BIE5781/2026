@@ -12,7 +12,7 @@ output:
 
 ```{r setup, echo=FALSE}
 library(rmarkdown)
-knitr::opts_chunk$set(eval = FALSE, fig.asp = 1)
+knitr::opts_chunk$set(eval = TRUE, fig.asp = 1)
 # Área de transferência
 htmltools::tagList(
   xaringanExtra::use_clipboard(
@@ -141,7 +141,7 @@ fit <- ulam(
 
 ## Avaliando a convergência do modelo
 
-O primeiro passo é verificar se o modelo convergiu. Para isso, podemos usar a função `precis` do pacote `rethinking`, que mostra os valores de Rhat e ess_bulk para cada parâmetro. Valores de Rhat próximos de 1 indicam que o modelo convergiu, enquanto valores maiores que 1,1 indicam problemas de convergência. Em um modelo bem ajustado, o ess_bulk deve ser da mesma ordem de magnitude do número de amostras a posteriori (nesse caso, 4000^[Com `iter = 2000`, cada cadeia executa 2.000 iterações. Dessas, 1.000 são de aquecimento e descartadas, e 1.000 geram amostras a posteriori. Nas 4 cadeias, isso totaliza $1.000 \times 4 = 4.000$ amostras a posteriori.]).
+O primeiro passo é verificar se o modelo convergiu. Para isso, podemos usar a função `precis` do pacote `rethinking`, que mostra os valores de Rhat e ess_bulk para cada parâmetro. Valores de Rhat próximos de 1 indicam que o modelo convergiu, enquanto valores maiores que 1,01 poderem indicar problemas de convergência. Valores acima de 1.1 quase certamente indica problemas de convergência e que o modelos pode ser melhor parametrizado. Em um modelo bem ajustado, o ess_bulk deve ser da mesma ordem de magnitude do número de amostras a posteriori (nesse caso, 4000^[Com `iter = 2000`, cada cadeia executa 2.000 iterações. Dessas, 1.000 são de aquecimento e descartadas, e 1.000 geram amostras a posteriori. Nas 4 cadeias, isso totaliza $1.000 \times 4 = 4.000$ amostras a posteriori.]). Existem ainda outros indicadores de problemas de convergência, como divergências do amostrador, que podem ser verificadas com a função `check_hmc_diagnostics`. Se houver divergências, o modelo pode ser mal especificado, e você deve investigar o modelo antes de tentar ajustar novamente. Veja [este artigo](https://mc-stan.org/users/documentation/case-studies/divergences_and_bias.html) para mais informações sobre divergências do amostrador.
 
 ```{r model_diagnostics, eval=FALSE}
 precis(fit) 
@@ -193,7 +193,7 @@ Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade.
 
 ## Usando simulações para comparar a posteriori e o prior
 
-Uma forma de verificar se o modelo aprendeu algo com os dados é comparar a distribuição a posteriori com a distribuição a priori. Se a distribuição a posteriori for muito diferente da distribuição a priori, isso indica que o modelo aprendeu algo com os dados. Se a distribuição a posteriori for muito semelhante à distribuição a priori, isso indica que o modelo não aprendeu nada com os dados. Nesse caso, provavelmente os dados não são informativos o suficiente para atualizar as priors, ou o modelo está mal especificado.
+Uma forma de verificar se o modelo aprendeu algo com os dados é comparar a distribuição a posteriori com a distribuição a priori. Se a distribuição a posteriori for muito diferente da distribuição a priori, isso indica que o modelo aprendeu algo com os dados. Se a distribuição a posteriori for muito semelhante à distribuição a priori, isso pode indicar que o modelo não aprendeu nada com os dados, mas é importante avaliar a distribuição conjunta dos parâmetros, como veremos a seguir. Nesse caso, provavelmente os dados não são informativos o suficiente para atualizar as priors, ou o modelo está mal especificado.
 
 ```{r prior_posterior_comparison, eval=FALSE}
 set.seed(123)
@@ -330,7 +330,7 @@ Repita o processo de ajuste e verificação do modelo, mas agora incluindo os di
 
 Ao construir modelos de regressão, é tentador fazer a seguinte pergunta. Se temos várias variáveis preditoras disponíveis, por que não colocá-las todas no modelo de uma vez? Existem vários perigos nessa abordagem. Hoje vamos começar por um dos menos assustadores, a multicolinearidade.
 
-Multicolinearidade significa uma associação muito forte entre duas ou mais variáveis preditoras. A consequência prática disso é que a distribuição a posteriori parecerá sugerir que nenhuma das variáveis está confiavelmente associada ao desfecho, mesmo que todas estejam, na realidade, fortemente associadas a ele. A multicolinearidade não torna o modelo estatisticamente errado. O modelo ainda pode prever bem. O problema está na nossa dificuldade em interpretar os efeitos individuais.
+Multicolinearidade significa uma associação muito forte entre duas ou mais variáveis preditoras. A consequência prática disso é que a distribuição a posteriori parecerá sugerir que nenhuma das variáveis está confiavelmente associada à variável de resposta, mesmo que todas estejam, na realidade, fortemente associadas. A multicolinearidade não torna o modelo estatisticamente errado, ele ainda pode prever bem os dados. O problema está na nossa dificuldade em interpretar os efeitos individuais.
 
 Vamos explorar esse fenômeno usando um conjunto de dados do pacote `rethinking`, que relaciona medidas de qualidade do leite produzido por diversas espécies de primatas.
 
@@ -430,14 +430,14 @@ post_lactose <- rethinking::extract.samples(fit_lactose)
 p_lac = ggplot(milk_fit, aes(x = F, y = K)) +
   geom_point(color = "grey30", size = 2) +
   geom_abline(intercept = mean(post_fat$a), slope = mean(post_fat$bF), color = "steelblue", size = 1) +
-  labs(x = "Gordura (padronizada)", y = "Energia (padronizada)") +
+  labs(x = "Gordura (z-score)", y = "Energia (z-score)") +
   theme_minimal() +
   ggtitle("Modelo com Gordura") 
 
 p_fat = ggplot(milk_fit, aes(x = L, y = K)) +
   geom_point(color = "grey30", size = 2) +
   geom_abline(intercept = mean(post_lactose$a), slope = mean(post_lactose$bL), color = "steelblue", size = 1) +
-  labs(x = "Lactose (padronizada)", y = "Energia (padronizada)") +
+  labs(x = "Lactose (z-score)", y = "Energia (z-score)") +
   theme_minimal() +
   ggtitle("Modelo com Lactose")
 
@@ -487,7 +487,7 @@ bayesplot::mcmc_intervals(slope_draws, prob = 0.5, prob_outer = 0.95) +
 
 ### Veja a posterior conjunta e pense causalmente
 
-Na literatura científica, você pode encontrar várias maneiras questionáveis de lidar com a multicolinearidade. Uma ferramenta útil é a análise da posterior conjunta. Se plotarmos as amostras da posteriori, veremos uma longa "crista" de combinações igualmente plausíveis para os coeficientes. Isso é um sinal claro de que o modelo é subespecificado, ou seja, muitas combinações de parâmetros são consistentes com os dados, levando à incerteza alta do modelo multiplo. Mas, isso não é um defeito do modelo, é um resultado condizente com a informação dos dados. 
+Na literatura científica, você pode encontrar várias maneiras questionáveis de lidar com a multicolinearidade. Uma ferramenta útil é a análise da posterior conjunta. Se plotarmos as amostras da posteriori, veremos uma longa "crista" de combinações igualmente plausíveis para os coeficientes. Isso é um sinal claro de que o modelo é fracamente identificável, ou seja, muitas combinações de parâmetros são consistentes com os dados, levando à incerteza alta do modelo multiplo. Mas, isso não é um defeito do modelo, é um resultado condizente com a informação dos dados. 
 
 ```{r milk_joint_posterior_pairs, eval=FALSE}
 posterior_slope_correlation <- cor(as.numeric(post_joint$bF), as.numeric(post_joint$bL))
@@ -505,6 +505,8 @@ pairs(joint_slopes, pch = 16, cex = 0.4,
 ```
 
 Por que isso acontece? Provavelmente estamos observando um trade-off na composição do leite. Se uma espécie amamenta frequentemente, o leite tende a ser mais aguado e com baixa energia, sendo rico em açúcar (lactose). Se, por outro lado, uma espécie amamenta raramente, em períodos curtos, o leite precisa ter mais energia e será muito rico em gordura. Pode haver uma variável latente (não observável) de "densidade" do leite que determina tanto a gordura quanto a lactose, que por sua vez determinam a energia. O problema de estimar esses efeitos separados quando eles andam juntos reflete uma propriedade dos nossos sistemas biológicos, não um "defeito" da regressão. Precisamos aceitar que a natureza não nos deve inferências fáceis, mesmo quando o modelo está correto.
+
+Claro que essa não é a única explicação possível. A ideia aqui é que a multicolinearidade não é um problema a princípio, e incluir ou não incluir variáveis correlacionadas no modelo depende do que você quer aprender com ele. Não existe escapatória na estatística para um pensamento científico do sistema sendo estudado. Todo modelo deve ser cuidadosamente interpretado no contexto do problema biológico que ele se propõe a estudar. 
 
 ### A PCA resolveria o problema?
 
@@ -534,7 +536,6 @@ fit_pc1 <- ulam(
 precis(fit_pc1)
 
 ```
-
 
 Vamos comparar as amostras preditivas da posteriori para os dois modelos. O coeficiente do modelo com PCA é mais preciso, mas as previsões são idênticas. 
 
