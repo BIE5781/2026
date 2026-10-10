@@ -169,7 +169,7 @@ bayesplot::mcmc_dens_overlay(draws, pars = c("a", "b", "sigma"))
 
 Esses gráficos são ferramentas visuais. Interprete-os junto com Rhat, ESS e eventuais avisos do amostrador. Nenhum deles, isoladamente, comprova convergência.
 
-## Vizualizando e interpretando os coeficientes do modelo
+## Vizualizando os coeficientes do modelo
 
 Vamos agora voltar para o output da função `precis` e interpretar os coeficientes do modelo. A função `precis` mostra a média, desvio-padrão, intervalo de credibilidade para cada parâmetro. O output dessa função também pode ser passado para função plot para um gráfico rápido dos coeficientes do modelo. A função `plot` mostra a média e o intervalo de credibilidade para cada parâmetro.
 
@@ -189,7 +189,7 @@ prob = 0.95)
 
 ## Interpretando os coeficientes do modelo
 
-Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade. A inclinação $b$ representa a elasticidade da massa do cérebro em relação à massa do corpo. Por exemplo, se $b = 0{,}75$, um aumento de 1% na massa do corpo está associado a um aumento de 0,75% na massa do cérebro. 
+Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade. A inclinação $b$ representa a elasticidade da massa do cérebro em relação à massa do corpo. Por exemplo, se $b = 0{,}75$, um aumento de 1% na massa do corpo está associado a um aumento de 0,75% na massa do cérebro. Podemos interpretar o modelo num contexto alométrico, que descreve como diferentes características de organismos mudam com o tamanho do corpo. A alometria é frequentemente descrita por uma relação de potência, que pode ser linearizada usando logaritmos. A inclinação $b$ representa a taxa de crescimento relativo do cérebro em relação ao corpo. Se $b = 1$, o cérebro cresce na mesma proporção que o corpo. Se $b < 1$, cresce mais lentamente. Se $b > 1$, cresce mais rapidamente.
 
 ## Usando simulações para comparar a posteriori e o prior
 
@@ -319,4 +319,270 @@ ggplot() +
   labs(x = "Log body weight (kg)", y = "Log brain weight (g)") +
   theme_minimal()
 ```
+
+## Exercício
+
+Repita o processo de ajuste e verificação do modelo, mas agora incluindo os dinossauros. Compare os resultados com o modelo ajustado apenas com mamíferos. O que mudou? Inclua um preditor categórico para diferenciar os dinossauros dos mamíferos. O que acontece com a inclinação do modelo? Compare as distribuições a posteriori com as priors. O ajuste do modelo com dinossaros é problemático? A inclusão do novo preditor melhora o ajuste do modelo? Compare as simulações preditivas com os dados observados. O que mudou? 
+
+**Extra:** Faça o mesmo procedimento de checagem de modelo com o modelo com resíduos $t$-Student. Compare os resultados com o modelo com resíduos normais e as simulações preditivas com os dados observados.
+
+# Usando a posteriori para inferência e interpretação de modelos multiplos
+
+Ao construir modelos de regressão, é tentador fazer a seguinte pergunta. Se temos várias variáveis preditoras disponíveis, por que não colocá-las todas no modelo de uma vez? Existem vários perigos nessa abordagem. Hoje vamos começar por um dos menos assustadores, a multicolinearidade.
+
+Multicolinearidade significa uma associação muito forte entre duas ou mais variáveis preditoras. A consequência prática disso é que a distribuição a posteriori parecerá sugerir que nenhuma das variáveis está confiavelmente associada ao desfecho, mesmo que todas estejam, na realidade, fortemente associadas a ele. A multicolinearidade não torna o modelo estatisticamente errado. O modelo ainda pode prever bem. O problema está na nossa dificuldade em interpretar os efeitos individuais.
+
+Vamos explorar esse fenômeno usando um conjunto de dados do pacote `rethinking`, que relaciona medidas de qualidade do leite produzido por diversas espécies de primatas.
+
+## Multicolinearidade na composição do leite
+
+O conjunto `milk` descreve 29 espécies e oito variáveis. Variáveis como `kcal.per.g` (energia do leite), `perc.fat` (gordura), `perc.protein` e `perc.lactose` (lactose) nos ajudam a entender as estratégias de lactação. Vamos nos concentrar em energia, gordura e lactose.
+
+### Olhe os dados primeiro, mas com cuidado
+
+Muitas áreas ensinam os alunos a inspecionar correlações par a par antes de ajustar um modelo, para identificar e descartar preditores altamente correlacionados, mas isso é um erro. As correlações par a par não são o problema, pois o que realmente importa são as associações condicionais. Além disso, como vimos no tutorial passado, correlação entre preditores é uma condição necessária para que um modelo de regressão múltipla dê resultados diferentes de um modelo de regressão simples. Nós usamos mais de uma variável no mesmo modelo porque elas são correlacionadas, não apesar disso. E, mesmo assim, a decisão sobre o que fazer dependerá do que está causando essa colinearidade.
+
+Ainda assim, visualizar os dados é o primeiro passo para entender a estrutura com a qual estamos lidando. O gráfico abaixo revela que a gordura tende a aumentar junto com a energia, a lactose tende a diminuir, e gordura e lactose variam em sentidos opostos, formando quase uma linha reta.
+
+```{r milk_data_pairs, eval=FALSE}
+data(milk, package = "rethinking")
+milk_data <- milk[complete.cases(milk[c("kcal.per.g", "perc.fat", "perc.lactose")]), ]
+cor(milk_data[c("kcal.per.g", "perc.fat", "perc.lactose")])
+
+milk_panel <- function(x, y, ...) {
+  points(x, y, pch = 21, bg = 1, col = "white")
+  abline(lm(y ~ x), col = "tomato3", lwd = 1)
+}
+
+pairs(milk_data[c("kcal.per.g", "perc.fat", "perc.lactose")],
+      panel = milk_panel, cex.labels = 0.9)
+
+```
+
+Como sempre, vamos escalonar e centralizar os dados. Isso permite que os coeficientes sejam comparáveis e que os priors sejam mais simples de interpretar. As três variáveis são padronizadas para que os coeficientes representem mudanças em escala de desvios-padrão.
+
+```{r milk_standardize, eval=FALSE}
+milk_fit <- data.frame(
+  K = as.numeric(scale(milk_data$kcal.per.g)),
+  F = as.numeric(scale(milk_data$perc.fat)),
+  L = as.numeric(scale(milk_data$perc.lactose))
+)
+
+```
+
+### Gordura, sozinha
+
+O que a gordura prevê quando modelada isoladamente? Vista sozinha, a gordura parece bastante informativa e sua inclinação posterior é fortemente positiva. 
+
+```{r milk_fat_model, eval=FALSE, results='hide'}
+library(rethinking)
+fit_fat <- ulam(
+  alist(
+    K ~ normal(mu, sigma),
+    mu <- a + bF * F,
+    a ~ normal(0, 0.2),
+    bF ~ normal(0, 0.5),
+    sigma ~ exponential(1)
+  ),
+  data = milk_fit, chains = 4, cores = 4, iter = 2000, refresh = 0,
+  log_lik = TRUE
+)
+```
+
+```{r milk_fat_summary, eval=FALSE}
+precis(fit_fat)
+```
+
+### Lactose, sozinha
+
+Se fizermos o mesmo para a lactose, o cenário se inverte. A inclinação é fortemente negativa. Ambas as regressões parecem contar histórias claras e espelhadas. Ainda falta a pergunta multivariada. O que cada nutriente acrescenta de informação *dado que* já conhecemos o outro?
+
+```{r milk_lactose_model, eval=FALSE, results='hide'}
+fit_lactose <- ulam(
+  alist(
+    K ~ normal(mu, sigma),
+    mu <- a + bL * L,
+    a ~ normal(0, 0.2),
+    bL ~ normal(0, 0.5),
+    sigma ~ exponential(1)
+  ),
+  data = milk_fit, chains = 4, cores = 4, iter = 2000, refresh = 0,
+log_lik = TRUE
+)
+```
+
+```{r milk_lactose_summary, eval=FALSE}
+precis(fit_lactose)
+```
+
+Faça um gráfico de pontos e intervalos de confiança comparando esses coeficientes.
+
+### Comparando as retas de regressão dos modelos isolados
+
+```{r milk_model_comparison, eval=FALSE}
+library(bayesplot)
+library(ggplot2)
+library(patchwork)
+
+post_fat <- rethinking::extract.samples(fit_fat)
+post_lactose <- rethinking::extract.samples(fit_lactose)
+
+p_lac = ggplot(milk_fit, aes(x = F, y = K)) +
+  geom_point(color = "grey30", size = 2) +
+  geom_abline(intercept = mean(post_fat$a), slope = mean(post_fat$bF), color = "steelblue", size = 1) +
+  labs(x = "Gordura (padronizada)", y = "Energia (padronizada)") +
+  theme_minimal() +
+  ggtitle("Modelo com Gordura") 
+
+p_fat = ggplot(milk_fit, aes(x = L, y = K)) +
+  geom_point(color = "grey30", size = 2) +
+  geom_abline(intercept = mean(post_lactose$a), slope = mean(post_lactose$bL), color = "steelblue", size = 1) +
+  labs(x = "Lactose (padronizada)", y = "Energia (padronizada)") +
+  theme_minimal() +
+  ggtitle("Modelo com Lactose")
+
+p_lac + p_fat
+```
+
+### Quando gordura e lactose entram juntas
+
+Agora incluímos os dois preditores. Uma regressão múltipla muda a pergunta. Quanto aprendemos sobre a energia do leite ao conhecer a gordura, depois de já conhecer a lactose? E quanto aprendemos sobre a lactose depois de conhecer a gordura? Essas são associações condicionais, diferentes das associações vistas nos modelos separados.
+
+```{r milk_joint_model, eval=FALSE, results='hide'}
+fit_joint <- ulam(
+  alist(
+    K ~ normal(mu, sigma),
+    mu <- a + bF * F + bL * L,
+    a ~ normal(0, 0.2),
+    bF ~ normal(0, 0.5),
+    bL ~ normal(0, 0.5),
+    sigma ~ exponential(1)
+  ),
+  data = milk_fit, chains = 4, cores = 4, iter = 2000, refresh = 0,
+  control = list(adapt_delta = 0.99), log_lik = TRUE
+)
+```
+
+```{r milk_joint_summary, eval=FALSE}
+precis(fit_joint)
+```
+
+Observe que os desvios-padrão dos coeficientes quase dobram em relação aos modelos isolados. As estimativas também se aproximam de zero. Isso não significa que a posterior esteja errada. Ela mostra que os dados não permitem responder com precisão à pergunta sobre o efeito independente de cada nutriente. Como gordura e lactose contêm quase a mesma informação, elas funcionam como substitutas no modelo.
+
+```{r milk_slope_comparison, eval=FALSE}
+post_fat <- rethinking::extract.samples(fit_fat)
+post_lactose <- rethinking::extract.samples(fit_lactose)
+post_joint <- rethinking::extract.samples(fit_joint)
+
+slope_draws <- cbind(
+  "Gordura" = as.numeric(post_fat$bF),
+  "Gordura (+lactose)" = as.numeric(post_joint$bF),
+  "Lactose" = as.numeric(post_lactose$bL),
+  "Lactose (+gordura)" = as.numeric(post_joint$bL)
+)
+bayesplot::mcmc_intervals(slope_draws, prob = 0.5, prob_outer = 0.95) +
+  labs(x = "Coeficiente padronizado", y = NULL) +
+  theme_minimal()
+```
+
+### Veja a posterior conjunta e pense causalmente
+
+Na literatura científica, você pode encontrar várias maneiras questionáveis de lidar com a multicolinearidade. Uma ferramenta útil é a análise da posterior conjunta. Se plotarmos as amostras da posteriori, veremos uma longa "crista" de combinações igualmente plausíveis para os coeficientes. Isso é um sinal claro de que o modelo é subespecificado, ou seja, muitas combinações de parâmetros são consistentes com os dados, levando à incerteza alta do modelo multiplo. Mas, isso não é um defeito do modelo, é um resultado condizente com a informação dos dados. 
+
+```{r milk_joint_posterior_pairs, eval=FALSE}
+posterior_slope_correlation <- cor(as.numeric(post_joint$bF), as.numeric(post_joint$bL))
+posterior_slope_correlation
+
+joint_slopes <- data.frame(
+  bF = as.numeric(post_joint$bF),
+  bL = as.numeric(post_joint$bL)
+)
+
+pairs(joint_slopes, pch = 16, cex = 0.4,
+      col = grDevices::adjustcolor("steelblue", alpha.f = 0.2),
+      labels = c("bF, efeito da gordura", "bL, efeito da lactose"))
+
+```
+
+Por que isso acontece? Provavelmente estamos observando um trade-off na composição do leite. Se uma espécie amamenta frequentemente, o leite tende a ser mais aguado e com baixa energia, sendo rico em açúcar (lactose). Se, por outro lado, uma espécie amamenta raramente, em períodos curtos, o leite precisa ter mais energia e será muito rico em gordura. Pode haver uma variável latente (não observável) de "densidade" do leite que determina tanto a gordura quanto a lactose, que por sua vez determinam a energia. O problema de estimar esses efeitos separados quando eles andam juntos reflete uma propriedade dos nossos sistemas biológicos, não um "defeito" da regressão. Precisamos aceitar que a natureza não nos deve inferências fáceis, mesmo quando o modelo está correto.
+
+### A PCA resolveria o problema?
+
+Uma sugestão metodológica comum ao esbarrar na multicolinearidade é usar a Análise de Componentes Principais (PCA) para transformar os preditores. A ideia parece razoável: rotacionamos os dados originais para criar novas variáveis ortogonais (não correlacionadas por definição) e usamos essas componentes na regressão. Como `F` e `L` têm uma correlação muito alta, acima de $-0{,}9$, o primeiro componente principal ($PC_1$) vai capturar quase toda a variação, representando justamente esse forte contraste onde a gordura é alta e a lactose é baixa. Mas vamos pensar um pouco mais sobre o que isso significa. A explicação anterior era de que a gordura e a lactose podem estar sobre a influência de uma variável latente, que chamamos de "densidade" do leite. O primeiro componente principal é uma combinação linear de `F` e `L`, que, em algum sentido, é uma aproximação dessa variável latente. Mas, ao usar o $PC_1$ como preditor, perdemos a interpretação biológica direta de cada nutriente e aceitamos a premissa da variável latente de forma acrítica. A PCA não resolve a ambiguidade causal, apenas a mascara. Na verdade, nesse caso, esses modelos são completamente equivalentes.
+
+Quando aplicamos a PCA e usamos apenas o $PC_1$, criamos um preditor sintético. Ao rodar o modelo com essa nova variável, obteremos um coeficiente com um intervalo estreito e bem comportado. O desconforto visual da incerteza desaparece, mas as previsões são as mesmas. Perdemos a ligação direta com as variáveis biológicas e sua interpretação natural. Não resolvemos a ambiguidade causal da composição do leite, apenas reescrevemos os dados em um sistema de coordenadas onde essa ambiguidade não incomoda.
+
+```{r milk_pca_fit, eval=FALSE}
+# Podemos extrair a primeira componente e ajustar o modelo
+X <- as.matrix(milk_fit[c("F", "L")])
+pca_milk <- prcomp(X, center = FALSE, scale. = FALSE)
+milk_pca_fit <- milk_fit
+milk_pca_fit$PC1 <- as.numeric(pca_milk$x[, 1])
+
+fit_pc1 <- ulam(
+  alist(
+    K ~ normal(mu, sigma),
+    mu <- a + bPC1 * PC1,
+    a ~ normal(0, 0.2),
+    bPC1 ~ normal(0, 0.5),
+    sigma ~ exponential(1)
+  ),
+  data = milk_pca_fit, chains = 4, cores = 4, iter = 2000, refresh = 0
+)
+
+
+precis(fit_pc1)
+
+```
+
+
+Vamos comparar as amostras preditivas da posteriori para os dois modelos. O coeficiente do modelo com PCA é mais preciso, mas as previsões são idênticas. 
+
+```{r milk_posterior_predictive_comparison, eval=FALSE}
+set.seed(123)
+
+yrep_joint <- rethinking::sim(fit_joint, data = milk_fit)
+yrep_pc1 <- rethinking::sim(fit_pc1, data = milk_pca_fit)
+
+summarize_predictions <- function(draws) {
+  data.frame(
+    lower = apply(draws, 2, quantile, probs = 0.25),
+    mean = apply(draws, 2, mean),
+    upper = apply(draws, 2, quantile, probs = 0.75)
+  )
+}
+
+joint_predictions <- summarize_predictions(yrep_joint)
+pc1_predictions <- summarize_predictions(yrep_pc1)
+comparison_predictions <- data.frame(
+  joint_lower = joint_predictions$lower,
+  joint_mean = joint_predictions$mean,
+  joint_upper = joint_predictions$upper,
+  pc1_lower = pc1_predictions$lower,
+  pc1_mean = pc1_predictions$mean,
+  pc1_upper = pc1_predictions$upper
+)
+
+ggplot(comparison_predictions, aes(x = joint_mean, y = pc1_mean)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey55") +
+  geom_segment(aes(x = joint_lower, xend = joint_upper,
+                   y = pc1_mean, yend = pc1_mean),
+               color = "steelblue", alpha = 0.5) +
+  geom_segment(aes(x = joint_mean, xend = joint_mean,
+                   y = pc1_lower, yend = pc1_upper),
+               color = "steelblue", alpha = 0.5) +
+  geom_point(size = 2) +
+  coord_equal() +
+  labs(title = "Comparação das previsões posteriores",
+       subtitle = "Intervalos preditivos centrais de 50%",
+       x = "Modelo conjunto: gordura + lactose",
+       y = "Modelo PCA: primeiro componente") +
+  theme_minimal()
+```
+
+
+### O perigo de descartar preditores "não significativos"
+
+Outro risco metodológico é a tentação de descartar variáveis com base em significância estatística. Nesse caso, a inclusão da lactose no modelo faz com que o efeito da gordura pareça "não significativo" (o intervalo de credibilidade inclui zero). Alguns guias diriam que isso seria motivo suficiente para remover a gordura do modelo, já que, supostamente, não conseguiriamos distinguir o efeito de gordura do "acaso". Essa interpretação da significância nesse caso é muito problemática. O intervalo de credibilidade da gordura inclui o zero porque o modelo está respondendo a pergunta: depois que eu conheço o efeito da lactose, qual é o efeito adicional de conhecer a  gordura? Ambos são muito correlacioados, então o efeito de uma variável depende fortemente da presença da outra. Essa dependencia é visivel na posteriori, que estimou muito bem a correlação entre os coeficientes, limitando o espaço de valores possíveis para ambos os efeitos para um conjunto restrito de valores. No caso da gordura, o intervalo de credibilidade inclui o zero, e é, portanto, não significativo. Não significa que o efeito de gordura seja compatível com o "acaso"^[Como defender a tese que a quantidade de gordura no leite não influencia o conteúdo calórico?]. A escolha de quais variáveis incluir no modelo deve ser guiada por conhecimento do sistema de estudo, teoria e objetivos da análise, não apenas por critérios estatísticos de significância. 
+
 

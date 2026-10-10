@@ -2528,10 +2528,25 @@ distill-header .nav a {
 <li><a href="#entendendo-as-priors" id="toc-entendendo-as-priors">Entendendo as priors</a></li>
 <li><a href="#montando-o-modelo-completo" id="toc-montando-o-modelo-completo">Montando o modelo completo</a></li>
 <li><a href="#avaliando-a-convergência-do-modelo" id="toc-avaliando-a-convergência-do-modelo">Avaliando a convergência do modelo</a></li>
-<li><a href="#vizualizando-e-interpretando-os-coeficientes-do-modelo" id="toc-vizualizando-e-interpretando-os-coeficientes-do-modelo">Vizualizando e interpretando os coeficientes do modelo</a></li>
+<li><a href="#vizualizando-os-coeficientes-do-modelo" id="toc-vizualizando-os-coeficientes-do-modelo">Vizualizando os coeficientes do modelo</a></li>
 <li><a href="#interpretando-os-coeficientes-do-modelo" id="toc-interpretando-os-coeficientes-do-modelo">Interpretando os coeficientes do modelo</a></li>
 <li><a href="#usando-simulações-para-comparar-a-posteriori-e-o-prior" id="toc-usando-simulações-para-comparar-a-posteriori-e-o-prior">Usando simulações para comparar a posteriori e o prior</a></li>
 <li><a href="#simulações-preditivas" id="toc-simulações-preditivas">Simulações preditivas</a></li>
+<li><a href="#exercício" id="toc-exercício">Exercício</a></li>
+</ul></li>
+<li><a href="#usando-a-posteriori-para-inferência-e-interpretação-de-modelos-multiplos" id="toc-usando-a-posteriori-para-inferência-e-interpretação-de-modelos-multiplos">Usando a posteriori para inferência e interpretação de modelos multiplos</a>
+<ul>
+<li><a href="#multicolinearidade-na-composição-do-leite" id="toc-multicolinearidade-na-composição-do-leite">Multicolinearidade na composição do leite</a>
+<ul>
+<li><a href="#olhe-os-dados-primeiro-mas-com-cuidado" id="toc-olhe-os-dados-primeiro-mas-com-cuidado">Olhe os dados primeiro, mas com cuidado</a></li>
+<li><a href="#gordura-sozinha" id="toc-gordura-sozinha">Gordura, sozinha</a></li>
+<li><a href="#lactose-sozinha" id="toc-lactose-sozinha">Lactose, sozinha</a></li>
+<li><a href="#comparando-as-retas-de-regressão-dos-modelos-isolados" id="toc-comparando-as-retas-de-regressão-dos-modelos-isolados">Comparando as retas de regressão dos modelos isolados</a></li>
+<li><a href="#quando-gordura-e-lactose-entram-juntas" id="toc-quando-gordura-e-lactose-entram-juntas">Quando gordura e lactose entram juntas</a></li>
+<li><a href="#veja-a-posterior-conjunta-e-pense-causalmente" id="toc-veja-a-posterior-conjunta-e-pense-causalmente">Veja a posterior conjunta e pense causalmente</a></li>
+<li><a href="#a-pca-resolveria-o-problema" id="toc-a-pca-resolveria-o-problema">A PCA resolveria o problema?</a></li>
+<li><a href="#o-perigo-de-descartar-preditores-não-significativos" id="toc-o-perigo-de-descartar-preditores-não-significativos">O perigo de descartar preditores “não significativos”</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
@@ -2673,7 +2688,7 @@ distill-header .nav a {
 </div>
 </div>
 <p>Esses gráficos são ferramentas visuais. Interprete-os junto com Rhat, ESS e eventuais avisos do amostrador. Nenhum deles, isoladamente, comprova convergência.</p>
-<h2 id="vizualizando-e-interpretando-os-coeficientes-do-modelo">Vizualizando e interpretando os coeficientes do modelo</h2>
+<h2 id="vizualizando-os-coeficientes-do-modelo">Vizualizando os coeficientes do modelo</h2>
 <p>Vamos agora voltar para o output da função <code>precis</code> e interpretar os coeficientes do modelo. A função <code>precis</code> mostra a média, desvio-padrão, intervalo de credibilidade para cada parâmetro. O output dessa função também pode ser passado para função plot para um gráfico rápido dos coeficientes do modelo. A função <code>plot</code> mostra a média e o intervalo de credibilidade para cada parâmetro.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2691,7 +2706,7 @@ distill-header .nav a {
 </div>
 </div>
 <h2 id="interpretando-os-coeficientes-do-modelo">Interpretando os coeficientes do modelo</h2>
-<p>Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade. A inclinação <span class="math inline">\(b\)</span> representa a elasticidade da massa do cérebro em relação à massa do corpo. Por exemplo, se <span class="math inline">\(b = 0{,}75\)</span>, um aumento de 1% na massa do corpo está associado a um aumento de 0,75% na massa do cérebro.</p>
+<p>Esse é o modelo log-log, o que os economistas chamam de modelo de elasticidade. A inclinação <span class="math inline">\(b\)</span> representa a elasticidade da massa do cérebro em relação à massa do corpo. Por exemplo, se <span class="math inline">\(b = 0{,}75\)</span>, um aumento de 1% na massa do corpo está associado a um aumento de 0,75% na massa do cérebro. Podemos interpretar o modelo num contexto alométrico, que descreve como diferentes características de organismos mudam com o tamanho do corpo. A alometria é frequentemente descrita por uma relação de potência, que pode ser linearizada usando logaritmos. A inclinação <span class="math inline">\(b\)</span> representa a taxa de crescimento relativo do cérebro em relação ao corpo. Se <span class="math inline">\(b = 1\)</span>, o cérebro cresce na mesma proporção que o corpo. Se <span class="math inline">\(b &lt; 1\)</span>, cresce mais lentamente. Se <span class="math inline">\(b &gt; 1\)</span>, cresce mais rapidamente.</p>
 <h2 id="usando-simulações-para-comparar-a-posteriori-e-o-prior">Usando simulações para comparar a posteriori e o prior</h2>
 <p>Uma forma de verificar se o modelo aprendeu algo com os dados é comparar a distribuição a posteriori com a distribuição a priori. Se a distribuição a posteriori for muito diferente da distribuição a priori, isso indica que o modelo aprendeu algo com os dados. Se a distribuição a posteriori for muito semelhante à distribuição a priori, isso indica que o modelo não aprendeu nada com os dados. Nesse caso, provavelmente os dados não são informativos o suficiente para atualizar as priors, ou o modelo está mal especificado.</p>
 <div class="layout-chunk" data-layout="l-body">
@@ -2761,13 +2776,311 @@ distill-header .nav a {
 </div>
 </div>
 <h2 id="simulações-preditivas">Simulações preditivas</h2>
-<p>Finalmente, podemos usar o modelo para fazer simulações preditivas. A função <code>link</code> do pacote <code>rethinking</code> calcula a média prevista para cada valor de <code>log_body</code>, enquanto a função <code>sim</code> calcula simulações do erro residual. O gráfico mostra a média prevista e o intervalo de credibilidade para cada valor de <code>log_body</code>, bem como as simulações do erro residual.</p>
+<p>Finalmente, podemos usar o modelo para fazer simulações preditivas. Podemos comparar, por exemplo, a densidade observada com a densidade predita pelo modelo. A função <code>link</code> do pacote <code>rethinking</code> permite calcular a média prevista para cada observação, enquanto a função <code>sim</code> permite simular novas observações a partir da distribuição preditiva.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">prediction_data</span> <span class="op">&lt;-</span> <span class="va">animals_without_dinosaurs</span></span>
+<span><span class="va">y_rep</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/sim.html">sim</a></span><span class="op">(</span><span class="va">fit</span>, data <span class="op">=</span> <span class="va">prediction_data</span><span class="op">)</span></span>
+<span><span class="va">mean_posterior</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colMeans</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span></span>
+<span><span class="va">replicate_index</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span><span class="op">)</span>, <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="va">y_rep</span> <span class="op">&lt;-</span> <span class="va">y_rep</span><span class="op">[</span><span class="va">replicate_index</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="va">replicated_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>  log_brain_c <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html">as.vector</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span>,</span>
+<span>  replicate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span><span class="op">)</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html">ncol</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">mean_posterior_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span>log_brain_c <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html">as.vector</a></span><span class="op">(</span><span class="va">mean_posterior</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html">geom_density</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">replicated_density</span>,</span>
+<span>               <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">log_brain_c</span>, group <span class="op">=</span> <span class="va">replicate</span>, color <span class="op">=</span> <span class="st">&quot;Réplicas preditivas&quot;</span><span class="op">)</span>,</span>
+<span>               alpha <span class="op">=</span> <span class="fl">0.1</span>, linewidth <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html">geom_density</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">prediction_data</span>,</span>
+<span>               <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">log_brain_c</span>, color <span class="op">=</span> <span class="st">&quot;Observado&quot;</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html">geom_density</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">mean_posterior_density</span>,</span>
+<span>               <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">log_brain_c</span>, color <span class="op">=</span> <span class="st">&quot;Média posterior preditiva&quot;</span><span class="op">)</span>,</span>
+<span>               linetype <span class="op">=</span> <span class="st">&quot;dashed&quot;</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html">scale_color_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">&quot;Observado&quot;</span> <span class="op">=</span> <span class="st">&quot;grey20&quot;</span>,</span>
+<span>    <span class="st">&quot;Média posterior preditiva&quot;</span> <span class="op">=</span> <span class="st">&quot;firebrick&quot;</span>,</span>
+<span>    <span class="st">&quot;Réplicas preditivas&quot;</span> <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span></span>
+<span>  <span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Log brain weight, centered&quot;</span>, y <span class="op">=</span> <span class="st">&quot;Density&quot;</span>, color <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Agora vamos comparar pares de <code>log_body</code> e <code>log_brain</code> sem centralização. Para cada tamanho corporal observado, simulamos valores de <code>log_brain</code> da posterior preditiva. Como o modelo usa <code>log_brain_c</code>, somamos <code>brain_center</code> às réplicas para voltar à escala logarítmica não centrada.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">prediction_data</span> <span class="op">&lt;-</span> <span class="va">animals_without_dinosaurs</span></span>
+<span></span>
+<span><span class="co"># 100 amostras da posterior preditiva para cada valor do preditor</span></span>
+<span><span class="va">y_rep</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/sim.html">sim</a></span><span class="op">(</span><span class="va">fit</span>, data <span class="op">=</span> <span class="va">prediction_data</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">1000</span>, <span class="fl">100</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">brain_center</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">prediction_data</span><span class="op">$</span><span class="va">log_brain</span><span class="op">)</span></span>
+<span><span class="va">simulated_pairs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>  log_body <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="va">prediction_data</span><span class="op">$</span><span class="va">log_body</span>, each <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  log_brain <span class="op">=</span> <span class="va">brain_center</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html">as.vector</a></span><span class="op">(</span><span class="va">y_rep</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">simulated_pairs</span>,</span>
+<span>             <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">log_body</span>, <span class="va">log_brain</span>, color <span class="op">=</span> <span class="st">&quot;Simulado&quot;</span><span class="op">)</span>, alpha <span class="op">=</span> <span class="fl">0.12</span>, size <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">prediction_data</span>,</span>
+<span>             <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">log_body</span>, <span class="va">log_brain</span>, color <span class="op">=</span> <span class="st">&quot;Observado&quot;</span><span class="op">)</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html">scale_color_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Simulado&quot;</span> <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span>, <span class="st">&quot;Observado&quot;</span> <span class="op">=</span> <span class="st">&quot;grey20&quot;</span><span class="op">)</span>, name <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Log body weight (kg)&quot;</span>, y <span class="op">=</span> <span class="st">&quot;Log brain weight (g)&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h2 id="exercício">Exercício</h2>
+<p>Repita o processo de ajuste e verificação do modelo, mas agora incluindo os dinossauros. Compare os resultados com o modelo ajustado apenas com mamíferos. O que mudou? Inclua um preditor categórico para diferenciar os dinossauros dos mamíferos. O que acontece com a inclinação do modelo? Compare as distribuições a posteriori com as priors. O ajuste do modelo com dinossaros é problemático? A inclusão do novo preditor melhora o ajuste do modelo? Compare as simulações preditivas com os dados observados. O que mudou?</p>
+<p><strong>Extra:</strong> Faça o mesmo procedimento de checagem de modelo com o modelo com resíduos <span class="math inline">\(t\)</span>-Student. Compare os resultados com o modelo com resíduos normais e as simulações preditivas com os dados observados.</p>
+<h1 id="usando-a-posteriori-para-inferência-e-interpretação-de-modelos-multiplos">Usando a posteriori para inferência e interpretação de modelos multiplos</h1>
+<p>Ao construir modelos de regressão, é tentador fazer a seguinte pergunta. Se temos várias variáveis preditoras disponíveis, por que não colocá-las todas no modelo de uma vez? Existem vários perigos nessa abordagem. Hoje vamos começar por um dos menos assustadores, a multicolinearidade.</p>
+<p>Multicolinearidade significa uma associação muito forte entre duas ou mais variáveis preditoras. A consequência prática disso é que a distribuição a posteriori parecerá sugerir que nenhuma das variáveis está confiavelmente associada ao desfecho, mesmo que todas estejam, na realidade, fortemente associadas a ele. A multicolinearidade não torna o modelo estatisticamente errado. O modelo ainda pode prever bem. O problema está na nossa dificuldade em interpretar os efeitos individuais.</p>
+<p>Vamos explorar esse fenômeno usando um conjunto de dados do pacote <code>rethinking</code>, que relaciona medidas de qualidade do leite produzido por diversas espécies de primatas.</p>
+<h2 id="multicolinearidade-na-composição-do-leite">Multicolinearidade na composição do leite</h2>
+<p>O conjunto <code>milk</code> descreve 29 espécies e oito variáveis. Variáveis como <code>kcal.per.g</code> (energia do leite), <code>perc.fat</code> (gordura), <code>perc.protein</code> e <code>perc.lactose</code> (lactose) nos ajudam a entender as estratégias de lactação. Vamos nos concentrar em energia, gordura e lactose.</p>
+<h3 id="olhe-os-dados-primeiro-mas-com-cuidado">Olhe os dados primeiro, mas com cuidado</h3>
+<p>Muitas áreas ensinam os alunos a inspecionar correlações par a par antes de ajustar um modelo, para identificar e descartar preditores altamente correlacionados, mas isso é um erro. As correlações par a par não são o problema, pois o que realmente importa são as associações condicionais. Além disso, como vimos no tutorial passado, correlação entre preditores é uma condição necessária para que um modelo de regressão múltipla dê resultados diferentes de um modelo de regressão simples. Nós usamos mais de uma variável no mesmo modelo porque elas são correlacionadas, não apesar disso. E, mesmo assim, a decisão sobre o que fazer dependerá do que está causando essa colinearidade.</p>
+<p>Ainda assim, visualizar os dados é o primeiro passo para entender a estrutura com a qual estamos lidando. O gráfico abaixo revela que a gordura tende a aumentar junto com a energia, a lactose tende a diminuir, e gordura e lactose variam em sentidos opostos, formando quase uma linha reta.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html">data</a></span><span class="op">(</span><span class="va">milk</span>, package <span class="op">=</span> <span class="st">&quot;rethinking&quot;</span><span class="op">)</span></span>
+<span><span class="va">milk_data</span> <span class="op">&lt;-</span> <span class="va">milk</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html">complete.cases</a></span><span class="op">(</span><span class="va">milk</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;kcal.per.g&quot;</span>, <span class="st">&quot;perc.fat&quot;</span>, <span class="st">&quot;perc.lactose&quot;</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html">cor</a></span><span class="op">(</span><span class="va">milk_data</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;kcal.per.g&quot;</span>, <span class="st">&quot;perc.fat&quot;</span>, <span class="st">&quot;perc.lactose&quot;</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">milk_panel</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/points.html">points</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, pch <span class="op">=</span> <span class="fl">21</span>, bg <span class="op">=</span> <span class="fl">1</span>, col <span class="op">=</span> <span class="st">&quot;white&quot;</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/lm.html">lm</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span><span class="op">)</span>, col <span class="op">=</span> <span class="st">&quot;tomato3&quot;</span>, lwd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/pairs.html">pairs</a></span><span class="op">(</span><span class="va">milk_data</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;kcal.per.g&quot;</span>, <span class="st">&quot;perc.fat&quot;</span>, <span class="st">&quot;perc.lactose&quot;</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>      panel <span class="op">=</span> <span class="va">milk_panel</span>, cex.labels <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Como sempre, vamos escalonar e centralizar os dados. Isso permite que os coeficientes sejam comparáveis e que os priors sejam mais simples de interpretar. As três variáveis são padronizadas para que os coeficientes representem mudanças em escala de desvios-padrão.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">milk_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>  K <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">milk_data</span><span class="op">$</span><span class="va">kcal.per.g</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  F <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">milk_data</span><span class="op">$</span><span class="va">perc.fat</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  L <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span><span class="op">(</span><span class="va">milk_data</span><span class="op">$</span><span class="va">perc.lactose</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h3 id="gordura-sozinha">Gordura, sozinha</h3>
+<p>O que a gordura prevê quando modelada isoladamente? Vista sozinha, a gordura parece bastante informativa e sua inclinação posterior é fortemente positiva.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">rethinking</span><span class="op">)</span></span>
+<span><span class="va">fit_fat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>    <span class="va">K</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
+<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="va">bF</span> <span class="op">*</span> <span class="cn">F</span>,</span>
+<span>    <span class="va">a</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
+<span>    <span class="va">bF</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    <span class="va">sigma</span> <span class="op">~</span> <span class="fu">exponential</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">milk_fit</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">2000</span>, refresh <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  log_lik <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">fit_fat</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h3 id="lactose-sozinha">Lactose, sozinha</h3>
+<p>Se fizermos o mesmo para a lactose, o cenário se inverte. A inclinação é fortemente negativa. Ambas as regressões parecem contar histórias claras e espelhadas. Ainda falta a pergunta multivariada. O que cada nutriente acrescenta de informação <em>dado que</em> já conhecemos o outro?</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">fit_lactose</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>    <span class="va">K</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
+<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="va">bL</span> <span class="op">*</span> <span class="va">L</span>,</span>
+<span>    <span class="va">a</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
+<span>    <span class="va">bL</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    <span class="va">sigma</span> <span class="op">~</span> <span class="fu">exponential</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">milk_fit</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">2000</span>, refresh <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>log_lik <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">fit_lactose</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Faça um gráfico de pontos e intervalos de confiança comparando esses coeficientes.</p>
+<h3 id="comparando-as-retas-de-regressão-dos-modelos-isolados">Comparando as retas de regressão dos modelos isolados</h3>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/bayesplot/">bayesplot</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://patchwork.data-imaginist.com">patchwork</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">post_fat</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">fit_fat</span><span class="op">)</span></span>
+<span><span class="va">post_lactose</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">fit_lactose</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p_lac</span> <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">milk_fit</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="cn">F</span>, y <span class="op">=</span> <span class="va">K</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">&quot;grey30&quot;</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post_fat</span><span class="op">$</span><span class="va">a</span><span class="op">)</span>, slope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post_fat</span><span class="op">$</span><span class="va">bF</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span>, size <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Gordura (padronizada)&quot;</span>, y <span class="op">=</span> <span class="st">&quot;Energia (padronizada)&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">ggtitle</a></span><span class="op">(</span><span class="st">&quot;Modelo com Gordura&quot;</span><span class="op">)</span> </span>
+<span></span>
+<span><span class="va">p_fat</span> <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">milk_fit</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">L</span>, y <span class="op">=</span> <span class="va">K</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">&quot;grey30&quot;</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post_lactose</span><span class="op">$</span><span class="va">a</span><span class="op">)</span>, slope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post_lactose</span><span class="op">$</span><span class="va">bL</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span>, size <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Lactose (padronizada)&quot;</span>, y <span class="op">=</span> <span class="st">&quot;Energia (padronizada)&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">ggtitle</a></span><span class="op">(</span><span class="st">&quot;Modelo com Lactose&quot;</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p_lac</span> <span class="op">+</span> <span class="va">p_fat</span></span></code></pre>
+</div>
+</div>
+<h3 id="quando-gordura-e-lactose-entram-juntas">Quando gordura e lactose entram juntas</h3>
+<p>Agora incluímos os dois preditores. Uma regressão múltipla muda a pergunta. Quanto aprendemos sobre a energia do leite ao conhecer a gordura, depois de já conhecer a lactose? E quanto aprendemos sobre a lactose depois de conhecer a gordura? Essas são associações condicionais, diferentes das associações vistas nos modelos separados.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">fit_joint</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>    <span class="va">K</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
+<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="va">bF</span> <span class="op">*</span> <span class="cn">F</span> <span class="op">+</span> <span class="va">bL</span> <span class="op">*</span> <span class="va">L</span>,</span>
+<span>    <span class="va">a</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
+<span>    <span class="va">bF</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    <span class="va">bL</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    <span class="va">sigma</span> <span class="op">~</span> <span class="fu">exponential</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">milk_fit</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">2000</span>, refresh <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>adapt_delta <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span>, log_lik <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">fit_joint</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Observe que os desvios-padrão dos coeficientes quase dobram em relação aos modelos isolados. As estimativas também se aproximam de zero. Isso não significa que a posterior esteja errada. Ela mostra que os dados não permitem responder com precisão à pergunta sobre o efeito independente de cada nutriente. Como gordura e lactose contêm quase a mesma informação, elas funcionam como substitutas no modelo.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">post_fat</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">fit_fat</span><span class="op">)</span></span>
+<span><span class="va">post_lactose</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">fit_lactose</span><span class="op">)</span></span>
+<span><span class="va">post_joint</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">fit_joint</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">slope_draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html">cbind</a></span><span class="op">(</span></span>
+<span>  <span class="st">&quot;Gordura&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_fat</span><span class="op">$</span><span class="va">bF</span><span class="op">)</span>,</span>
+<span>  <span class="st">&quot;Gordura (+lactose)&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bF</span><span class="op">)</span>,</span>
+<span>  <span class="st">&quot;Lactose&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_lactose</span><span class="op">$</span><span class="va">bL</span><span class="op">)</span>,</span>
+<span>  <span class="st">&quot;Lactose (+gordura)&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bL</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">bayesplot</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-intervals.html">mcmc_intervals</a></span><span class="op">(</span><span class="va">slope_draws</span>, prob <span class="op">=</span> <span class="fl">0.5</span>, prob_outer <span class="op">=</span> <span class="fl">0.95</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Coeficiente padronizado&quot;</span>, y <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h3 id="veja-a-posterior-conjunta-e-pense-causalmente">Veja a posterior conjunta e pense causalmente</h3>
+<p>Na literatura científica, você pode encontrar várias maneiras questionáveis de lidar com a multicolinearidade. Uma ferramenta útil é a análise da posterior conjunta. Se plotarmos as amostras da posteriori, veremos uma longa “crista” de combinações igualmente plausíveis para os coeficientes. Isso é um sinal claro de que o modelo é subespecificado, ou seja, muitas combinações de parâmetros são consistentes com os dados, levando à incerteza alta do modelo multiplo. Mas, isso não é um defeito do modelo, é um resultado condizente com a informação dos dados.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">posterior_slope_correlation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html">cor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bF</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bL</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">posterior_slope_correlation</span></span>
+<span></span>
+<span><span class="va">joint_slopes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>  bF <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bF</span><span class="op">)</span>,</span>
+<span>  bL <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">post_joint</span><span class="op">$</span><span class="va">bL</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/pairs.html">pairs</a></span><span class="op">(</span><span class="va">joint_slopes</span>, pch <span class="op">=</span> <span class="fl">16</span>, cex <span class="op">=</span> <span class="fl">0.4</span>,</span>
+<span>      col <span class="op">=</span> <span class="fu">grDevices</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grDevices/adjustcolor.html">adjustcolor</a></span><span class="op">(</span><span class="st">&quot;steelblue&quot;</span>, alpha.f <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,</span>
+<span>      labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;bF, efeito da gordura&quot;</span>, <span class="st">&quot;bL, efeito da lactose&quot;</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Por que isso acontece? Provavelmente estamos observando um trade-off na composição do leite. Se uma espécie amamenta frequentemente, o leite tende a ser mais aguado e com baixa energia, sendo rico em açúcar (lactose). Se, por outro lado, uma espécie amamenta raramente, em períodos curtos, o leite precisa ter mais energia e será muito rico em gordura. Pode haver uma variável latente (não observável) de “densidade” do leite que determina tanto a gordura quanto a lactose, que por sua vez determinam a energia. O problema de estimar esses efeitos separados quando eles andam juntos reflete uma propriedade dos nossos sistemas biológicos, não um “defeito” da regressão. Precisamos aceitar que a natureza não nos deve inferências fáceis, mesmo quando o modelo está correto.</p>
+<h3 id="a-pca-resolveria-o-problema">A PCA resolveria o problema?</h3>
+<p>Uma sugestão metodológica comum ao esbarrar na multicolinearidade é usar a Análise de Componentes Principais (PCA) para transformar os preditores. A ideia parece razoável: rotacionamos os dados originais para criar novas variáveis ortogonais (não correlacionadas por definição) e usamos essas componentes na regressão. Como <code>F</code> e <code>L</code> têm uma correlação muito alta, acima de <span class="math inline">\(-0{,}9\)</span>, o primeiro componente principal (<span class="math inline">\(PC_1\)</span>) vai capturar quase toda a variação, representando justamente esse forte contraste onde a gordura é alta e a lactose é baixa. Mas vamos pensar um pouco mais sobre o que isso significa. A explicação anterior era de que a gordura e a lactose podem estar sobre a influência de uma variável latente, que chamamos de “densidade” do leite. O primeiro componente principal é uma combinação linear de <code>F</code> e <code>L</code>, que, em algum sentido, é uma aproximação dessa variável latente. Mas, ao usar o <span class="math inline">\(PC_1\)</span> como preditor, perdemos a interpretação biológica direta de cada nutriente e aceitamos a premissa da variável latente de forma acrítica. A PCA não resolve a ambiguidade causal, apenas a mascara. Na verdade, nesse caso, esses modelos são completamente equivalentes.</p>
+<p>Quando aplicamos a PCA e usamos apenas o <span class="math inline">\(PC_1\)</span>, criamos um preditor sintético. Ao rodar o modelo com essa nova variável, obteremos um coeficiente com um intervalo estreito e bem comportado. O desconforto visual da incerteza desaparece, mas as previsões são as mesmas. Perdemos a ligação direta com as variáveis biológicas e sua interpretação natural. Não resolvemos a ambiguidade causal da composição do leite, apenas reescrevemos os dados em um sistema de coordenadas onde essa ambiguidade não incomoda.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="co"># Podemos extrair a primeira componente e ajustar o modelo</span></span>
+<span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html">as.matrix</a></span><span class="op">(</span><span class="va">milk_fit</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;F&quot;</span>, <span class="st">&quot;L&quot;</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">pca_milk</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/prcomp.html">prcomp</a></span><span class="op">(</span><span class="va">X</span>, center <span class="op">=</span> <span class="cn">FALSE</span>, scale. <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">milk_pca_fit</span> <span class="op">&lt;-</span> <span class="va">milk_fit</span></span>
+<span><span class="va">milk_pca_fit</span><span class="op">$</span><span class="va">PC1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">pca_milk</span><span class="op">$</span><span class="va">x</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">fit_pc1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>    <span class="va">K</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">)</span>,</span>
+<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="va">bPC1</span> <span class="op">*</span> <span class="va">PC1</span>,</span>
+<span>    <span class="va">a</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
+<span>    <span class="va">bPC1</span> <span class="op">~</span> <span class="fu">normal</span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    <span class="va">sigma</span> <span class="op">~</span> <span class="fu">exponential</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">milk_pca_fit</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">2000</span>, refresh <span class="op">=</span> <span class="fl">0</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">fit_pc1</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Vamos comparar as amostras preditivas da posteriori para os dois modelos. O coeficiente do modelo com PCA é mais preciso, mas as previsões são idênticas.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">yrep_joint</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/sim.html">sim</a></span><span class="op">(</span><span class="va">fit_joint</span>, data <span class="op">=</span> <span class="va">milk_fit</span><span class="op">)</span></span>
+<span><span class="va">yrep_pc1</span> <span class="op">&lt;-</span> <span class="fu">rethinking</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/sim.html">sim</a></span><span class="op">(</span><span class="va">fit_pc1</span>, data <span class="op">=</span> <span class="va">milk_pca_fit</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">summarize_predictions</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">draws</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>    lower <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html">apply</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">2</span>, <span class="va">quantile</span>, probs <span class="op">=</span> <span class="fl">0.25</span><span class="op">)</span>,</span>
+<span>    mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html">apply</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">2</span>, <span class="va">mean</span><span class="op">)</span>,</span>
+<span>    upper <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html">apply</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">2</span>, <span class="va">quantile</span>, probs <span class="op">=</span> <span class="fl">0.75</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">joint_predictions</span> <span class="op">&lt;-</span> <span class="fu">summarize_predictions</span><span class="op">(</span><span class="va">yrep_joint</span><span class="op">)</span></span>
+<span><span class="va">pc1_predictions</span> <span class="op">&lt;-</span> <span class="fu">summarize_predictions</span><span class="op">(</span><span class="va">yrep_pc1</span><span class="op">)</span></span>
+<span><span class="va">comparison_predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span></span>
+<span>  joint_lower <span class="op">=</span> <span class="va">joint_predictions</span><span class="op">$</span><span class="va">lower</span>,</span>
+<span>  joint_mean <span class="op">=</span> <span class="va">joint_predictions</span><span class="op">$</span><span class="va">mean</span>,</span>
+<span>  joint_upper <span class="op">=</span> <span class="va">joint_predictions</span><span class="op">$</span><span class="va">upper</span>,</span>
+<span>  pc1_lower <span class="op">=</span> <span class="va">pc1_predictions</span><span class="op">$</span><span class="va">lower</span>,</span>
+<span>  pc1_mean <span class="op">=</span> <span class="va">pc1_predictions</span><span class="op">$</span><span class="va">mean</span>,</span>
+<span>  pc1_upper <span class="op">=</span> <span class="va">pc1_predictions</span><span class="op">$</span><span class="va">upper</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">comparison_predictions</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">joint_mean</span>, y <span class="op">=</span> <span class="va">pc1_mean</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html">geom_abline</a></span><span class="op">(</span>slope <span class="op">=</span> <span class="fl">1</span>, intercept <span class="op">=</span> <span class="fl">0</span>, linetype <span class="op">=</span> <span class="st">&quot;dashed&quot;</span>, color <span class="op">=</span> <span class="st">&quot;grey55&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_segment.html">geom_segment</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">joint_lower</span>, xend <span class="op">=</span> <span class="va">joint_upper</span>,</span>
+<span>                   y <span class="op">=</span> <span class="va">pc1_mean</span>, yend <span class="op">=</span> <span class="va">pc1_mean</span><span class="op">)</span>,</span>
+<span>               color <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_segment.html">geom_segment</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">joint_mean</span>, xend <span class="op">=</span> <span class="va">joint_mean</span>,</span>
+<span>                   y <span class="op">=</span> <span class="va">pc1_lower</span>, yend <span class="op">=</span> <span class="va">pc1_upper</span><span class="op">)</span>,</span>
+<span>               color <span class="op">=</span> <span class="st">&quot;steelblue&quot;</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html">coord_equal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">&quot;Comparação das previsões posteriores&quot;</span>,</span>
+<span>       subtitle <span class="op">=</span> <span class="st">&quot;Intervalos preditivos centrais de 50%&quot;</span>,</span>
+<span>       x <span class="op">=</span> <span class="st">&quot;Modelo conjunto: gordura + lactose&quot;</span>,</span>
+<span>       y <span class="op">=</span> <span class="st">&quot;Modelo PCA: primeiro componente&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h3 id="o-perigo-de-descartar-preditores-não-significativos">O perigo de descartar preditores “não significativos”</h3>
+<p>Outro risco metodológico é a tentação de descartar variáveis com base em significância estatística. Nesse caso, a inclusão da lactose no modelo faz com que o efeito da gordura pareça “não significativo” (o intervalo de credibilidade inclui zero). Alguns guias diriam que isso seria motivo suficiente para remover a gordura do modelo, já que, supostamente, não conseguiriamos distinguir o efeito de gordura do “acaso”. Essa interpretação da significância nesse caso é muito problemática. O intervalo de credibilidade da gordura inclui o zero porque o modelo está respondendo a pergunta: depois que eu conheço o efeito da lactose, qual é o efeito adicional de conhecer a gordura? Ambos são muito correlacioados, então o efeito de uma variável depende fortemente da presença da outra. Essa dependencia é visivel na posteriori, que estimou muito bem a correlação entre os coeficientes, limitando o espaço de valores possíveis para ambos os efeitos para um conjunto restrito de valores. No caso da gordura, o intervalo de credibilidade inclui o zero, e é, portanto, não significativo. Não significa que o efeito de gordura seja compatível com o “acaso”<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>. A escolha de quais variáveis incluir no modelo deve ser guiada por conhecimento do sistema de estudo, teoria e objetivos da análise, não apenas por critérios estatísticos de significância.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
 <li id="fn1"><p>Com <code>iter = 2000</code>, cada cadeia executa 2.000 iterações. Dessas, 1.000 são de aquecimento e descartadas, e 1.000 geram amostras a posteriori. Nas 4 cadeias, isso totaliza <span class="math inline">\(1.000 \times 4 = 4.000\)</span> amostras a posteriori.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn2"><p>O “folk theorem of statistical computing”, frequentemente associado ao estatístico Andrew Gelman, afirma que dificuldades computacionais graves para ajustar um modelo Bayesiano costumam estar ligadas a um modelo mal especificado, superparametrizado, fracamente identificado ou mal escalonado. Nesse caso, em vez de começar procurando um amostrador mais rápido ou complexo, investigue o modelo. Simplificá-lo, reparametrizar as variáveis, ajustar as priors e reduzir correlações fortes entre parâmetros são alternativas com muito mais chance de melhorar o ajuste computacional do modelo.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Como defender a tese que a quantidade de gordura no leite não influencia o conteúdo calórico?<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 <!--radix_placeholder_article_footer-->
