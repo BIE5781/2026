@@ -3024,7 +3024,7 @@ y_i &amp;\sim Normal(\mu_i, \sigma_i) \\
 \]</span></p>
 <p>Como <code>Grazing0</code> vale 0 para plantas submetidas à herbivoria e 1 para
 plantas protegidas, podemos atribuir um desvio-padrão residual a cada
-grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos.</p>
+grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote <code>rethinking</code>, ela seria equivalente ao uso de contrastes com codificação <em>one-hot</em> em pacotes como <code>rstanarm</code> ou <code>brms</code>.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">df</span><span class="op">$</span><span class="va">Grazing_i</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Grazing0</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span></span>
@@ -3063,6 +3063,7 @@ em vez de um único desvio-padrão comum a todas as plantas. Como o modelo usa p
 </div>
 </div>
 <p>É importante fazer essa comparação explicita entre os coeficientes, já que comparação visual entre os intervalos de credibilidade pode ser enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma diferença entre os grupos devido à correlações entre as estiamativas dos dois parâmetros. A proporção calculada acima nos dá uma medida direta da evidência de diferença na variabilidade residual entre os grupos.</p>
+<p><strong>Exercício opcional</strong>: ajuste o modelo introduzindo uma dependência entre a variância residual e o diâmetro basal das plantas. Por exemplo, podemos modelar o desvio-padrão residual como uma função não-linear do diâmetro basal, como uma lei de potência com dois parâmetros. (existem diversas estratégias, mas todas devem lidar o fato de que o desvio-padrão residual deve ser positivo)<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>. Compare os resultados com o modelo anterior.</p>
 <h1 id="regressão-robusta">Regressão robusta</h1>
 <p>Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
 a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para
@@ -3227,7 +3228,7 @@ escala vertical logarítmica deixa visível a diferença entre as caudas.</p>
 <h2 id="incluindo-a-distribuição-t-de-student-no-modelo">Incluindo a distribuição <span class="math inline">\(t\)</span> de Student no modelo</h2>
 <p>No modelo abaixo, vamos incluir um parâmetro adicional no modelo que controla os graus de liberdade da distribuição <span class="math inline">\(t\)</span> dos resíduos.
 O parâmetro <span class="math inline">\(\nu = 2 + \exp(\text{log_nu})\)</span> mantém os graus de liberdade acima de 2, de modo que a variância dos resíduos
-seja finita.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
+seja finita.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">&lt;-</span> <span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">animals</span><span class="op">$</span><span class="va">log_brain</span><span class="op">)</span></span>
@@ -3340,13 +3341,14 @@ que expliquem as diferenças entre observações.</p>
 <ol>
 <li id="fn1"><p>Péssimas!<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn2"><p>Os coeficientes padronizados dependem da população usada para definir cada desvio-padrão. Se a população de plantas protegidas for muito diferente da população de plantas não protegidas, o desvio-padrão do contraste pode não ser representativo da população geral. Por isso, é importante interpretar as comparações entre coeficientes padronizados com cautela. Da mesma forma, a dedução que usamos supôs um numero similar de plantas em cada grupo. Se os grupos forem muito desbalanceados, a interpretação do coeficiente do contraste como uma mudança por desvio-padrão pode não ser adequada.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
+<li id="fn3"><p>Quais outras estratégias vimos em aula? Talvez uma transformação?<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Quando <span class="math inline">\(\nu=1\)</span>, a distribuição <span class="math inline">\(t\)</span> é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras.
 Por exemplo, a distribuição de Cauchy não tem média nem variância definidas. Se você amostrar valores de uma distribuição de Cauchy, os valores serão extremamente
 dispersos e a média das amostras nunca vai convergir pra um valor, mesmo com muitas amostras, ela vai só crescer indefinidamente.<br />
 Voltando para a <span class="math inline">\(t\)</span>-student, a média da distribuição <span class="math inline">\(t\)</span> só existe para <span class="math inline">\(\nu&gt;1\)</span>, e a variância só para <span class="math inline">\(\nu&gt;2\)</span>. Além disso, o parâmetro <span class="math inline">\(\sigma\)</span> que aparece na distribuição <span class="math inline">\(t\)</span>
 é um parâmetro de escala, não o desvio-padrão. Para <span class="math inline">\(\nu&gt;2\)</span>, o desvio-padrão é dado por <span class="math inline">\(\sigma\sqrt{\nu/(\nu-2)}\)</span>.
 Esse fator é a razão entre o desvio-padrão e <span class="math inline">\(\sigma\)</span>. Por exemplo, com <span class="math inline">\(\nu=3\)</span> e <span class="math inline">\(\sigma=1\)</span>, o desvio-padrão é <span class="math inline">\(\sqrt{3}\approx1{,}73\)</span>, não 1.
-À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+À medida que <span class="math inline">\(\nu\)</span> aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com <span class="math inline">\(\sigma\)</span>.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 <!--radix_placeholder_article_footer-->

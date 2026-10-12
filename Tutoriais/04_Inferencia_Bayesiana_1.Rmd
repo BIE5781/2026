@@ -547,7 +547,7 @@ $$
 
 Como `Grazing0` vale 0 para plantas submetidas à herbivoria e 1 para
 plantas protegidas, podemos atribuir um desvio-padrão residual a cada
-grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos.
+grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote `rethinking`, ela seria equivalente ao uso de contrastes com codificação _one-hot_ em pacotes como `rstanarm` ou `brms`.
 
 ```{r heteroskedastic_model}
 df$Grazing_i <- ifelse(df$Grazing0 == 1, 2, 1)
@@ -588,6 +588,8 @@ proportion
 ```
 
 É importante fazer essa comparação explicita entre os coeficientes, já que comparação visual entre os intervalos de credibilidade pode ser enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma diferença entre os grupos devido à correlações entre as estiamativas dos dois parâmetros. A proporção calculada acima nos dá uma medida direta da evidência de diferença na variabilidade residual entre os grupos.
+
+**Exercício opcional**: ajuste o modelo introduzindo uma dependência entre a variância residual e o diâmetro basal das plantas. Por exemplo, podemos modelar o desvio-padrão residual como uma função não-linear do diâmetro basal, como uma lei de potência com dois parâmetros. (existem diversas estratégias, mas todas devem lidar o fato de que o desvio-padrão residual deve ser positivo)^[Quais outras estratégias vimos em aula? Talvez uma transformação?]. Compare os resultados com o modelo anterior.
 
 # Regressão robusta
 
