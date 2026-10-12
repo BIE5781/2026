@@ -324,7 +324,7 @@ ggplot() +
 
 Repita o processo de ajuste e verificação do modelo, mas agora incluindo os dinossauros. Compare os resultados com o modelo ajustado apenas com mamíferos. O que mudou? Inclua um preditor categórico para diferenciar os dinossauros dos mamíferos. O que acontece com a inclinação do modelo? Compare as distribuições a posteriori com as priors. O ajuste do modelo com dinossaros é problemático? A inclusão do novo preditor melhora o ajuste do modelo? Compare as simulações preditivas com os dados observados. O que mudou? 
 
-**Extra:** Faça o mesmo procedimento de checagem de modelo com o modelo com resíduos $t$-Student. Compare os resultados com o modelo com resíduos normais e as simulações preditivas com os dados observados.
+**Extra opcional:** Faça o mesmo procedimento de checagem de modelo com o modelo com resíduos $t$-Student. Compare os resultados com o modelo com resíduos normais e as simulações preditivas com os dados observados.
 
 # Usando a posteriori para inferência e interpretação de modelos multiplos
 
@@ -585,5 +585,4 @@ ggplot(comparison_predictions, aes(x = joint_mean, y = pc1_mean)) +
 ### O perigo de descartar preditores "não significativos"
 
 Outro risco metodológico é a tentação de descartar variáveis com base em significância estatística. Nesse caso, a inclusão da lactose no modelo faz com que o efeito da gordura pareça "não significativo" (o intervalo de credibilidade inclui zero). Alguns guias diriam que isso seria motivo suficiente para remover a gordura do modelo, já que, supostamente, não conseguiriamos distinguir o efeito de gordura do "acaso". Essa interpretação da significância nesse caso é muito problemática. O intervalo de credibilidade da gordura inclui o zero porque o modelo está respondendo a pergunta: depois que eu conheço o efeito da lactose, qual é o efeito adicional de conhecer a  gordura? Ambos são muito correlacioados, então o efeito de uma variável depende fortemente da presença da outra. Essa dependencia é visivel na posteriori, que estimou muito bem a correlação entre os coeficientes, limitando o espaço de valores possíveis para ambos os efeitos para um conjunto restrito de valores. No caso da gordura, o intervalo de credibilidade inclui o zero, e é, portanto, não significativo. Não significa que o efeito de gordura seja compatível com o "acaso"^[Como defender a tese que a quantidade de gordura no leite não influencia o conteúdo calórico?]. A escolha de quais variáveis incluir no modelo deve ser guiada por conhecimento do sistema de estudo, teoria e objetivos da análise, não apenas por critérios estatísticos de significância. 
-
 
