@@ -2542,7 +2542,10 @@ distill-header .nav a {
 <ul>
 <li><a href="#desvio-padrão-de-uma-variável-binária" id="toc-desvio-padrão-de-uma-variável-binária">Desvio-padrão de uma variável binária</a></li>
 </ul></li>
-<li><a href="#modelando-a-variabilidade-residual" id="toc-modelando-a-variabilidade-residual">Modelando a variabilidade residual</a></li>
+<li><a href="#modelando-a-variabilidade-residual" id="toc-modelando-a-variabilidade-residual">Modelando a variabilidade residual</a>
+<ul>
+<li><a href="#testendo-a-diferneça-na-variabilidade-residual-entre-os-grupos" id="toc-testendo-a-diferneça-na-variabilidade-residual-entre-os-grupos">Testendo a diferneça na variabilidade residual entre os grupos</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#regressão-robusta" id="toc-regressão-robusta">Regressão robusta</a>
 <ul>
@@ -3019,6 +3022,47 @@ y_i &amp;\sim Normal(\mu_i, \sigma_i) \\
 \sigma_i &amp;= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação}
 \end{aligned}
 \]</span></p>
+<p>Como <code>Grazing0</code> vale 0 para plantas submetidas à herbivoria e 1 para
+plantas protegidas, podemos atribuir um desvio-padrão residual a cada
+grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">df</span><span class="op">$</span><span class="va">Grazing_i</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Grazing0</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">m_heteroskedastic</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/quap.html">quap</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>    <span class="va">Fruit</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="va">mu</span>, <span class="va">sigma</span><span class="op">[</span><span class="va">Grazing_i</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a</span><span class="op">[</span><span class="va">Grazing_i</span><span class="op">]</span> <span class="op">+</span> <span class="va">c</span> <span class="op">*</span> <span class="va">Root</span>,</span>
+<span>    <span class="va">a</span><span class="op">[</span><span class="va">Grazing_i</span><span class="op">]</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="va">c</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="va">sigma</span><span class="op">[</span><span class="va">Grazing_i</span><span class="op">]</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">df</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m_heteroskedastic</span>, depth <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>O índice <code>Grazing_i</code> associa cada observação a um dos dois grupos. O
+modelo usa esse índice para selecionar tanto o intercepto quanto o
+desvio-padrão residual correspondentes, enquanto a inclinação de <code>Root</code>
+é compartilhada. Assim, <code>sigma</code> contém um parâmetro para cada tratamento,
+em vez de um único desvio-padrão comum a todas as plantas. Como o modelo usa parâmetros armazenados em vetores, precisamos usar o argumento <code>depth = 2</code> na função <code>precis()</code> para que ela mostre os dois interceptos e os dois desvios-padrão residuais. Compare os valores estimados de a com os valores obtidos no modelo anterior. O que mudou? Compare os desvios-padrão residuais estimados para cada grupo. Existe evidencia de diferença na variabilidade residual entre os dois grupos?</p>
+<h3 id="testendo-a-diferneça-na-variabilidade-residual-entre-os-grupos">Testendo a diferneça na variabilidade residual entre os grupos</h3>
+<p>Para testar a diferença na variabilidade residual entre os grupos, podemos extrair amostras da posterior e calcular a diferença entre os dois desvios-padrão residuais. Em seguida, podemos calcular a proporção de amostras em que o desvio-padrão do grupo protegido é maior que o desvio-padrão do grupo não protegido (ou vice-versa).</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">posterior_samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">m_heteroskedastic</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
+<span><span class="va">sigma1</span> <span class="op">&lt;-</span> <span class="va">posterior_samples</span><span class="op">$</span><span class="va">sigma</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">sigma2</span> <span class="op">&lt;-</span> <span class="va">posterior_samples</span><span class="op">$</span><span class="va">sigma</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span></span>
+<span><span class="va">difference</span> <span class="op">&lt;-</span> <span class="va">sigma1</span> <span class="op">-</span> <span class="va">sigma2</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html">hist</a></span><span class="op">(</span><span class="va">difference</span>, breaks <span class="op">=</span> <span class="fl">30</span>, main <span class="op">=</span> <span class="st">&quot;Diferença entre desvios-padrão residuais&quot;</span>, xlab <span class="op">=</span> <span class="st">&quot;sigma1 - sigma2&quot;</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fl">0</span>, col <span class="op">=</span> <span class="st">&quot;red&quot;</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">proportion</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">difference</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">proportion</span></span></code></pre>
+</div>
+</div>
+<p>É importante fazer essa comparação explicita entre os coeficientes, já que comparação visual entre os intervalos de credibilidade pode ser enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma diferença entre os grupos devido à correlações entre as estiamativas dos dois parâmetros. A proporção calculada acima nos dá uma medida direta da evidência de diferença na variabilidade residual entre os grupos.</p>
 <h1 id="regressão-robusta">Regressão robusta</h1>
 <p>Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
 a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para
