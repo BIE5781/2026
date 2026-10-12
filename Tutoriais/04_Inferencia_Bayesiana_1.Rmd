@@ -540,14 +540,15 @@ Neste modelo, e até agora no curso, sempre usamos a versão mais simples do aju
 $$
 \begin{aligned}
 y_i &\sim Normal(\mu_i, \sigma_i) \\
-\mu_i &= a + b * \text{Grazing0} + c * \text{Root} \\
-\sigma_i &= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação}
+\mu_i &= a_{t[i]} + c * \text{Root} \\
+\sigma_i &= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação} \\
+a[t] &\sim Normal(0, 1) \\
+c &\sim Normal(0, 1) \\
+\gamma[t] &\sim Exponential(1) \\
 \end{aligned}
 $$
 
-Como `Grazing0` vale 0 para plantas submetidas à herbivoria e 1 para
-plantas protegidas, podemos atribuir um desvio-padrão residual a cada
-grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote `rethinking`, ela seria equivalente ao uso de contrastes com codificação _one-hot_ em pacotes como `rstanarm` ou `brms`.
+Esse modelo usa uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote `rethinking`, ela seria equivalente ao uso de contrastes com codificação _one-hot_ em funções como `rstanarm` e `lm()`.
 
 ```{r heteroskedastic_model}
 df$Grazing_i <- ifelse(df$Grazing0 == 1, 2, 1)

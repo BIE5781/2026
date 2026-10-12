@@ -3018,13 +3018,14 @@ médias dos grupos. Essa recodificação muda a escala do coeficiente, não o aj
 <p><span class="math display">\[
 \begin{aligned}
 y_i &amp;\sim Normal(\mu_i, \sigma_i) \\
-\mu_i &amp;= a + b * \text{Grazing0} + c * \text{Root} \\
-\sigma_i &amp;= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação}
+\mu_i &amp;= a_{t[i]} + c * \text{Root} \\
+\sigma_i &amp;= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação} \\
+a[t] &amp;\sim Normal(0, 1) \\
+c &amp;\sim Normal(0, 1) \\
+\gamma[t] &amp;\sim Exponential(1) \\
 \end{aligned}
 \]</span></p>
-<p>Como <code>Grazing0</code> vale 0 para plantas submetidas à herbivoria e 1 para
-plantas protegidas, podemos atribuir um desvio-padrão residual a cada
-grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote <code>rethinking</code>, ela seria equivalente ao uso de contrastes com codificação <em>one-hot</em> em pacotes como <code>rstanarm</code> ou <code>brms</code>.</p>
+<p>Esse modelo usa uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote <code>rethinking</code>, ela seria equivalente ao uso de contrastes com codificação <em>one-hot</em> em funções como <code>rstanarm</code> e <code>lm()</code>.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">df</span><span class="op">$</span><span class="va">Grazing_i</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Grazing0</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span></span>
