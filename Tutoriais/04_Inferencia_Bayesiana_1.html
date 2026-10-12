@@ -2542,6 +2542,7 @@ distill-header .nav a {
 <ul>
 <li><a href="#desvio-padrão-de-uma-variável-binária" id="toc-desvio-padrão-de-uma-variável-binária">Desvio-padrão de uma variável binária</a></li>
 </ul></li>
+<li><a href="#modelando-a-variabilidade-residual" id="toc-modelando-a-variabilidade-residual">Modelando a variabilidade residual</a></li>
 </ul></li>
 <li><a href="#regressão-robusta" id="toc-regressão-robusta">Regressão robusta</a>
 <ul>
@@ -3009,6 +3010,15 @@ médias dos grupos. Essa recodificação muda a escala do coeficiente, não o aj
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">df</span><span class="op">$</span><span class="va">Grazing_contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Grazing0</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">1</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
+<h2 id="modelando-a-variabilidade-residual">Modelando a variabilidade residual</h2>
+<p>Neste modelo, e até agora no curso, sempre usamos a versão mais simples do ajuste da regressão linear, que assume que a variabilidade residual é constante para todos os valores de <span class="math inline">\(x\)</span>. Essa suposição é chamada de <strong>homocedasticidade</strong>. Quando a variabilidade residual muda com o valor do preditor, dizemos que há <strong>heterocedasticidade</strong>. Vamos tentar modelar a variabilidade residual como uma função do preditor. Para isso, incluir um modelo explicito para o desvio-padrão residual em função do tramento experimental, de forma exatamente análoga a como modelamos a média da resposta.</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_i &amp;\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &amp;= a + b * \text{Grazing0} + c * \text{Root} \\
+\sigma_i &amp;= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação}
+\end{aligned}
+\]</span></p>
 <h1 id="regressão-robusta">Regressão robusta</h1>
 <p>Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
 a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para

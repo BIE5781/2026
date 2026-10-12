@@ -533,6 +533,62 @@ médias dos grupos. Essa recodificação muda a escala do coeficiente, não o aj
 df$Grazing_contrast <- ifelse(df$Grazing0 == 1, 1, -1)
 ```
 
+## Modelando a variabilidade residual
+
+Neste modelo, e até agora no curso, sempre usamos a versão mais simples do ajuste da regressão linear, que assume que a variabilidade residual é constante para todos os valores de $x$. Essa suposição é chamada de **homocedasticidade**. Quando a variabilidade residual muda com o valor do preditor, dizemos que há **heterocedasticidade**. Vamos tentar modelar a variabilidade residual como uma função do preditor. Para isso, incluir um modelo explicito para o desvio-padrão residual em função do tramento experimental, de forma exatamente análoga a como modelamos a média da resposta. 
+
+$$
+\begin{aligned}
+y_i &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= a + b * \text{Grazing0} + c * \text{Root} \\
+\sigma_i &= \gamma_{t[i]} \text{, onde } t[i] \text{ é o tratamento da i-ésima observação}
+\end{aligned}
+$$
+
+Como `Grazing0` vale 0 para plantas submetidas à herbivoria e 1 para
+plantas protegidas, podemos atribuir um desvio-padrão residual a cada
+grupo. Vamos usar uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos.
+
+```{r heteroskedastic_model}
+df$Grazing_i <- ifelse(df$Grazing0 == 1, 2, 1)
+
+m_heteroskedastic <- quap(
+  alist(
+    Fruit ~ dnorm(mu, sigma[Grazing_i]),
+    mu <- a[Grazing_i] + c * Root,
+    a[Grazing_i] ~ dnorm(0, 1),
+    c ~ dnorm(0, 1),
+    sigma[Grazing_i] ~ dexp(1)
+  ),
+  data = df
+)
+
+precis(m_heteroskedastic, depth = 2)
+```
+
+O índice `Grazing_i` associa cada observação a um dos dois grupos. O
+modelo usa esse índice para selecionar tanto o intercepto quanto o
+desvio-padrão residual correspondentes, enquanto a inclinação de `Root`
+é compartilhada. Assim, `sigma` contém um parâmetro para cada tratamento,
+em vez de um único desvio-padrão comum a todas as plantas. Como o modelo usa parâmetros armazenados em vetores, precisamos usar o argumento `depth = 2` na função `precis()` para que ela mostre os dois interceptos e os dois desvios-padrão residuais. Compare os valores estimados de a com os valores obtidos no modelo anterior. O que mudou? Compare os desvios-padrão residuais estimados para cada grupo. Existe evidencia de diferença na variabilidade residual entre os dois grupos? 
+
+### Testendo a diferneça na variabilidade residual entre os grupos
+
+Para testar a diferença na variabilidade residual entre os grupos, podemos extrair amostras da posterior e calcular a diferença entre os dois desvios-padrão residuais. Em seguida, podemos calcular a proporção de amostras em que o desvio-padrão do grupo protegido é maior que o desvio-padrão do grupo não protegido (ou vice-versa).
+
+```{r test_variance_difference}
+posterior_samples <- extract.samples(m_heteroskedastic, n = 1000)
+sigma1 <- posterior_samples$sigma[,1]
+sigma2 <- posterior_samples$sigma[,2]
+difference <- sigma1 - sigma2
+hist(difference, breaks = 30, main = "Diferença entre desvios-padrão residuais", xlab = "sigma1 - sigma2")
+abline(v = 0, col = "red", lwd = 2)
+proportion <- mean(difference > 0)
+proportion
+```
+
+É importante fazer essa comparação explicita entre os coeficientes, já que comparação visual entre os intervalos de credibilidade pode ser enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma diferença entre os grupos devido à correlações entre as estiamativas dos dois parâmetros. A proporção calculada acima nos dá uma medida direta da evidência de diferença na variabilidade residual entre os grupos.
+
 # Regressão robusta
 
 Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
