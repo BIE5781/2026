@@ -47,24 +47,24 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 
 # Cronograma
 
-| Data | Aula | Tópicos | Tutorial | Docente |
-|:--|:--|:--|:--|:--|
-| 30/09 | **1. Fundamentos da modelagem**: [slides](Aulas/Aula_01_fundamentos.html) e  [pdf](Aulas/Aula_01_fundamentos.pdf) | Distribuições de probabilidade, $p(y \mid \theta)$, regressão simples e erros Gaussianos |[Distribuição normal](Tutoriais/01_fundamentos.html)  | Paulo Inácio |
-| 02/10 | **2. Verossimilhança**: [slides](Aulas/Aula_02_Verossimilhanca.html) e [pdf](Aulas/Aula_02_Verossimilhanca.pdf)| Função de verossimilhança, máxima verossimilhança e outras distribuições |[Ajustes por máxima verossimilhança](Tutoriais/02_Verossimilhanca)  | Paulo Inácio |
-| 07/10 | **3. O modelo linear I**: [slides](Aulas/Aula_03_Preditores_Lineares.html) e [pdf](Aulas/Aula_03_Preditores_Lineares.pdf) | Regressão múltipla, efeitos aditivos, interações e interpretação de coeficientes | [Regressão linear](Tutoriais/03_modelo_linear.html) | Paulo Inácio |
-| 09/10 | **4. O modelo linear II**: [slides](Aulas/Aula_04_Modelo_Linear_II/index.html) e [pdf](Aulas/Aula_04_Modelo_Linear_II.pdf   ) | Transformações, contrastes e interações | | Diogo  |
-| 14/10 | **5. Inferência Bayesiana I** | História, fundamentos e distribuição a priori | Introdução ao *Statistical Rethinking* | Diogo |
-| 16/10 | **6. Inferência Bayesiana II** | Ajuste de modelos, estimadores, quantidades derivadas e integração | Exploração da distribuição a posteriori, simulações e correlações | Diogo |
-| 21/10 | **7. Modelos lineares generalizados I** | Regressões binomial e de Poisson para dados não contínuos | Modelos binomial e Poisson | Paulo Inácio |
-| 23/10 | **8. Modelos hierárquicos I** | Dependência, *shrinkage*, prioris hierárquicas, penalização e *partial pooling* | Tutorial das ilhas | Diogo |
-| 28/10 | **9. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico | Reprodução de modelo dos macacos | Diogo |
-| 04/11 | **10. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [LOO, WAIC e validação cruzada](Tutoriais/loo_cross.html) | Paulo Inácio |
-| 06/11 | **11. Pensamento causal I** | Variáveis de confusão e o critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo |
-| 11/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio |
-| 13/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  |
-| 18/11 | **14. Modelos mistos contínuos** | Modelos animais, filogenéticos e espaciais | [Modelo animal univariado](Tutoriais/modelo_animal_uni.html); [bivariado](Tutoriais/modelo_animal_multi.html) | Diogo |
-| 25/11 | **15. Modelos avançados** | Processos geradores explícitos e processos Gaussianos | Equações diferenciais, captura-marcação-recaptura, movimento ou processos Gaussianos | Diogo e Paulo Inácio |
-| 27/11 | **Fechamento** | Segunda discussão dos projetos |  |  |
+| Data | Aula | Tópicos | Tutorial | Docente | Local |
+|:--|:--|:--|:--|:--|:--|
+| 30/09 | **1. Fundamentos da modelagem**: [slides](Aulas/Aula_01_fundamentos.html) e  [pdf](Aulas/Aula_01_fundamentos.pdf) | Distribuições de probabilidade, $p(y \mid \theta)$, regressão simples e erros Gaussianos |[Distribuição normal](Tutoriais/01_fundamentos.html)  | Paulo Inácio | Sala 5 CD |
+| 02/10 | **2. Verossimilhança**: [slides](Aulas/Aula_02_Verossimilhanca.html) e [pdf](Aulas/Aula_02_Verossimilhanca.pdf)| Função de verossimilhança, máxima verossimilhança e outras distribuições |[Ajustes por máxima verossimilhança](Tutoriais/02_Verossimilhanca)  | Paulo Inácio | Sala 5 CD |
+| 07/10 | **3. O modelo linear I**: [slides](Aulas/Aula_03_Preditores_Lineares.html) e [pdf](Aulas/Aula_03_Preditores_Lineares.pdf) | Regressão múltipla, efeitos aditivos, interações e interpretação de coeficientes | [Regressão linear](Tutoriais/03_modelo_linear.html) | Paulo Inácio | Sala 5 CD |
+| 09/10 | **4. O modelo linear II**: [slides](Aulas/Aula_04_Modelo_Linear_II/index.html) e [pdf](Aulas/Aula_04_Modelo_Linear_II.pdf   ) | Transformações, contrastes e interações | | Diogo  | Sala Terezinha Ungaretti DG |
+| 14/10 | **5. Inferência Bayesiana I** | História, fundamentos e distribuição a priori | Introdução ao *Statistical Rethinking* | Diogo | Sala 5 CD | 
+| 16/10 | **6. Inferência Bayesiana II** | Ajuste de modelos, estimadores, quantidades derivadas e integração | Exploração da distribuição a posteriori, simulações e correlações | Diogo | Sala 5 CD |
+| 21/10 | **7. Modelos lineares generalizados I** | Regressões binomial e de Poisson para dados não contínuos | Modelos binomial e Poisson | Paulo Inácio | Sala 5 CD |
+| 23/10 | **8. Modelos hierárquicos I** | Dependência, *shrinkage*, prioris hierárquicas, penalização e *partial pooling* | Tutorial das ilhas | Diogo | Sala 5 CD |
+| 28/10 | **9. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico | Reprodução de modelo dos macacos | Diogo | Sala 5 CD |
+| 04/11 | **10. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [LOO, WAIC e validação cruzada](Tutoriais/loo_cross.html) | Paulo Inácio |  Sala 5 CD |
+| 06/11 | **11. Pensamento causal I** | Variáveis de confusão e o critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo | Sala 5 CD |
+| 11/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio | Sala 5 CD |
+| 13/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  |  Sala 5 CD |
+| 18/11 | **14. Modelos mistos contínuos** | Modelos animais, filogenéticos e espaciais | [Modelo animal univariado](Tutoriais/modelo_animal_uni.html); [bivariado](Tutoriais/modelo_animal_multi.html) | Diogo | Sala Multimídia 2 |
+| 25/11 | **15. Modelos avançados** | Processos geradores explícitos e processos Gaussianos | Equações diferenciais, captura-marcação-recaptura, movimento ou processos Gaussianos | Diogo e Paulo Inácio | Sala 5 CD |
+| 27/11 | **Fechamento** | Segunda discussão dos projetos |  |  | Sala 5 CD |
 
 # Avaliação
 
