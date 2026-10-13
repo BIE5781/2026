@@ -44,7 +44,6 @@ xaringanExtra::use_fit_screen()
 xaringanExtra::use_tachyons()
 xaringanExtra::use_tile_view()
 ```
-
 ## Modelos multiníveis
 
 - Modelos multiníveis introduzem estrutura na distribuição dos parâmetros.
@@ -71,7 +70,6 @@ $$\hat{p} = \frac{N_{\mathrm{hits}}}{N_{\mathrm{attempts}}}$$
 
 ## Hiperparâmetros
 
-- Queremos introduzir dependência entre as médias dos jogadores.
 - Assim, a informação conjunta sobre a população ajuda a estimar a média de cada jogador.
 - $y_i$: número de rebatidas do jogador $i$
 - $n_i$: número de tentativas do jogador $i$
@@ -88,7 +86,7 @@ p_i &\sim \mathrm{Beta}(\nu_1, \nu_2) \\
 
 ## Modelo de rebatidas em `ulam`
 
-```{r baseball-ulam}
+```{r baseball-ulam, eval=FALSE}
 m1 <- ulam(
   alist(
     hits ~ binomial(at_bats, avgs),
@@ -116,47 +114,58 @@ m1 <- ulam(
 
 ---
 
-## Encolhimento e tipos de pooling
+## Shrinkage e tipos de pooling
 
 1. **Pooling completo:** todos os jogadores compartilham uma única estimativa, o que pode ignorar diferenças reais entre eles.
 2. **Sem pooling:** cada jogador é estimado separadamente, sem compartilhar informação; com poucas tentativas, as estimativas podem ser instáveis.
 3. **Pooling parcial:** as estimativas individuais são regularizadas por uma distribuição comum que aprende quanto os jogadores variam.
 
 ---
+## Variáveis categóricas e pooling
 
-## Interceptos aleatórios 
+.pull-left[
+**Pooling completo**
+
+Todos os grupos (níveis do preditor categórico) compartilham o mesmo intercepto:
+
+$$y_i \sim \mathrm{Normal}(\mu_i, \sigma)$$
+$$\mu_i = \textcolor{#cb4b16}{\alpha_0} + \beta x_i$$
+$$\textcolor{#cb4b16}{\alpha_0} \sim \mathrm{Normal}(0, 1)$$
+$$\beta \sim \mathrm{Normal}(0, 1)$$
+$$\sigma \sim \mathrm{Exponential}(1)$$
+]
+
+.pull-right[
+**Sem pooling**
+
+Cada grupo tem seu próprio intercepto:
+
+$$y_i \sim \mathrm{Normal}(\mu_i, \sigma)$$
+$$\mu_i = \textcolor{#cb4b16}{\alpha_{\mathrm{g}[i]}} + \beta x_i$$
+$$\textcolor{#cb4b16}{\alpha_k} \sim \mathrm{Normal}(0, 1) \quad k=1,\ldots,N_g$$
+$$\beta \sim \mathrm{Normal}(0, 1)$$
+$$\sigma \sim \mathrm{Exponential}(1)$$
+]
+
+No primeiro modelo, os dados de todos os grupos informam um único intercepto. No segundo, cada intercepto é estimado a partir do próprio grupo.
+
+---
+ 
+## Interceptos aleatórios (Partial pooling)
 
 Muitos modelos hierárquicos envolvem grupos de observações, onde cada grupo (ou bloco) reúne unidades experimentais semelhantes, por exemplo por local, tratamento, parentesco, ou período temporal. Podemos modelar a heterogeneidade entre grupos com interceptos aleatórios:
 
 <div>
 $$\begin{aligned}
 y_i &\sim \mathrm{Normal}(\mu_i, \sigma) \\
- \mu_i &= \alpha_0 + \alpha_{\mathrm{group}[i]} \\
- \alpha_{k} &\sim \mathrm{Normal}(0, \sigma_{\mathrm{group}}), \quad k=1,\ldots,N_g \\
+ \mu_i &= \textcolor{#cb4b16}{\alpha_{\mathrm{group}[i]}} \\
+ \textcolor{#cb4b16}{\alpha_{k}} &\sim \mathrm{Normal}(\alpha_0, \sigma_{\mathrm{group}}), \quad k=1,\ldots,N_g \\
  \alpha_0 &\sim \mathrm{Normal}(0, 1) \\
  \sigma, \sigma_{\mathrm{group}} &\sim \mathrm{Exponential}(1)
 \end{aligned}$$
 </div>
 
-O desvio-padrão $\sigma_{\mathrm{group}}$ controla a heterogeneidade entre grupos. Nessa notação, o vetor $\mathrm{group}[i]$ assume valores entre 1 e $N_g$, indicando a qual grupo cada observação pertence.
-
----
-
-## Interceptos aleatórios
-
-Considere observações $i$ agrupadas em grupos $j$. Um modelo com intercepto aleatório permite que cada grupo tenha seu próprio nível basal, mantendo uma inclinação comum:
-
-<div>
-$$\begin{aligned}
-y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma) \\
- \mu_{i} &= \alpha_0 + \alpha_{\mathrm{group}[i]} + \beta x_{i} \\
- \alpha_{\mathrm{group}[j]} &\sim \mathrm{Normal}(0, \sigma_{\mathrm{group}})
-\end{aligned}$$
-</div>
-
-$\alpha_0$ é o intercepto populacional e $\alpha_{k}$ é o desvio do grupo $k$. Assim, o intercepto específico do grupo é $\alpha_0+\alpha_{k}$. $\sigma$ descreve a variação entre observações do mesmo grupo, enquanto $\sigma_{\mathrm{group}}$ descreve a variação dos interceptos entre grupos.
-
-Grupos com poucas observações terão seus interceptos mais próximos de $\alpha_0$, enquanto grupos com muitas observações terão interceptos mais próximos de suas médias amostrais.
+O desvio-padrão $\sigma_{\mathrm{group}}$ controla a heterogeneidade entre grupos. Nessa notação, o vetor $\mathrm{group}[i]$ assume valores entre 1 e $N_g$, indicando a qual grupo cada observação pertence. O prior compartilhado introduz dependência entre os interceptos, permitindo que a informação de um grupo informe a estimativa de outro.
 
 ---
 
@@ -251,7 +260,7 @@ Ambos os modelos são equivalentes, mas a versão não centrada costuma ter melh
 
 ---
 
-## Ajuste do modelo com clado (versão não centrada)
+## Ajuste do modelo com clado (versão não-centrada)
 
 ```{r milk-random-intercept-model-matt, eval=TRUE, results='hide'}
 milk_random_intercept_nc <- ulam(
@@ -307,14 +316,76 @@ ggplot2::ggplot(milk_grid, ggplot2::aes(x = L, y = mean, color = clade)) +
     ggplot2::aes(x = L, y = K, color = clade),
     inherit.aes = FALSE, alpha = 0.65, size = 2
   ) +
-  ggplot2::scale_color_brewer(palette = "Dark2", name = "Clade") +
+  ggplot2::scale_color_brewer(
+    palette = "Dark2", name = "Clade",
+    guide = ggplot2::guide_legend(nrow = 1, byrow = TRUE)
+  ) +
   ggplot2::labs(
     x = "Lactose (z-score)",
-    y = "Energia do leite (z-score)",
-    title = "Energia do leite prevista por clado"
-  ) +
+    y = "Energia do leite (z-score)") +
   ggplot2::theme_minimal(base_size = 14) +
-  ggplot2::theme(legend.position = "right")
+  ggplot2::theme(legend.position = "bottom")
+```
+
+---
+
+## Comparando as previsões com as médias de cada grupo
+
+```{r milk-partial-pooling-comparison, eval=TRUE, echo=FALSE, fig.width=9, fig.height=4.2, dpi=300, out.width="95%", fig.bg="transparent"}
+milk_posterior <- rethinking::extract.samples(milk_random_intercept_nc)
+clade_levels <- levels(factor(milk_data$clade))
+milk_lm_no_pooling <- stats::lm(K ~ 0 + clade + L, data = milk_data)
+lm_coefficients <- stats::coef(milk_lm_no_pooling)
+raw_intercepts <- unname(lm_coefficients[paste0("clade", clade_levels)])
+
+group_estimates <- data.frame(
+  clade = factor(clade_levels, levels = clade_levels),
+  raw_mean = raw_intercepts,
+  mixed_mean = colMeans(milk_posterior$a)
+)
+estimate_points <- rbind(
+  data.frame(clade = group_estimates$clade, estimate = group_estimates$raw_mean,
+             y = 2),
+  data.frame(clade = group_estimates$clade, estimate = group_estimates$mixed_mean,
+             y = 1)
+)
+global_mean <- mean(milk_posterior$a_0)
+
+ggplot2::ggplot() +
+  ggplot2::geom_vline(xintercept = global_mean, color = "#586e75", linetype = "dashed") +
+  ggplot2::geom_segment(
+    data = group_estimates,
+    ggplot2::aes(x = raw_mean, xend = mixed_mean, y = 2, yend = 1,
+                 color = clade),
+    linetype = "dashed", alpha = 0.65, linewidth = 0.7
+  ) +
+  ggplot2::geom_point(
+    data = estimate_points,
+    ggplot2::aes(x = estimate, y = y, color = clade),
+    size = 3
+  ) +
+  ggrepel::geom_text_repel(
+    data = subset(estimate_points, y == 2),
+    ggplot2::aes(x = estimate, y = y, label = clade, color = clade),
+    inherit.aes = FALSE, direction = "y", nudge_y = 0.16, size = 3,
+    box.padding = 0.2, point.padding = 0.15, max.overlaps = Inf,
+    min.segment.length = 0, show.legend = FALSE
+  ) +
+  ggplot2::scale_y_continuous(
+    breaks = c(2, 1), labels = c("Não pooled", "Modelo misto"),
+    limits = c(0.6, 2.4), expand = ggplot2::expansion(mult = 0)
+  ) +
+  ggplot2::scale_color_brewer(palette = "Dark2", guide = "none") +
+  ggplot2::labs(
+    x = "Intercepto de energia previsto em lactose média (z-score)",
+    y = NULL
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    legend.position = "none",
+    panel.background = ggplot2::element_rect(fill = "transparent", color = NA),
+    plot.background = ggplot2::element_rect(fill = "transparent", color = NA)
+  )
 ```
 
 ---
@@ -323,16 +394,13 @@ ggplot2::ggplot(milk_grid, ggplot2::aes(x = L, y = mean, color = clade)) +
 
 O intercepto de cada grupo não é estimado isoladamente. A distribuição hierárquica combina a informação local do grupo com a distribuição comum, produzindo shrinkage em direção a $\alpha_0$.
 
-No caso normal simples, com variância residual conhecida, o estimador posterior do intercepto do grupo tem a forma de uma média ponderada:
+No **caso normal simples**, com variância residual conhecida, o estimador posterior do intercepto do grupo tem a forma de uma média ponderada:
 
-<div>
-$$\begin{aligned}
-\hat{\alpha}_j &= w_j\bar{y}_j + (1-w_j)\alpha_0 \\
-w_j &= \frac{\tau_0^2}{\tau_0^2+\sigma^2/n_j}
-\end{aligned}$$
-</div>
+$$\hat{\alpha}_j = w_j\bar{y}_j + (1-w_j)\alpha_0$$
 
-Grupos com mais observações têm maior $w_j$ e dependem mais de seus próprios dados. Grupos pequenos são mais regularizados em direção à média populacional. Se $\tau_0$ for próximo de zero, os grupos são semelhantes e o pooling é forte; se for grande, há menos pooling.
+$$w_j = \frac{\sigma_g^2}{\sigma_g^2+\sigma^2/n_j}$$
+
+Grupos com mais observações têm maior $w_j$ e dependem mais de seus próprios dados. Grupos pequenos são mais regularizados em direção à média populacional. Se $\sigma_g$ for próximo de zero, os grupos são semelhantes e o pooling é forte; se for grande, há menos pooling.
 
 ---
 
@@ -342,309 +410,125 @@ Um intercepto aleatório não basta quando a associação entre $x$ e $y$ també
 
 <div>
 $$\begin{aligned}
-\mu_{ij} &= (\alpha_0+u_{0j}) + (\beta_0+u_{1j})x_{ij} \\
- \begin{pmatrix}u_{0j}\\
-u_{1j}\end{pmatrix} &\sim \mathrm{Normal}_2\left[ \begin{pmatrix}0\\
-0\end{pmatrix},\;\mathbf{\Sigma} \right]
+ y_i &\sim \mathrm{Normal}(\mu_i, \sigma) \\
+\mu_i &= \alpha_0 + \alpha_{\mathrm{group}[i]} + (\beta_0 + \beta_{\mathrm{group}[i]})x_i \\
+\alpha_j &\sim \mathrm{Normal}(0, \sigma_\alpha), \quad j=1,\ldots,N_g \\
+\beta_j &\sim \mathrm{Normal}(0, \sigma_\beta), \quad j=1,\ldots,N_g \\
+\alpha_0, \beta_0 &\sim \mathrm{Normal}(0, 1) \\
+\sigma, \sigma_\alpha, \sigma_\beta &\sim \mathrm{Exponential}(1)
 \end{aligned}$$
 </div>
 
-$\beta_0$ é a inclinação média, e $u_{1j}$ representa quanto a inclinação do grupo $j$ se desvia dela. A inclinação específica é $\beta_j=\beta_0+u_{1j}$. O modelo de interceptos aleatórios é o caso particular em que $\tau_1=0$, isto é, não há variação entre as inclinações.
+O intercepto e a inclinação específicos do grupo $j$ são, respectivamente, $\alpha_0+\alpha_j$ e $\beta_0+\beta_j$. 
 
 ---
 
-## Covariância e centralização
+## Modelo de lactose com inclinações aleatórias
 
-A matriz de covariância dos desvios pode ser escrita como:
-
-<div>
-$$\mathbf{\Sigma} =
-\begin{pmatrix}
-\tau_0^2 & \rho\tau_0\tau_1 \\
-\rho\tau_0\tau_1 & \tau_1^2
-\end{pmatrix}$$
-</div>
-
-O parâmetro $\rho$ descreve se grupos com valores basais maiores tendem a ter inclinações maiores ou menores. Essa associação depende da origem de $x$: centralizá-lo em um valor substantivamente relevante torna o intercepto o nível esperado nesse ponto e costuma reduzir a dependência entre interceptos e inclinações. A centralização não muda as previsões, mas muda a interpretação dos parâmetros.
-
----
-
-## Prosocialidade em chimpanzés
-
-- Prosocialidade refere-se a comportamentos que beneficiam outros indivíduos.
-- Podemos estudar esse comportamento experimentalmente.
-- Neste experimento, um sujeito pode disponibilizar alimento a um parceiro sem custo para si.
-
----
-
-## Delineamento experimental
-
-.center[![](figures/chimp_experiment.png)]
-
----
-
-## Estrutura dos dados
-
-- Várias medidas por chimpanzé (ator)
-- Condição social ou não social
-- Blocos experimentais
-- Opção prosocial à esquerda; os chimpanzés podem ter preferência lateral
-
-**Respostas observadas**
-
-- Escolheu a opção prosocial
-- Puxou a alavanca da esquerda
-
----
-
-## Dados dos chimpanzés
-
-```{r chimp-data}
-library(rethinking)
-data(chimpanzees)
-head(chimpanzees)
-```
-
-```text
-  actor recipient condition block trial prosoc_left chose_prosoc pulled_left
-1     1        NA         0     1     2           0            1           0
-2     1        NA         0     1     4           0            0           1
-3     1        NA         0     1     6           1            0           0
-4     1        NA         0     1     8           0            1           0
-5     1        NA         0     1    10           1            1           1
-6     1        NA         0     1    12           1            1           1
-```
-
----
-
-## Tratamentos experimentais
-
-.f3[
-1. `prosoc_left = 0`, `condition = 0`: dois itens à direita, sem parceiro.
-2. `prosoc_left = 1`, `condition = 0`: dois itens à esquerda, sem parceiro.
-3. `prosoc_left = 0`, `condition = 1`: dois itens à direita, com parceiro.
-4. `prosoc_left = 1`, `condition = 1`: dois itens à esquerda, com parceiro.
-]
-
----
-
-## Modelo inicial da verossimilhança
-
-- $L_i$: indicador de que a alavanca esquerda foi puxada
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} + \beta_{\mathrm{treatment}[i]}
-\end{aligned}$$
-</div>
-
----
-
-## Incluindo efeitos de bloco
-
-- $L_i$: indicador de que a alavanca esquerda foi puxada
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]}
-\end{aligned}$$
-</div>
-
----
-
-## Priori para o tratamento experimental
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
- \beta_j &\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4
-\end{aligned}$$
-</div>
-
----
-
-## Pooling dos interceptos por ator
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
- \beta_j &\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
- \alpha_j &\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7
-\end{aligned}$$
-</div>
-
----
-
-## Pooling dos interceptos por bloco
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
- \beta_j &\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
- \alpha_j &\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
- \gamma_j &\sim \mathrm{Normal}(0, \sigma_{\gamma}), \quad j=1,\ldots,6
-\end{aligned}$$
-</div>
-
----
-
-## Completando as prioris
-
-<div>
-$$\begin{aligned}
-L_i &\sim \mathrm{Bernoulli}(p_i) \\
- \mathrm{logit}(p_i) &= \alpha_0 + \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
- \beta_j &\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
- \alpha_j &\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
- \gamma_j &\sim \mathrm{Normal}(0, \sigma_{\gamma}), \quad j=1,\ldots,6 \\
- \alpha_0 &\sim \mathrm{Normal}(0, 1.5) \\
- \sigma_{\alpha} &\sim \mathrm{Exponential}(1) \\
- \sigma_{\gamma} &\sim \mathrm{Exponential}(1)
-\end{aligned}$$
-</div>
-
----
-
-## Código do modelo dos chimpanzés
-
-```{r chimp-model}
-data(chimpanzees, package = "rethinking")
-d <- chimpanzees
-d$treatment <- 1 + d$prosoc_left + 2 * d$condition
-
-dat_list <- list(
-  pulled_left = d$pulled_left,
-  actor = d$actor,
-  block_id = d$block,
-  treatment = as.integer(d$treatment)
-)
-
-m1 <- ulam(
+```{r milk-random-slope-model, eval=FALSE, results='hide'}
+milk_random_slope <- ulam(
   alist(
-    pulled_left ~ dbinom(1, p),
-    logit(p) <- a[actor] + g[block_id] + b[treatment],
-    b[treatment] ~ dnorm(0, 0.5),
-    a[actor] ~ dnorm(a_0, sigma_a),
-    g[block_id] ~ dnorm(0, sigma_g),
-    a_0 ~ dnorm(0, 1.5),
-    sigma_a ~ dexp(1),
-    sigma_g ~ dexp(1)
-  ),
-  data = dat_list,
-  chains = 4, cores = 4, log_lik = TRUE
+    # Likelihood
+    K ~ normal(mu, sigma),
+    mu <- a[clade_id] + b[clade_id] * L,        
+
+    # Priors
+    a[clade_id] ~ normal(a_0, sigma_a),
+    b[clade_id] ~ normal(b_0, sigma_b),
+    sigma ~ exponential(1),
+    # Hyperpriors
+    a_0 ~ normal(0, 0.2),
+    b_0 ~ normal(0, 0.5),
+    sigma_a ~ exponential(1),
+    sigma_b ~ exponential(1)
+    ),
+    data = milk_data[, c("K", "L", "clade_id")],
+    chains = 4, cores = 4, iter = 2000
 )
+```
+
+```r
+Warning: 155 of 4000 (4.0%) transitions ended with a divergence.
+See https://mc-stan.org/misc/warnings for details.
 ```
 
 ---
 
-## Estimativas por ator
+## Modelo de lactose com inclinações aleatórias (não-centrado)
 
-.center[![](figures/actors_sigma_a.png)]
-
----
-
-## Estimativas por bloco
-
-.center[![](figures/blocks_sigma_g.png)]
-
----
-
-## Desvios-padrão dos efeitos aleatórios
-
-.center[![](figures/sigma_ag.png)]
-
----
-
-## Efeitos dos tratamentos
-
-.center[![](figures/chimp_treatments.png)]
-
----
-
-## Contrastes entre tratamentos
-
-.center[![](figures/chimp_contrasts.png)]
-
----
-
-## Parametrização centrada dos efeitos por ator
-
-<div>
-$$\begin{aligned}
-\mathrm{logit}(p_i) &= \alpha_{\mathrm{actor}[i]} \\
- \alpha_j &\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
- \alpha_0 &\sim \mathrm{Normal}(0, 1.5) \\
- \sigma_{\alpha} &\sim \mathrm{Exponential}(1)
-\end{aligned}$$
-</div>
-
-Na parametrização centrada, cada intercepto de ator é modelado diretamente pela distribuição hierárquica. A forma torna explícito que os valores observados são realizações de uma população comum.
-
----
-
-## Parametrização não centrada dos efeitos por ator
-
-<div>
-$$\begin{aligned}
-\mathrm{logit}(p_i) &= \alpha_0 + \tilde{\alpha}_{\mathrm{actor}[i]}\sigma_{\alpha} \\
- \tilde{\alpha}_j &\sim \mathrm{Normal}(0, 1), \quad j=1,\ldots,7 \\
- \alpha_0 &\sim \mathrm{Normal}(0, 1.5) \\
- \sigma_{\alpha} &\sim \mathrm{Exponential}(1)
-\end{aligned}$$
-</div>
-
-Na parametrização não centrada, escrevemos cada efeito como um valor padronizado $z_j$ multiplicado pela escala populacional. As duas expressões definem o mesmo modelo probabilístico, mas produzem geometrias diferentes para o amostrador. A forma centrada tende a funcionar bem quando há informação suficiente por grupo; a não centrada costuma ajudar quando os grupos são pouco informativos ou a heterogeneidade está próxima de zero. A escolha deve ser avaliada pelos diagnósticos do ajuste.
-
----
-
-## Modelo não centrado dos chimpanzés
-
-```{r chimp-noncentered}
-m1nc <- ulam(
+```{r milk-random-slope-model-matt, eval=TRUE, results='hide'}
+milk_random_slope_nc <- ulam(
   alist(
-    pulled_left ~ dbinom(1, p),
-    logit(p) <- a_0 + z[actor] * sigma_a +
-      x[block_id] * sigma_g + b[treatment],
-    b[treatment] ~ dnorm(0, 0.5),
-    z[actor] ~ dnorm(0, 1),
-    x[block_id] ~ dnorm(0, 1),
-    a_0 ~ dnorm(0, 1.5),
-    sigma_a ~ dexp(1),
-    sigma_g ~ dexp(1),
-    gq> vector[actor]:a <<- a_0 + z * sigma_a,
-    gq> vector[block_id]:g <<- x * sigma_g
-  ),
-  data = dat_list,
-  chains = 4, cores = 4
+    # Likelihood
+    K ~ normal(mu, sigma),
+    mu <- a_0 + a_z[clade_id] * sigma_a + (b_0 + b_z[clade_id] * sigma_b) * L,
+    # Priors
+    a_z[clade_id] ~ normal(0, 1),
+    b_z[clade_id] ~ normal(0, 1),
+    sigma ~ exponential(1),
+    # Hyperpriors       
+    a_0 ~ normal(0, 0.2),
+    b_0 ~ normal(0, 0.5),
+    sigma_a ~ exponential(1),
+    sigma_b ~ exponential(1),
+    # Transformação para interceptos e inclinações específicos do grupo
+    gq> vector[clade_id]:a <<- a_0 + a_z * sigma_a,
+    gq> vector[clade_id]:b <<- b_0 + b_z * sigma_b),
+    data = milk_data[, c("K", "L", "clade_id")],
+    chains = 4, cores = 4, iter = 2000, refresh = 0
 )
 ```
 
 ---
 
-## Modelo de interceptos e inclinações aleatórios
+## Retas de regressão por clado
 
-Para o grupo $j$, seja $u_{0j}$ o desvio do intercepto e $u_{1j}$ o desvio da inclinação. Os dois desvios podem variar juntos:
+```{r milk-random-slope-predictions, eval=TRUE, echo=FALSE, fig.width=9, fig.height=4.4, dpi=300, out.width="95%"}
+milk_slope_posterior <- rethinking::extract.samples(milk_random_slope_nc)
+clade_levels <- levels(factor(milk_data$clade))
+milk_slope_grid <- expand.grid(
+  L = seq(min(milk_data$L), max(milk_data$L), length.out = 100),
+  clade_id = seq_along(clade_levels)
+)
+milk_slope_grid$clade <- factor(
+  clade_levels[milk_slope_grid$clade_id], levels = clade_levels
+)
 
-<div>
-$$\begin{aligned}
-y_{ij} &\sim \mathrm{Normal}(\mu_{ij}, \sigma) \\
- \mu_{ij} &= (\alpha_0+u_{0j}) + (\beta_0+u_{1j})x_{ij} \\
- \begin{pmatrix}u_{0j}\\
-u_{1j}\end{pmatrix} &\sim \mathrm{Normal}_2\left(\begin{pmatrix}0\\
-0\end{pmatrix}, \mathbf{\Sigma}\right) \\
- \mathbf{\Sigma} &= \begin{pmatrix} \tau_0^2 & \rho\tau_0\tau_1 \\
- \rho\tau_0\tau_1 & \tau_1^2 \end{pmatrix}
-\end{aligned}$$
-</div>
+milk_mu_draws <- vapply(seq_len(nrow(milk_slope_grid)), function(i) {
+  clade_id <- milk_slope_grid$clade_id[i]
+  milk_slope_posterior$a[, clade_id] +
+    milk_slope_posterior$b[, clade_id] * milk_slope_grid$L[i]
+}, numeric(nrow(milk_slope_posterior$a)))
+milk_slope_grid$mean <- colMeans(milk_mu_draws)
 
-Agora cada grupo tem sua própria reta. $\alpha_0+u_{0j}$ é o intercepto do grupo $j$, e $\beta_0+u_{1j}$ é sua inclinação. $\tau_0$ e $\tau_1$ medem a heterogeneidade entre grupos; $\rho$ representa a associação entre os desvios de intercepto e inclinação. Se $\tau_1=0$, as inclinações são comuns e o modelo se reduz ao de interceptos aleatórios.
+ggplot2::ggplot(
+  milk_slope_grid,
+  ggplot2::aes(x = L, y = mean, color = clade)
+) +
+  ggplot2::geom_line(linewidth = 0.8) +
+  ggplot2::geom_point(
+    data = milk_data,
+    ggplot2::aes(x = L, y = K, color = clade),
+    inherit.aes = FALSE, alpha = 0.7, size = 2
+  ) +
+  ggplot2::scale_color_brewer(palette = "Dark2", name = "Clade") +
+  ggplot2::labs(
+    x = "Lactose (z-score)",
+    y = "Energia do leite (z-score)"
+  ) +
+  ggplot2::theme_minimal(base_size = 13) +
+  ggplot2::theme(legend.position = "bottom")
+```
 
-Antes de ajustar esse modelo, centralize $x$ em um valor de referência relevante. Sem centralização, o intercepto corresponde a $x=0$, que pode estar fora da região observada; isso também pode induzir forte correlação entre os efeitos aleatórios de intercepto e inclinação.
+---
+
+## Quando usar modelos hierárquicos?
+
+- Existe uma recomendação genérica na literatura só devam ser usados quando número de grupos é grande (por exemplo, $> 30$). 
+- No entanto, o pooling parcial é útil mesmo com poucos grupos, especialmente quando há poucos dados por grupo. O modelo hierárquico permite que a informação de todos os grupos informe a estimativa de cada um deles.
+- Sempre que os grupos forem amostras de uma população maior, o pooling parcial é apropriado. 
+- Se os grupos forem fixos e não representativos de uma população maior (por exemplo, se forem tratamentos experimentais), o pooling parcial ainda pode ser útil para regularizar as estimativas. Ainda existem fontes de similaridade entre os grupos que podem ser exploradas, mesmo que não sejam amostras de uma população maior.
+- Uma preocupação comum é que o uso de modelos hierárquicos aumente de forma relevante a complexidade do modelo, incluindo muitos novos parâmetros. No entanto, a regularização hierárquica reduz a variância das estimativas, e o número de parâmetros não é mais um bom indicador da complexidade do modelo. Vamos explorar isso mais adiante, quando discutirmos a comparação de modelos.
 
 ---
 

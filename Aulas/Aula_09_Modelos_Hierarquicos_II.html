@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>GLMs Hierarquicos e outros modelos mistos</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Diogo Melo" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# GLMs Hierarquicos e outros modelos mistos
+]
+.subtitle[
+## Modelo binomial hierárquico para dados de chimpanzés
+]
+.author[
+### Diogo Melo
+]
+.date[
+### 23 de outubro de 2026
+]
+
+---
+
+
+
+
+
+
+## Prosocialidade em chimpanzés
+
+- Prosocialidade refere-se a comportamentos que beneficiam outros indivíduos.
+- Podemos estudar esse comportamento experimentalmente.
+- Neste experimento, um sujeito pode disponibilizar alimento a um parceiro sem custo para si.
+
+---
+
+## Delineamento experimental
+
+.center[![](figures/chimp_experiment.png)]
+
+---
+
+## Estrutura dos dados
+
+- Várias medidas por chimpanzé (ator)
+- Condição social ou não social
+- Blocos experimentais
+- Opção prosocial à esquerda; os chimpanzés podem ter preferência lateral
+
+**Respostas observadas**
+
+- Escolheu a opção prosocial
+- Puxou a alavanca da esquerda
+
+---
+
+## Dados dos chimpanzés
+
+
+``` r
+library(rethinking)
+data(chimpanzees)
+head(chimpanzees)
+```
+
+```text
+  actor recipient condition block trial prosoc_left chose_prosoc pulled_left
+1     1        NA         0     1     2           0            1           0
+2     1        NA         0     1     4           0            0           1
+3     1        NA         0     1     6           1            0           0
+4     1        NA         0     1     8           0            1           0
+5     1        NA         0     1    10           1            1           1
+6     1        NA         0     1    12           1            1           1
+```
+
+---
+
+## Tratamentos experimentais
+
+.f3[
+1. `prosoc_left = 0`, `condition = 0`: dois itens à direita, sem parceiro.
+2. `prosoc_left = 1`, `condition = 0`: dois itens à esquerda, sem parceiro.
+3. `prosoc_left = 0`, `condition = 1`: dois itens à direita, com parceiro.
+4. `prosoc_left = 1`, `condition = 1`: dois itens à esquerda, com parceiro.
+]
+
+---
+
+## Modelo inicial da verossimilhança
+
+- `\(L_i\)`: indicador de que a alavanca esquerda foi puxada
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} + \beta_{\mathrm{treatment}[i]}
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Incluindo efeitos de bloco
+
+- `\(L_i\)`: indicador de que a alavanca esquerda foi puxada
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]}
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Priori para o tratamento experimental
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
+ \beta_j &amp;\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Pooling dos interceptos por ator
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
+ \beta_j &amp;\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
+ \alpha_j &amp;\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Pooling dos interceptos por bloco
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
+ \beta_j &amp;\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
+ \alpha_j &amp;\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
+ \gamma_j &amp;\sim \mathrm{Normal}(0, \sigma_{\gamma}), \quad j=1,\ldots,6
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Completando as prioris
+
+&lt;div&gt;
+`$$\begin{aligned}
+L_i &amp;\sim \mathrm{Bernoulli}(p_i) \\
+ \mathrm{logit}(p_i) &amp;= \alpha_0 + \alpha_{\mathrm{actor}[i]} + \gamma_{\mathrm{block}[i]} + \beta_{\mathrm{treatment}[i]} \\
+ \beta_j &amp;\sim \mathrm{Normal}(0, 0.5), \quad j=1,\ldots,4 \\
+ \alpha_j &amp;\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
+ \gamma_j &amp;\sim \mathrm{Normal}(0, \sigma_{\gamma}), \quad j=1,\ldots,6 \\
+ \alpha_0 &amp;\sim \mathrm{Normal}(0, 1.5) \\
+ \sigma_{\alpha} &amp;\sim \mathrm{Exponential}(1) \\
+ \sigma_{\gamma} &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
+## Código do modelo dos chimpanzés
+
+
+``` r
+data(chimpanzees, package = "rethinking")
+d &lt;- chimpanzees
+d$treatment &lt;- 1 + d$prosoc_left + 2 * d$condition
+
+dat_list &lt;- list(
+  pulled_left = d$pulled_left,
+  actor = d$actor,
+  block_id = d$block,
+  treatment = as.integer(d$treatment)
+)
+
+m1 &lt;- ulam(
+  alist(
+    pulled_left ~ dbinom(1, p),
+    logit(p) &lt;- a[actor] + g[block_id] + b[treatment],
+    b[treatment] ~ dnorm(0, 0.5),
+    a[actor] ~ dnorm(a_0, sigma_a),
+    g[block_id] ~ dnorm(0, sigma_g),
+    a_0 ~ dnorm(0, 1.5),
+    sigma_a ~ dexp(1),
+    sigma_g ~ dexp(1)
+  ),
+  data = dat_list,
+  chains = 4, cores = 4, log_lik = TRUE
+)
+```
+
+---
+
+## Estimativas por ator
+
+.center[![](figures/actors_sigma_a.png)]
+
+---
+
+## Estimativas por bloco
+
+.center[![](figures/blocks_sigma_g.png)]
+
+---
+
+## Desvios-padrão dos efeitos aleatórios
+
+.center[![](figures/sigma_ag.png)]
+
+---
+
+## Efeitos dos tratamentos
+
+.center[![](figures/chimp_treatments.png)]
+
+---
+
+## Contrastes entre tratamentos
+
+.center[![](figures/chimp_contrasts.png)]
+
+---
+
+## Parametrização centrada dos efeitos por ator
+
+&lt;div&gt;
+`$$\begin{aligned}
+\mathrm{logit}(p_i) &amp;= \alpha_{\mathrm{actor}[i]} \\
+ \alpha_j &amp;\sim \mathrm{Normal}(\alpha_0, \sigma_{\alpha}), \quad j=1,\ldots,7 \\
+ \alpha_0 &amp;\sim \mathrm{Normal}(0, 1.5) \\
+ \sigma_{\alpha} &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+&lt;/div&gt;
+
+Na parametrização centrada, cada intercepto de ator é modelado diretamente pela distribuição hierárquica. A forma torna explícito que os valores observados são realizações de uma população comum.
+
+---
+
+## Parametrização não centrada dos efeitos por ator
+
+&lt;div&gt;
+`$$\begin{aligned}
+\mathrm{logit}(p_i) &amp;= \alpha_0 + \tilde{\alpha}_{\mathrm{actor}[i]}\sigma_{\alpha} \\
+ \tilde{\alpha}_j &amp;\sim \mathrm{Normal}(0, 1), \quad j=1,\ldots,7 \\
+ \alpha_0 &amp;\sim \mathrm{Normal}(0, 1.5) \\
+ \sigma_{\alpha} &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+&lt;/div&gt;
+
+Na parametrização não centrada, escrevemos cada efeito como um valor padronizado `\(z_j\)` multiplicado pela escala populacional. As duas expressões definem o mesmo modelo probabilístico, mas produzem geometrias diferentes para o amostrador. A forma centrada tende a funcionar bem quando há informação suficiente por grupo; a não centrada costuma ajudar quando os grupos são pouco informativos ou a heterogeneidade está próxima de zero. A escolha deve ser avaliada pelos diagnósticos do ajuste.
+
+---
+
+## Modelo não centrado dos chimpanzés
+
+
+``` r
+m1nc &lt;- ulam(
+  alist(
+    pulled_left ~ dbinom(1, p),
+    logit(p) &lt;- a_0 + z[actor] * sigma_a +
+      x[block_id] * sigma_g + b[treatment],
+    b[treatment] ~ dnorm(0, 0.5),
+    z[actor] ~ dnorm(0, 1),
+    x[block_id] ~ dnorm(0, 1),
+    a_0 ~ dnorm(0, 1.5),
+    sigma_a ~ dexp(1),
+    sigma_g ~ dexp(1),
+    gq&gt; vector[actor]:a &lt;&lt;- a_0 + z * sigma_a,
+    gq&gt; vector[block_id]:g &lt;&lt;- x * sigma_g
+  ),
+  data = dat_list,
+  chains = 4, cores = 4
+)
+```
+
+---
+
+## Modelo de interceptos e inclinações aleatórios
+
+Para o grupo `\(j\)`, seja `\(u_{0j}\)` o desvio do intercepto e `\(u_{1j}\)` o desvio da inclinação. Os dois desvios podem variar juntos:
+
+&lt;div&gt;
+`$$\begin{aligned}
+y_{ij} &amp;\sim \mathrm{Normal}(\mu_{ij}, \sigma) \\
+ \mu_{ij} &amp;= (\alpha_0+u_{0j}) + (\beta_0+u_{1j})x_{ij} \\
+ \begin{pmatrix}u_{0j}\\
+u_{1j}\end{pmatrix} &amp;\sim \mathrm{Normal}_2\left(\begin{pmatrix}0\\
+0\end{pmatrix}, \mathbf{\Sigma}\right) \\
+ \mathbf{\Sigma} &amp;= \begin{pmatrix} \tau_0^2 &amp; \rho\tau_0\tau_1 \\
+ \rho\tau_0\tau_1 &amp; \tau_1^2 \end{pmatrix}
+\end{aligned}$$`
+&lt;/div&gt;
+
+Agora cada grupo tem sua própria reta. `\(\alpha_0+u_{0j}\)` é o intercepto do grupo `\(j\)`, e `\(\beta_0+u_{1j}\)` é sua inclinação. `\(\tau_0\)` e `\(\tau_1\)` medem a heterogeneidade entre grupos; `\(\rho\)` representa a associação entre os desvios de intercepto e inclinação. Se `\(\tau_1=0\)`, as inclinações são comuns e o modelo se reduz ao de interceptos aleatórios.
+
+Antes de ajustar esse modelo, centralize `\(x\)` em um valor de referência relevante. Sem centralização, o intercepto corresponde a `\(x=0\)`, que pode estar fora da região observada; isso também pode induzir forte correlação entre os efeitos aleatórios de intercepto e inclinação.
+
+---
+
+## Dados replicados
+
+Simular dados a partir do modelo ajustado permite verificar se ele reproduz características importantes dos dados observados, incluindo a variação dentro e entre grupos. A replicação deve respeitar a estrutura de agrupamento, não apenas a distribuição marginal da resposta.
+
+---
+
+## Efeitos aleatórios correlacionados
+
+A correlação entre intercepto e inclinação descreve como o nível basal dos grupos se relaciona com a resposta ao preditor. Ela não é uma associação causal entre esses parâmetros e pode depender da origem escolhida para `\(x\)`; por isso, sua interpretação exige centralização e contexto substantivo.
+
+---
+
+## Modelos filogenéticos e processos Gaussianos
+
+São extensões nas quais a dependência entre observações é definida por uma estrutura de covariância, como parentesco evolutivo ou distância espacial, em vez de apenas pela pertença a grupos discretos.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
