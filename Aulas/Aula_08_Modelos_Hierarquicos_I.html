@@ -295,18 +295,18 @@ rethinking::precis(milk_random_intercept_nc, depth = 2) |&gt; round(3)
 
 ```
           mean    sd   5.5%  94.5%  rhat ess_bulk
-a_z[1]  -0.545 0.824 -1.830  0.807 1.002 2318.660
-a_z[2]  -0.017 0.796 -1.302  1.260 1.001 2573.563
-a_z[3]   0.325 0.825 -1.029  1.636 1.003 2295.995
-a_z[4]   0.313 0.844 -0.994  1.673 1.001 2612.349
-bL      -0.887 0.088 -1.024 -0.745 1.001 2292.536
-sigma    0.407 0.062  0.318  0.518 1.000 3143.915
-a_0      0.006 0.103 -0.158  0.168 1.001 1912.088
-sigma_g  0.169 0.146  0.014  0.433 1.002 1088.624
-a[1]    -0.088 0.126 -0.301  0.097 1.002 2825.100
-a[2]     0.006 0.108 -0.161  0.183 1.001 4311.863
-a[3]     0.068 0.137 -0.123  0.308 1.001 2917.292
-a[4]     0.059 0.139 -0.142  0.292 1.000 2933.126
+a_z[1]  -0.556 0.793 -1.787  0.728 1.001 2542.232
+a_z[2]  -0.028 0.806 -1.333  1.231 1.001 2737.116
+a_z[3]   0.313 0.819 -1.021  1.600 1.002 2814.681
+a_z[4]   0.287 0.855 -1.093  1.604 1.002 2736.401
+bL      -0.885 0.090 -1.022 -0.739 1.000 2735.284
+sigma    0.406 0.059  0.323  0.509 1.002 2974.800
+a_0      0.008 0.100 -0.147  0.170 1.000 2384.559
+sigma_g  0.178 0.166  0.013  0.469 1.003 1002.563
+a[1]    -0.090 0.127 -0.308  0.097 1.000 2485.400
+a[2]     0.006 0.110 -0.168  0.181 1.001 4481.948
+a[3]     0.069 0.136 -0.121  0.309 1.001 3059.220
+a[4]     0.062 0.144 -0.151  0.302 1.000 3188.110
 ```
 
 ``` r
@@ -440,9 +440,15 @@ milk_random_slope_nc &lt;- ulam(
 
 ---
 
-## Dados replicados
+## Erro de mensuração e modelos hierárquicos
 
-Simular dados a partir do modelo ajustado permite verificar se ele reproduz características importantes dos dados observados, incluindo a variação dentro e entre grupos. A replicação deve respeitar a estrutura de agrupamento, não apenas a distribuição marginal da resposta.
+Vamos ilustrar um uso de modelos hierárquicos que ilustra a flexibilidade dos modelos Bayesianos. Existe uma simetria entre observações e parâmetros nesses modelos. Podemos usar essa simetria para deslocar a posição do nosso modelo linear. 
+
+Vamos supor que tanto a variável resposta quanto a variável preditora tenham erro de mensuração. Podemos modelar o erro de mensuração da variável preditora como um parâmetro aleatório, com distribuição normal em torno do valor observado. 
+
+Se houverem medidas repeditas, podemos usar essas medidas para estimar simultaneamente o erro de mensuração e a relação entre as variáveis.
+
+A estrutura hierárquica do modelo permite que a informação de todas as observações informe a estimativa do valor verdadeiro da variável preditora, reduzindo o impacto do erro de mensuração na estimativa da relação entre as variáveis.
 
 ---
 

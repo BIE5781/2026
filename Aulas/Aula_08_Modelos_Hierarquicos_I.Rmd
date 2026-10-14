@@ -532,9 +532,15 @@ ggplot2::ggplot(
 
 ---
 
-## Dados replicados
+## Erro de mensuração e modelos hierárquicos
 
-Simular dados a partir do modelo ajustado permite verificar se ele reproduz características importantes dos dados observados, incluindo a variação dentro e entre grupos. A replicação deve respeitar a estrutura de agrupamento, não apenas a distribuição marginal da resposta.
+Vamos ilustrar um uso de modelos hierárquicos que ilustra a flexibilidade dos modelos Bayesianos. Existe uma simetria entre observações e parâmetros nesses modelos. Podemos usar essa simetria para deslocar a posição do nosso modelo linear. 
+
+Vamos supor que tanto a variável resposta quanto a variável preditora tenham erro de mensuração. Podemos modelar o erro de mensuração da variável preditora como um parâmetro aleatório, com distribuição normal em torno do valor observado. 
+
+Se houverem medidas repeditas, podemos usar essas medidas para estimar simultaneamente o erro de mensuração e a relação entre as variáveis.
+
+A estrutura hierárquica do modelo permite que a informação de todas as observações informe a estimativa do valor verdadeiro da variável preditora, reduzindo o impacto do erro de mensuração na estimativa da relação entre as variáveis.
 
 ---
 
