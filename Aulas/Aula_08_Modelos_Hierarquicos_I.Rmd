@@ -108,7 +108,7 @@ m1 <- ulam(
 
 ## Médias de rebatidas
 
-.center[![](figures/baseball_estimates.png)]
+.baseball-estimates.center[![](figures/baseball_estimates.png)]
 
 - Estimativas extremas são deslocadas em direção à média da população.
 
@@ -120,7 +120,26 @@ m1 <- ulam(
 2. **Sem pooling:** cada jogador é estimado separadamente, sem compartilhar informação; com poucas tentativas, as estimativas podem ser instáveis.
 3. **Pooling parcial:** as estimativas individuais são regularizadas por uma distribuição comum que aprende quanto os jogadores variam.
 
+**Modelos de Machine Learning que usam o mesmo princípio**
+
+- LASSO (restringe o módulo dos coeficientes)
+- Ridge Regression (restringe o quadrado dos coeficientes)
+- Elastic Net (restringe o módulo e o quadrado dos coeficientes)
+
 ---
+
+## Shrinkage em ML
+
+<div>
+$$\begin{aligned}
+\text{LASSO}&: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda \sum_{j=1}^p |\beta_j| \right) \\
+\text{Ridge}&: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda \sum_{j=1}^p \beta_j^2 \right) \\ 
+\text{Elastic Net}&: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda_1 \sum_{j=1}^p |\beta_j| + \lambda_2 \sum_{j=1}^p \beta_j^2 \right) \\
+\end{aligned}$$
+</div>
+
+---
+
 ## Variáveis categóricas e pooling
 
 .pull-left[
@@ -541,6 +560,20 @@ Vamos supor que tanto a variável resposta quanto a variável preditora tenham e
 Se houverem medidas repeditas, podemos usar essas medidas para estimar simultaneamente o erro de mensuração e a relação entre as variáveis.
 
 A estrutura hierárquica do modelo permite que a informação de todas as observações informe a estimativa do valor verdadeiro da variável preditora, reduzindo o impacto do erro de mensuração na estimativa da relação entre as variáveis.
+
+---
+
+## Observações de saturação de oxigênio
+
+.pull-left[
+61 children had their blood oxygen content measured at the Children's Hospital in Melbourne, either with a chemical method analysing gases in the blood (CO) or by a pulse oximeter measuring transcutaneously (pulse). Replicates are linked between methods; i.e. replicate 1 for each of the two methods are done at the same time. However, replicate measurements were taken in quick succession so the pairs of measurements are exchangeable within person.
+]
+.pull-right[
+```{r oxygen-data, eval=TRUE, echo=FALSE}
+data(ox, package = "MethComp")
+head(ox)
+```
+]
 
 ---
 

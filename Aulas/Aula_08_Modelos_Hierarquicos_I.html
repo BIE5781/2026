@@ -104,7 +104,7 @@ m1 &lt;- ulam(
 
 ## Médias de rebatidas
 
-.center[![](figures/baseball_estimates.png)]
+.baseball-estimates.center[![](figures/baseball_estimates.png)]
 
 - Estimativas extremas são deslocadas em direção à média da população.
 
@@ -116,7 +116,26 @@ m1 &lt;- ulam(
 2. **Sem pooling:** cada jogador é estimado separadamente, sem compartilhar informação; com poucas tentativas, as estimativas podem ser instáveis.
 3. **Pooling parcial:** as estimativas individuais são regularizadas por uma distribuição comum que aprende quanto os jogadores variam.
 
+**Modelos de Machine Learning que usam o mesmo princípio**
+
+- LASSO (restringe o módulo dos coeficientes)
+- Ridge Regression (restringe o quadrado dos coeficientes)
+- Elastic Net (restringe o módulo e o quadrado dos coeficientes)
+
 ---
+
+## Shrinkage em ML
+
+&lt;div&gt;
+`$$\begin{aligned}
+\text{LASSO}&amp;: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda \sum_{j=1}^p |\beta_j| \right) \\
+\text{Ridge}&amp;: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda \sum_{j=1}^p \beta_j^2 \right) \\ 
+\text{Elastic Net}&amp;: \quad \min_{\beta} \left( \sum_{i=1}^n (y_i - x_i^T \beta)^2 + \lambda_1 \sum_{j=1}^p |\beta_j| + \lambda_2 \sum_{j=1}^p \beta_j^2 \right) \\
+\end{aligned}$$`
+&lt;/div&gt;
+
+---
+
 ## Variáveis categóricas e pooling
 
 .pull-left[
@@ -295,18 +314,18 @@ rethinking::precis(milk_random_intercept_nc, depth = 2) |&gt; round(3)
 
 ```
           mean    sd   5.5%  94.5%  rhat ess_bulk
-a_z[1]  -0.556 0.793 -1.787  0.728 1.001 2542.232
-a_z[2]  -0.028 0.806 -1.333  1.231 1.001 2737.116
-a_z[3]   0.313 0.819 -1.021  1.600 1.002 2814.681
-a_z[4]   0.287 0.855 -1.093  1.604 1.002 2736.401
-bL      -0.885 0.090 -1.022 -0.739 1.000 2735.284
-sigma    0.406 0.059  0.323  0.509 1.002 2974.800
-a_0      0.008 0.100 -0.147  0.170 1.000 2384.559
-sigma_g  0.178 0.166  0.013  0.469 1.003 1002.563
-a[1]    -0.090 0.127 -0.308  0.097 1.000 2485.400
-a[2]     0.006 0.110 -0.168  0.181 1.001 4481.948
-a[3]     0.069 0.136 -0.121  0.309 1.001 3059.220
-a[4]     0.062 0.144 -0.151  0.302 1.000 3188.110
+a_z[1]  -0.542 0.808 -1.843  0.755 1.003 2347.108
+a_z[2]  -0.027 0.772 -1.267  1.187 1.001 2327.346
+a_z[3]   0.321 0.808 -0.946  1.603 1.001 2481.344
+a_z[4]   0.304 0.829 -1.022  1.624 1.001 2328.266
+bL      -0.886 0.089 -1.025 -0.742 1.001 2352.878
+sigma    0.404 0.058  0.323  0.508 1.003 3152.463
+a_0      0.009 0.104 -0.152  0.177 1.001 1954.421
+sigma_g  0.179 0.156  0.015  0.469 1.004 1138.207
+a[1]    -0.090 0.123 -0.298  0.092 1.001 2578.361
+a[2]     0.004 0.107 -0.163  0.177 1.001 4722.704
+a[3]     0.070 0.137 -0.127  0.304 1.001 3008.110
+a[4]     0.066 0.140 -0.134  0.302 1.001 2974.387
 ```
 
 ``` r
@@ -449,6 +468,26 @@ Vamos supor que tanto a variável resposta quanto a variável preditora tenham e
 Se houverem medidas repeditas, podemos usar essas medidas para estimar simultaneamente o erro de mensuração e a relação entre as variáveis.
 
 A estrutura hierárquica do modelo permite que a informação de todas as observações informe a estimativa do valor verdadeiro da variável preditora, reduzindo o impacto do erro de mensuração na estimativa da relação entre as variáveis.
+
+---
+
+## Observações de saturação de oxigênio
+
+.pull-left[
+61 children had their blood oxygen content measured at the Children's Hospital in Melbourne, either with a chemical method analysing gases in the blood (CO) or by a pulse oximeter measuring transcutaneously (pulse). Replicates are linked between methods; i.e. replicate 1 for each of the two methods are done at the same time. However, replicate measurements were taken in quick succession so the pairs of measurements are exchangeable within person.
+]
+.pull-right[
+
+```
+  meth item repl    y
+1   CO    1    1 78.0
+2   CO    1    2 76.4
+3   CO    1    3 77.2
+4   CO    2    1 68.7
+5   CO    2    2 67.6
+6   CO    2    3 68.3
+```
+]
 
 ---
 
