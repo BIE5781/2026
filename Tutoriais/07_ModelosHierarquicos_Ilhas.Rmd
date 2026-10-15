@@ -1,0 +1,710 @@
+---
+title: "Tutorial de modelos mistos e hierárquicos"
+author:
+ - "Paulo Inácio Prado"
+ - "Diogo Melo"
+date: "2026-10-23"
+
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+---
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, fig.asp = 1)
+# botão para copiar o código
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copy code <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copied! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Not copied 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+  )
+```
+
+# Introdução
+
+
+Usaremos um conjunto de dados com o número de espécies de formigas
+registradas em ilhas de diferentes arquipélagos. Nosso objetivo é ajustar
+modelos lineares à relação entre o número de espécies e a área da ilha,
+em escala logarítmica.
+
+
+Comece carregando as bibliotecas necessárias e os dados, disponíveis no
+material suplementar de Ohyama *et al.* (2021):
+
+
+```{r, eval =TRUE}
+## carregar as bibliotecas necessárias
+library(tidyverse)
+library(rethinking)
+library(lme4)
+library(bbmle)
+## todos os conjuntos de dados compilados por Ohyama et al.
+raw <- read.csv("https://github.com/piLaboratory/bie5781/raw/master/data/jbi14149-sup-0003-appendixs3.csv")
+```
+
+Os comandos abaixo usam a sintaxe do [tidyverse](https://www.tidyverse.org/)
+para selecionar apenas as ilhas oceânicas. Em seguida, calculamos os
+logaritmos da área e do número de espécies de cada ilha. Padronizamos o
+logaritmo da área^[subtraindo a média dos logaritmos das áreas e dividindo
+o resultado pelo desvio-padrão] e centralizamos o logaritmo do número de
+espécies^[subtraindo a média dos logaritmos da riqueza de espécies de cada
+valor]. O código também cria um índice numérico para cada local de estudo
+(arquipélago).
+
+```{r , eval =TRUE}
+## conjunto de dados de ilhas oceânicas
+## e área e riqueza transformadas
+islands <-
+    dplyr::filter(raw, Island.Type== "Oceanic") %>%
+    mutate(l_area = log(Island_area),
+           l_S = log(Species.Richness),
+           ls_area = (l_area - mean(l_area))/sd(l_area),
+           lc_S = l_S - mean(l_S),
+           site_fac= factor(Study.location),
+           site = as.integer(site_fac),
+           site_id = factor(site))
+
+```
+
+O tidyverse inclui o pacote ggplot2, que permite criar rapidamente um
+gráfico da relação entre espécies e área em cada local de estudo:
+
+
+```{r }
+p2 <-
+    islands %>%
+    ggplot(aes(x = ls_area, y = lc_S)) +
+    geom_point() +
+    facet_wrap(~ site_fac) +
+    xlab("Standardized ln Island Area (m2)") +
+    ylab("Centered ln Species Richness") +
+    theme_bw()
+
+p2
+```
+
+Nas próximas seções, ajustaremos e compararemos três modelos alternativos
+a esses dados, supondo que a resposta segue uma distribuição gaussiana:
+
+**Inclinação e intercepto únicos:** uma regressão linear simples, que
+estima uma única inclinação e um único intercepto para a relação linear
+esperada entre a resposta e o preditor:
+
+$$
+\begin{aligned} 
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha + \beta x_i
+\end{aligned} 
+$$
+
+Em que $y_i$ é o logaritmo centralizado da riqueza de espécies e $x_i$ é
+o logaritmo padronizado da área da ilha, para cada ilha $i$.
+
+**Inclinações e interceptos independentes por local:** este modelo
+equivale a ajustar uma regressão linear separada para cada arquipélago
+(local de estudo). Assim, cada local tem um intercepto e uma inclinação
+independentes para o preditor linear:
+
+$$
+\begin{aligned}
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i
+\end{aligned}
+$$
+
+Em que $\alpha_{\text{site[i]}}$ e $\beta_{\text{site[i]}}$ são o
+intercepto e a inclinação do local ao qual pertence a observação $i$.
+
+**Inclinações e interceptos agrupados entre locais:** cada local tem sua
+própria inclinação e seu próprio intercepto no preditor linear, mas esses
+parâmetros são agrupados em uma distribuição comum. Este é um modelo
+hierárquico, no qual as inclinações e os interceptos de cada local seguem
+uma distribuição de probabilidade, geralmente gaussiana.
+
+$$
+\begin{aligned}
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
+  \alpha_{\text{site}} &\sim \text{Normal}(\mu_\alpha, \sigma_\alpha) \\
+  \beta_{\text{site}} &\sim \text{Normal}(\mu_\beta, \sigma_\beta) \\
+\end{aligned}
+$$
+
+Ao agrupar os parâmetros em uma mesma distribuição, supomos que há
+dependência entre eles.
+
+Nas próximas seções, mostraremos como ajustar e comparar esses três
+modelos pelas abordagens bayesiana e de máxima verossimilhança.
+
+Em resumo, os três modelos são:
+
+1. m0: inclinação e intercepto únicos (pooling completo)
+2. m1: inclinações e interceptos diferentes por local (sem pooling)
+3. m2: inclinações e interceptos agrupados entre locais (pooling parcial)
+
+## Abordagem bayesiana
+
+
+### Inclinação e intercepto únicos
+
+Precisamos dos valores da variável resposta e do preditor para cada ilha,
+como mostram as primeiras linhas do conjunto de dados abaixo:
+
+```{r }
+head(islands[, c("ls_area", "lc_S")])
+```
+
+Precisamos definir distribuições a priori para os três parâmetros do
+modelo. Usamos uma priori log-normal para a inclinação, pois sabemos que
+a relação entre espécies e área é positiva. A priori escolhida atribui
+baixa probabilidade ($p<0{,}05$) a inclinações maiores que 1,5. As prioris
+do intercepto e do desvio-padrão são menos informativas:
+
+$$
+\begin{aligned} 
+  y_i & \sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha + \beta x_i \\
+  \alpha & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
+  \beta & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
+  \sigma & \sim \text{Exponential}(\lambda = 1)
+\end{aligned} 
+$$
+
+O código a seguir ajusta esse modelo usando o pacote *rethinking*:
+
+```{r }
+m0 <- ulam(
+    alist(
+        lc_S ~ dnorm( mu, sigma ) ,
+        mu <- alpha + beta * ls_area,
+        alpha ~ dnorm(0, 2),
+        beta ~ dlnorm(0, 0.7), 
+        sigma ~ dexp(1)
+    ) , data = islands[, c("ls_area", "lc_S")] , chains=4 , cores=4 , log_lik=TRUE ) # adicionamos o argumento log_lik para obter a
+             # log-verossimilhança por observação e comparar os modelos
+```
+
+Use o comando abaixo para obter um resumo das distribuições posteriores
+dos parâmetros:
+
+```{r }
+(m0.cf <- precis(m0, digits =3))
+```
+
+Podemos usar as médias posteriores do intercepto e da inclinação para
+desenhar a reta de regressão sobre os dados de cada local:
+
+```{r }
+p2 +
+    geom_abline(aes(intercept = m0.cf["alpha", 1], slope = m0.cf["beta",1]))
+```
+
+Supor a mesma reta de regressão para todos os locais subajusta muito os
+dados; precisamos de um modelo mais complexo.
+
+### Inclinações e interceptos diferentes por local
+
+Precisamos de um modelo com mais parâmetros para descrever as variações
+da relação entre espécies e área observadas entre os locais de estudo.
+Podemos permitir que cada local tenha seu próprio intercepto e sua
+própria inclinação. Para isso, precisamos de uma terceira variável: um
+índice numérico que identifica o local:
+
+```{r }
+head(islands[, c("ls_area", "lc_S", "site")])
+tail(islands[, c("ls_area", "lc_S", "site")])
+```
+
+Denotamos por $\alpha_{\text{site[i]}}$ o intercepto da observação $i$
+no respectivo local; o mesmo vale para a inclinação
+$\beta_{\text{site[i]}}$. Como temos `r max(islands$site)` locais,
+precisamos especificar esse mesmo número de prioris para os interceptos
+e para as inclinações. Usando $\theta_{\text{site}} \sim
+	ext{distribuição()}$ como abreviação para esse conjunto de prioris,
+podemos escrever o modelo assim:
+
+$$
+\begin{aligned}
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
+  \alpha_{\text{site}} & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
+  \beta_{\text{site}} & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
+  \sigma & \sim \text{Exponential}(\lambda = 1)
+\end{aligned}
+$$
+
+Para todos os interceptos e inclinações, usamos as mesmas prioris do
+modelo anterior, que tinha um único intercepto e uma única inclinação.
+Também mantemos a priori para o parâmetro $\sigma$, o desvio-padrão
+residual.
+
+Podemos ajustar esse modelo com:
+
+```{r }
+m1 <- ulam(
+    alist(
+        lc_S ~ dnorm( mu, sigma ) ,
+        mu <- a[site] + b[site] * ls_area,
+        a[site] ~ dnorm(0, 2),
+        b[site] ~ dlnorm(0, 0.7),
+        sigma ~ dexp(1)
+    ) , data = islands[, c("ls_area", "lc_S", "site")] , chains=4 , cores=4 , log_lik=TRUE )
+```
+
+Para resumir as distribuições posteriores de todos os parâmetros, use
+o argumento *depth = 2* da função *precis*:
+
+```{r }
+(m1.cf <- precis(m1, digits =3, depth =2))
+```
+
+O código abaixo organiza em um data frame as médias posteriores dos
+interceptos e das inclinações de cada local e acrescenta o nome de cada
+local. Depois, usamos esse data frame para adicionar as retas de
+regressão aos gráficos de dispersão:
+ 
+
+```{r }
+nsites <- max(islands$site)
+## data frame com parâmetros lineares e nomes dos locais
+m1.ab <- data.frame(
+    site = 1:nsites,
+    site_fac = levels(islands$site_fac),
+    intercept = m1.cf[1:nsites,1],
+    slope = m1.cf[(nsites+1):(2*nsites),1])
+## gráficos de dispersão e retas de regressão posteriores
+p2 +
+    geom_abline(data = m1.ab,
+                aes(intercept = intercept, slope = slope),
+                col="navy")
+```
+
+Como esperado, o ajuste melhorou bastante, mas ao custo de acrescentar
+34 parâmetros ao modelo. Saímos do subajuste e podemos ter chegado ao
+superajuste.
+
+### Interceptos e inclinações agrupados
+
+Uma alternativa intermediária é permitir que os parâmetros variem entre
+locais, mas agrupá-los em uma distribuição. Assim, temos
+**hiperparâmetros**, isto é, parâmetros das distribuições dos parâmetros
+do preditor linear. Portanto, precisamos atribuir prioris aos
+hiperparâmetros:
+
+
+$$
+\begin{aligned}
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
+  \alpha_{\text{site}} & \sim \text{Normal}(\mu_\alpha, \sigma_\alpha)\\
+  \beta_{\text{site}} & \sim \text{Normal}(\mu_\beta, \sigma_\beta)\\
+  \mu_\alpha & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
+  \mu_\beta & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
+  \sigma_\alpha & \sim \text{Exponential}(\lambda = 1)\\
+  \sigma_\beta & \sim \text{Exponential}(\lambda = 0.25)\\
+  \sigma & \sim \text{Exponential}(\lambda = 1)\\
+\end{aligned}
+$$
+
+O código para ajustar esse modelo é:
+
+
+```{r }
+m2 <- ulam(
+    alist(
+        lc_S ~ dnorm( mu, sigma ) ,
+        mu <- a[site] + b[site] * ls_area,
+        a[site] ~ dnorm(mu_a, sigma_a),
+        b[site] ~ dnorm(mu_b, sigma_b),
+        ## priori
+        sigma ~ dexp(1),
+        ## hiperprioris
+        mu_a ~ dnorm(0, 2),   # priori para o intercepto médio
+        mu_b ~ dlnorm(0, 0.7),# priori para a inclinação média
+        sigma_a ~ dexp(1),
+        sigma_b ~ dexp(0.25)
+    ) , data = islands[, c("ls_area", "lc_S", "site")] , chains=4 , cores=4 , log_lik=TRUE )
+```
+
+Novamente, resumimos as distribuições posteriores dos parâmetros e
+organizamos suas médias posteriores em um data frame:
+
+
+```{r }
+## resumos posteriores
+(m2.cf <- precis(m2, depth = 2, digits=3))
+## data frame com as médias posteriores da inclinação e do intercepto
+## de cada local
+m2.ab <- data.frame(
+    site = 1:nsites,
+    site_fac = levels(islands$site_fac),
+    intercept = m2.cf[1:nsites,1],
+    slope = m2.cf[(nsites+1):(2*nsites),1])
+```
+
+Em seguida, podemos adicionar aos gráficos de dispersão as retas deste
+modelo e do modelo anterior:
+
+
+```{r }
+p2 +
+    geom_abline(data = m1.ab,
+                 aes(intercept = intercept, slope = slope),
+                col="navy") +
+     geom_abline(data = m2.ab,
+                 aes(intercept = intercept, slope = slope),
+                col="red")
+```
+
+As inclinações agrupadas (linhas vermelhas) são menos variáveis porque
+o ajuste de cada local também usa informações dos demais. Assim, os
+parâmetros sofrem shrinkage em direção a uma média comum:
+
+```{r }
+plot(m1.ab$slope, rep(1,nrow(m1.ab)),
+     ylim = c(0.5, 2.5),
+     xlab = "Mean posterior slopes",
+     yaxt="n", ylab="" , cex.axis=2,
+     cex.lab = 2, pch = 19)
+points(m2.ab$slope, rep(2,nrow(m2.ab)), pch =19)
+segments(y0 = rep(1,nrow(m1.ab)), x0 = m1.ab$slope,
+         y1 = rep(2,nrow(m1.ab)), x1 = m2.ab$slope,
+         lty =2)
+axis(2, at = c(1, 2), labels = c("M1", "M2"), cex.axis=2, adj = 1, las = 2)       
+```
+
+Essa média comum é o hiperparâmetro $\mu_\beta$. Adicione ao gráfico
+acima o intervalo de credibilidade bayesiano desse parâmetro:
+
+
+```{r }
+segments(x0 = m2.cf["mu_b","5.5%"],
+         y0 = 2.2,
+         x1 = m2.cf["mu_b","94.5%"],
+         y1 = 2.2, lwd=2, col ="blue")
+```
+
+Este modelo supõe uma distribuição normal para as inclinações da
+regressão, que são o parâmetro de interesse na análise da relação entre
+espécies e área.
+
+Quão variáveis seriam as inclinações entre arquipélagos, supondo que o
+modelo faça boas previsões? Podemos avaliar isso simulando as
+distribuições posteriores das inclinações. Primeiro, amostramos as
+distribuições posteriores da média e do desvio-padrão da normal que
+descreve a distribuição das inclinações. Para simular um arquipélago
+escolhido ao acaso, sorteamos então um valor de uma normal com esses
+parâmetros. Repetindo o procedimento muitas vezes, aproximamos a
+distribuição posterior das inclinações. Para referência, também
+incluímos as distribuições a priori das inclinações:
+
+```{r }
+## amostras posteriores da média e do desvio-padrão das inclinações
+m2.samp <- extract.samples(m2, pars = c("mu_b", "sigma_b"))
+## simular valores normais usando os parâmetros amostrados acima
+sim.slopes <- rnorm(length(m2.samp$mu_b), mean = m2.samp$mu_b, sd = m2.samp$sigma_b)
+## simular a priori das inclinações
+m2.priors <- data.frame(mu_b = rlnorm(1e4, meanlog = 0, sdlog = 0.7),
+                        sigma_b = rexp(1e4, rate =1))
+sim.prior.slopes <- rnorm(length(m2.priors$mu_b), mean = m2.priors$mu_b, sd = m2.priors$sigma_b)
+## densidades das prioris e posteriores simuladas
+plot(density(sim.slopes),
+     xlab = "Slopes", main ="",
+     xlim = c(-2,5))
+lines(density(sim.prior.slopes), col ="blue")
+legend("topleft", legend = c("Prior", "Posterior"),
+       lty =1, col=c("blue","black"), bty = "n")
+```
+
+### Comparação de modelos
+
+O pacote *rethinking* oferece a função
+[compare](https://rdrr.io/github/rmcelreath/rethinking/man/compare.html)
+que retorna uma tabela de seleção de modelos com WAIC (Gelman *et al.*
+2013). Como ocorre com outros critérios baseados em informação, o modelo
+com melhor desempenho preditivo (ou menor perda de informação sobre o
+processo gerador dos dados) tem o menor valor de WAIC:
+
+```{r }
+(comp = compare(m0, m1, m2))
+
+# ou faça o gráfico da comparação:
+plot(comp)
+```
+
+No gráfico de WAIC, o círculo preto preenchido representa a deviance na
+amostra (uma medida do ajuste do modelo aos dados); o círculo vazio
+representa o valor de WAIC, uma estimativa do desempenho preditivo fora
+da amostra que considera a complexidade do modelo e a incerteza dos
+parâmetros; e os triângulos vazios representam a distribuição posterior
+da diferença de WAIC entre os modelos. Essa distribuição das diferenças
+é uma grande vantagem do WAIC sobre o AIC, pois oferece uma comparação
+mais fundamentada entre os valores.
+
+O WAIC indica que o modelo com interceptos e inclinações parcialmente
+agrupados prevê observações futuras tão bem quanto o modelo com
+inclinações e interceptos independentes. Isso sugere que o segundo pode
+estar levemente superajustado, embora as prioris cuidadosamente
+escolhidas para suas inclinações e interceptos ajudem a evitar esse
+problema. Uma vantagem do modelo parcialmente agrupado é que essa
+regularização ocorre naturalmente, e o número efetivo de parâmetros é
+menor.
+
+
+## Abordagem de máxima verossimilhança
+
+Há funções e bibliotecas em R com rotinas eficientes para ajustar várias
+classes de modelos pelo método da máxima verossimilhança. A maioria usa
+a [sintaxe de fórmulas de
+modelos](https://www.ucd.ie/ecomodel/Resources/R_formulae_WebVersion.html),
+que expressa a estrutura do preditor linear (ou não linear).
+
+
+### Inclinação e intercepto únicos
+
+Esta é uma regressão linear simples. Como [já vimos](https://statistical-inference.netlify.app/03_linear_models.html), ajustamos esse modelo por máxima verossimilhança com a função `lm`:
+
+
+```{r }
+m0.ML <- lm(lc_S ~ ls_area, data = islands)
+```
+
+Estas são as estimativas e os intervalos de confiança dos parâmetros do
+preditor linear:
+
+```{r }
+## estimativas e intervalos de confiança dos interceptos e inclinações
+coef(m0.ML)
+confint(m0.ML)
+```
+
+O comando abaixo retorna a estimativa do desvio-padrão residual $\sigma$:
+
+
+```{r }
+sigma(m0.ML)
+```
+
+Para obter os limites do intervalo de confiança frequentista de 95% para
+$\widehat{\sigma}$, aplicamos a expressão:
+
+$$
+\left(\,  \sqrt{ \frac{\text{RSS}}{\chi^2_{0.975,n-2}}} \; , \; \sqrt{ \frac{\text{RSS}}{\chi^2_{0.025,n-2}}} \, \right)
+$$
+
+Em que $\text{RSS}$ é a soma dos quadrados dos resíduos, $n$ é o número
+de observações e $\chi^2_{p,n-2}$ é o quantil da distribuição
+qui-quadrado para a probabilidade $p$ e $n-2$ graus de liberdade^[neste
+caso, os graus de liberdade da soma dos quadrados dos resíduos são o
+número de observações menos o número de parâmetros do preditor linear].
+
+Veja como calcular em R o intervalo de confiança para $\hat{\sigma}$:
+
+
+```{r }
+RSS <- sum(residuals(m0.ML)^2)
+N <- nrow(islands)
+## limite inferior do intervalo de confiança
+sqrt( RSS / qchisq(0.975, df = N -2))
+## limite superior do intervalo de confiança
+sqrt( RSS / qchisq(0.025, df = N -2))
+```
+
+**Pergunta:** as estimativas dos parâmetros e seus intervalos de confiança coincidem nos ajustes por máxima verossimilhança e bayesiano?
+
+
+### Inclinações e interceptos diferentes por local
+
+Esta é uma regressão linear múltipla, com a área da ilha e a identidade
+do local como variáveis preditoras. A identidade do local é um fator
+categórico com um nível para cada local:
+
+
+```{r }
+## índice do local com os nomes dos locais como rótulos
+levels(islands$site_fac)
+## índice do local com rótulos numéricos (os mesmos locais)
+levels(islands$site_id)
+```
+
+Ao incluir um efeito aditivo do índice do local, permitimos interceptos
+diferentes^[isto é, a riqueza média em escala logarítmica varia entre
+locais]. Ao incluir uma interação entre a área da ilha e o índice do
+local, permitimos inclinações diferentes^[isto é, o efeito da área da
+ilha varia entre locais]:
+
+
+```{r }
+m1.ML <- lm(lc_S ~ ls_area + site_id + ls_area:site_id, data=islands)
+```
+
+Obtemos então os coeficientes estimados com:
+
+```{r }
+(m1.ML.cf <- coef(m1.ML))
+```
+
+Em R, a estrutura padrão do preditor linear para uma regressão múltipla
+com variáveis categóricas é:
+
+$$mu_i = \alpha_0 + \alpha_{site[i]} + (\beta_0 + \beta_{site[i]}) \, \text{ls_area}$$
+
+Em que $\alpha_0$ é o intercepto do primeiro nível da variável
+categórica (o local codificado como #1), e $\beta_0$ é a inclinação
+desse mesmo nível. Assim, $\alpha_{site[i]}$ representa a
+**diferença entre interceptos** do primeiro nível e do nível $i$. Da
+mesma forma, $\beta_{site[i]}$ representa a diferença entre as
+inclinações desses níveis.
+
+Portanto, neste modelo, os coeficientes *"(Intercept)"* e *"ls_area"*
+são o intercepto e a inclinação estimados para o local de estudo 1. As
+estimativas dos interceptos dos locais 2 a 18 podem ser obtidas com:
+
+
+```{r }
+m1.ML.cf[1] + m1.ML.cf[3:(nsites+1)] 
+```
+
+**Pergunta:** calcule as inclinações estimadas para cada local e
+compare-as com as estimativas correspondentes do ajuste bayesiano. Elas
+coincidem? Depois da comparação, expanda o código abaixo para desenhar
+as retas dos ajustes bayesiano (azul) e por máxima verossimilhança
+(vermelho).
+
+```{r code_folding=TRUE}
+## monta um data frame com interceptos e inclinações
+## do ajuste por máxima verossimilhança
+m1.ML.ab <- data.frame(
+    site = 1:nsites,
+    site_fac = levels(islands$site_fac),
+    intercept = NA,
+    slope = NA)
+m1.ML.ab$intercept[1] <- m1.ML.cf[1]
+m1.ML.ab$slope[1] <- m1.ML.cf[2]
+m1.ML.ab$intercept[2:nsites] <- m1.ML.cf[3:(nsites+1)]+m1.ML.cf[1]
+m1.ML.ab$slope[2:nsites] <- m1.ML.cf[(nsites+2):(2*nsites)]+m1.ML.cf[2]
+## adiciona ao gráfico de dispersão as retas dos dois métodos
+p2 +
+    geom_abline(data = m1.ab,
+                aes(intercept = intercept, slope = slope),
+                col="navy") +
+    geom_abline(data = m1.ML.ab,
+                aes(intercept = intercept, slope = slope),
+                col="red")
+```
+
+### Interceptos e inclinações agrupados
+
+Na abordagem de máxima verossimilhança, este é um modelo linear de
+**efeitos mistos**, especificado como:
+
+$$
+\begin{aligned}
+  y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+  \mu_i &= \alpha + a_{\text{site[i]}} + (\beta + b_{\text{site[i]}}) \, x_i \\
+  a_{\text{site}} & \sim \text{Normal}(0, \sigma_a)\\
+  b_{\text{site}} & \sim \text{Normal}(0, \sigma_b)
+\end{aligned}
+$$
+
+Em que $\alpha$ e $\beta$ são os **efeitos fixos** e representam o
+intercepto e a inclinação médios de todas as observações. Há um
+parâmetro $a_{\text{site}}$ para cada local, com distribuição normal de
+média zero. Esses são os **efeitos aleatórios** do local sobre o
+intercepto: centrados em $\alpha$, ajustam o intercepto fixo de cada
+local. De modo análogo, $b_{\text{site}}$ representa o efeito aleatório
+do local sobre a inclinação.
+
+O pacote de referência para ajustar modelos de efeitos mistos por
+máxima verossimilhança é
+[lme4](http://cran.nexr.com/web/packages/lme4/vignettes/lmer.pdf). The
+A função `lmer` ajusta modelos lineares mistos gaussianos. Para ajustar
+o modelo com efeitos aleatórios nos interceptos e nas inclinações, use:
+
+
+```{r }
+m2.ML <- lmer(lc_S ~ ls_area + (ls_area|site_fac), data = islands, REML=FALSE)
+```
+
+Na sintaxe de `lmer`, o termo `(ls_area|site_fac)` indica que o local é
+um efeito aleatório associado ao preditor fixo `ls_area`. Esse termo
+acrescenta efeitos aleatórios ao intercepto e à inclinação do preditor
+linear^[na realidade, *(ls_area|site_fac)* é uma abreviação de
+*(1|site_fac) + (ls_area|site_fac)*, que indica explicitamente um
+efeito aleatório para o intercepto e outro para a inclinação. Um modelo
+com efeito aleatório somente na inclinação incluiria apenas
+*(1|site_fac)*].
+
+O resumo do modelo mostra as estimativas das variâncias dos efeitos
+aleatórios (parâmetros $\sigma_a$ e $\sigma_b$), as estimativas dos
+efeitos fixos (parâmetros $\alpha$ e $\beta$) e outras medidas
+importantes:
+
+```{r }
+summary(m2.ML)
+```
+
+**Pergunta:** compare os desvios-padrão estimados dos efeitos aleatórios
+com os estimados pelo ajuste bayesiano do modelo correspondente. Eles
+coincidem? **Dica:** a chamada `precis(m2)` mostra o resumo das
+distribuições posteriores necessário.
+
+
+As estimativas dos coeficientes de cada local são retornadas por:
+
+
+```{r }
+(m2.ML.cf <- coef(m2.ML)$site_fac)
+```
+
+Podemos acrescentar facilmente os nomes dos locais a esse data frame e
+usá-lo para comparar as retas de regressão ajustadas por máxima
+verossimilhança (verde) e pelo método bayesiano (vermelho):
+
+
+```{r }
+## adiciona um fator com o nome dos locais
+m2.ML.cf$site_fac <- factor(rownames(m2.ML.cf))
+## altera os nomes das colunas para usá-las na chamada do ggplot
+names(m2.ML.cf)[1:2] <- c("intercept", "slope")
+## gera o gráfico e adiciona as retas
+p2 +
+    geom_abline(data = m2.ML.cf,
+                 aes(intercept = intercept, slope = slope),
+                col="green") +
+     geom_abline(data = m2.ab,
+                 aes(intercept = intercept, slope = slope),
+                col="red")
+```
+
+**Perguntas:** por que as retas não coincidem exatamente? Por que
+algumas coincidem mais do que outras?
+
+### Comparação de modelos
+
+Use a função `bbmle::AICctab` para criar uma tabela de seleção de
+modelos com o AIC corrigido para amostras pequenas:
+
+
+```{r }
+AICctab(m0.ML, m1.ML, m2.ML, nobs=nrow(islands))
+```
+Segundo essa seleção, ajustar interceptos e inclinações independentes
+produz claramente superajuste. Sem prioris, o modelo com interceptos e
+inclinações independentes superajusta os dados, enquanto o modelo com
+interceptos e inclinações parcialmente agrupados é o melhor.
+
+
+# Referências
+
+* Gelman, A., Hwang, J., & Vehtari, A. (2014). Understanding predictive information criteria for Bayesian models. Statistics and computing, 24(6), 997-1016.
+
+* Ohyama, L., Holt, R. D., Matthews, T. J., & Lucky, A. (2021). The
+  species–area relationship in ant ecology. Journal of Biogeography,
+  48(8), 1824-1841.
