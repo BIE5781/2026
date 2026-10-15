@@ -2,11 +2,7 @@ library(MethComp)
 library(rethinking)
 library(tidyverse)
 
-
-
 data(ox)
-
-
 
 wide_ox = ox |>
     pivot_wider(id_cols = c(item, repl), 
@@ -29,8 +25,6 @@ wide_ox_mean <- wide_ox |>
     geom_smooth(method = "lm", se = FALSE, color = "firebrick") +
     theme_cowplot(10) +
     labs(x = "Mean pulse Measurement", y = "Mean CO Measurement")  
-lm(mean_CO ~ mean_pulse, data = wide_ox_mean) |>
-    summary()
     
 wide_ox |>
     ggplot(aes(x = sPulse, y = sCO)) +
