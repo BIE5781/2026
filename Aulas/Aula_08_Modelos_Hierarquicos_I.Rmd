@@ -569,11 +569,175 @@ A estrutura hierárquica do modelo permite que a informação de todas as observ
 61 children had their blood oxygen content measured at the Children's Hospital in Melbourne, either with a chemical method analysing gases in the blood (CO) or by a pulse oximeter measuring transcutaneously (pulse). Replicates are linked between methods; i.e. replicate 1 for each of the two methods are done at the same time. However, replicate measurements were taken in quick succession so the pairs of measurements are exchangeable within person.
 ]
 .pull-right[
-```{r oxygen-data, eval=TRUE, echo=FALSE}
+```{r oxygen-data, eval=TRUE, echo=TRUE}
+library(tidyverse)
 data(ox, package = "MethComp")
-head(ox)
+wide_ox <- ox |>
+    pivot_wider(id_cols = c(item, repl), 
+                names_from = "meth", 
+                values_from = "y") |>
+    mutate(item = as.integer(factor(item)),
+        sCO = as.numeric(scale(CO)),
+        sPulse = as.numeric(scale(pulse)))
+wide_ox
 ```
 ]
+
+---
+
+## Medidas repetidas de saturação de oxigênio
+
+```{r oxygen-data-plot, eval=TRUE, echo=FALSE, fig.width=8, fig.height=4.2, dpi=300, out.width="85%"}
+library(ggplot2); library(cowplot)
+wide_ox |>
+    ggplot(aes(x = sPulse, y = sCO)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "firebrick") +
+    theme_cowplot(10) +
+    labs(x = "Pulse Measurement (Z-Scores)", y = "Blood CO Measurement (Z-Scores)")
+```
+
+---
+
+## Tirando as médias de cada criança
+
+```{r oxygen-data-plot-means, eval=TRUE, echo=FALSE, fig.width=8, fig.height=4.2, dpi=300, out.width="85%"}
+wide_ox_mean <- wide_ox |> 
+    group_by(item) |>
+    summarise(
+        mean_CO = mean(CO),
+        mean_pulse = mean(pulse)
+    )  
+wide_ox |>
+    ggplot(aes(x = sPulse, y = sCO)) +
+    geom_point(alpha = 0.3) +
+    geom_point(data = wide_ox_mean, aes(x = scale(mean_pulse), y = scale(mean_CO)), color = 4, size = 2) +
+    geom_smooth(method = "lm", se = FALSE, color = "firebrick") +
+    theme_cowplot(10) +
+    labs(x = "Pulse Measurement (Z-Scores)", y = "Blood CO Measurement (Z-Scores)")
+```
+
+---
+
+## Modelo hierárquico para saturação de oxigênio (com medidas repetidas)
+
+Para cada criança $i$ e réplica $r=1,\ldots,R_i$, as medidas padronizadas são modeladas em torno dos valores verdadeiros da criança:
+
+.pull-left[
+$$
+\begin{aligned}
+\text{CO}_{ir} &\sim \operatorname{Normal}(\text{CO}^{true}_i,\sigma^{err}_{CO}),\\
+\text{pulse}_{ir} &\sim \operatorname{Normal}(\text{pulse}^{true}_i,\sigma^{err}_{pulse}).
+\end{aligned}
+$$
+
+Os valores latentes são estimádos para cada criança e se relacionam linearmente:
+
+$$
+\begin{aligned}
+    \text{CO}^{true}_i &\sim \operatorname{Normal}(\alpha+\beta \text{pulse}^{true}_i,\sigma_{CO}),\\
+	\text{pulse}^{true}_i &\sim \operatorname{Normal}(0,\sigma_{pulse}).
+\end{aligned}
+$$
+]
+.pull-right[
+$$
+\begin{aligned}
+\alpha,\beta &\sim \operatorname{Normal}(0,0.3),\\
+\sigma_{CO},\sigma_{pulse},\sigma^{err}_{CO},\sigma^{err}_{pulse} &\sim \operatorname{Exponencial}(1).
+\end{aligned}
+$$
+
+- Os desvios $\sigma^{err}_{CO}$ e $\sigma^{err}_{pulse}$ representam erro de mensuração
+- Os desvios $\sigma_{CO}$ e $\sigma_{pulse}$ representam variação entre crianças.
+]
+
+---
+
+## Modelo de regressão de variáveis latentes
+
+**Dados**
+
+```{r oxygen-data-list, eval=FALSE}
+dlist_ox <- list(
+  N_item = length(unique(wide_ox$item)), # Numero de crianças
+  sCO = wide_ox$sCO,                     # Medidas de CO padronizadas
+  sPulse = wide_ox$sPulse,               # Medidas de oximetro padronizadas
+  item_i = wide_ox$item,             # Indice da criança para cada medida (com replicas)
+  id = unique(wide_ox$item)          # Indice da criança para cada medida (sem replicas)
+)
+```
+
+---
+
+## Modelo de regressão de variáveis latentes
+
+```{r oxygen-model, eval=FALSE}
+ulam_model <- ulam(
+  alist(
+    # Modelo de erro para os dados observados (likelihood)
+    sCO ~ normal(co_true[item_i], s_error_co),
+    sPulse ~ normal(pulse_true[item_i], s_error_pulse),
+
+    # Modelo linear para os valores latentes
+    vector[N_item]:co_true ~ normal(mu, sigma_co),
+    vector[N_item]:mu <- a + bP * pulse_true[id],
+    vector[N_item]:pulse_true ~ normal(0, sigma_pulse),
+
+    # Parâmetros da regressão linear
+    a ~ normal(0, 0.3),
+    bP ~ normal(0, 0.3),
+
+    # SD das variáveis latentes
+    sigma_co ~ exponential(1),
+    sigma_pulse ~ exponential(1),
+    # SD do erro de mensuração
+    s_error_co ~ exponential(1),
+    s_error_pulse ~ exponential(1)
+  ),
+  data = dlist_ox)
+```
+
+
+---
+
+## Estimativas dos parâmetros do modelo
+
+```{r precis-d1, eval=FALSE, echo=TRUE}
+precis(ulam_model)
+```
+
+```{r estimates-d1, eval=TRUE, echo=FALSE}
+estimates <- readRDS("estimates_repeated_measure_ox.rds")
+tail(estimates) |> round(3)
+```
+
+---
+
+## Estimativas das observações latentes
+
+```{r precis-d2, eval=FALSE, echo=TRUE}
+precis(ulam_model, depth = 2)
+```
+
+```{r estimates-d2, eval=TRUE, echo=FALSE}
+estimates |> round(3)
+```
+
+---
+
+## Estimativas das observações latentes (cont.)
+
+```{r plot-latent-ox, eval=TRUE, echo=FALSE, fig.width=8, fig.height=4.2, dpi=300, out.width="85%"}
+mutate(wide_ox_mean, pulse_true = estimates[grep("pulse_true", rownames(estimates)), "mean"],
+       co_true = estimates[grep("co_true", rownames(estimates)), "mean"]) |>
+    ggplot(aes(x = pulse_true, y = co_true)) +
+    geom_point(size = 2) +
+    geom_point(data = wide_ox_mean, aes(x = scale(mean_pulse), y = scale(mean_CO)), color = 4, size = 1) +
+    geom_smooth(method = "lm", se = FALSE, color = "firebrick") +
+    theme_cowplot(10) +
+    labs(x = "Pulse (z-score)", y = "CO (z-score)")
+```
 
 ---
 

@@ -51,11 +51,13 @@ dlist_ox <- list(
 ulam_model <- ulam(
   alist(
     # Model for the observed data
-    sCO ~ normal(co_true[item_i], s_measure_co),
+    sCO ~ normal(co_true[item_i], s_error_co),
+    sPulse ~ normal(pulse_true[item_i], s_error_pulse),
+
+    # Latend variable model
     vector[N_item]:co_true ~ normal(mu, sigma_co),
     vector[N_item]:mu <- a + bP * pulse_true[id],
 
-    sPulse ~ normal(pulse_true[item_i], s_measure_pulse),
     vector[N_item]:pulse_true ~ normal(0, sigma_pulse),
 
     a ~ normal(0, 0.3),
@@ -65,14 +67,15 @@ ulam_model <- ulam(
     sigma_co ~ exponential(1),
     sigma_pulse ~ exponential(1),
     # Measurement SDs
-    s_measure_co ~ exponential(1),
-    s_measure_pulse ~ exponential(1)
+    s_error_co ~ exponential(1),
+    s_error_pulse ~ exponential(1)
   ),
   data = dlist_ox,
-  chains = 4, cores = 4, iter = 2000
+  chains = 4, cores = 4, iter = 3000
 )
 
 (estimates = precis(ulam_model, depth = 2))
+# saveRDS(estimates, "Aulas/estimates_repeated_measure_ox.rds")
 
 estimates[grep("pulse_true", rownames(estimates)), ]
 estimates[grep("co_true", rownames(estimates)), ]

@@ -314,18 +314,18 @@ rethinking::precis(milk_random_intercept_nc, depth = 2) |&gt; round(3)
 
 ```
           mean    sd   5.5%  94.5%  rhat ess_bulk
-a_z[1]  -0.542 0.808 -1.843  0.755 1.003 2347.108
-a_z[2]  -0.027 0.772 -1.267  1.187 1.001 2327.346
-a_z[3]   0.321 0.808 -0.946  1.603 1.001 2481.344
-a_z[4]   0.304 0.829 -1.022  1.624 1.001 2328.266
-bL      -0.886 0.089 -1.025 -0.742 1.001 2352.878
-sigma    0.404 0.058  0.323  0.508 1.003 3152.463
-a_0      0.009 0.104 -0.152  0.177 1.001 1954.421
-sigma_g  0.179 0.156  0.015  0.469 1.004 1138.207
-a[1]    -0.090 0.123 -0.298  0.092 1.001 2578.361
-a[2]     0.004 0.107 -0.163  0.177 1.001 4722.704
-a[3]     0.070 0.137 -0.127  0.304 1.001 3008.110
-a[4]     0.066 0.140 -0.134  0.302 1.001 2974.387
+a_z[1]  -0.578 0.838 -1.880  0.793 1.001 2279.513
+a_z[2]  -0.020 0.777 -1.282  1.200 1.003 2724.624
+a_z[3]   0.312 0.839 -1.041  1.621 1.003 2714.558
+a_z[4]   0.287 0.826 -1.046  1.624 1.002 2587.454
+bL      -0.884 0.091 -1.024 -0.737 1.001 2446.224
+sigma    0.407 0.062  0.323  0.516 1.002 2933.421
+a_0      0.008 0.111 -0.163  0.183 1.004 1767.249
+sigma_g  0.181 0.160  0.016  0.448 1.002 1171.025
+a[1]    -0.093 0.124 -0.302  0.090 1.000 2804.267
+a[2]     0.007 0.108 -0.162  0.182 1.001 4327.020
+a[3]     0.069 0.137 -0.124  0.301 1.000 2806.420
+a[4]     0.061 0.145 -0.150  0.302 1.001 2937.281
 ```
 
 ``` r
@@ -478,16 +478,300 @@ A estrutura hierárquica do modelo permite que a informação de todas as observ
 ]
 .pull-right[
 
+``` r
+library(tidyverse)
+data(ox, package = "MethComp")
+wide_ox &lt;- ox |&gt;
+    pivot_wider(id_cols = c(item, repl), 
+                names_from = "meth", 
+                values_from = "y") |&gt;
+    mutate(item = as.integer(factor(item)),
+        sCO = as.numeric(scale(CO)),
+        sPulse = as.numeric(scale(pulse)))
+wide_ox
 ```
-  meth item repl    y
-1   CO    1    1 78.0
-2   CO    1    2 76.4
-3   CO    1    3 77.2
-4   CO    2    1 68.7
-5   CO    2    2 67.6
-6   CO    2    3 68.3
+
+```
+# A tibble: 177 × 6
+    item  repl    CO pulse     sCO  sPulse
+   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+ 1     1     1  78      71  0.190  -0.187 
+ 2     1     2  76.4    72  0.0603 -0.101 
+ 3     1     3  77.2    73  0.125  -0.0155
+ 4     2     1  68.7    68 -0.566  -0.445 
+ 5     2     2  67.6    67 -0.655  -0.531 
+ 6     2     3  68.3    68 -0.598  -0.445 
+ 7     3     1  82.9    82  0.589   0.758 
+ 8     3     2  80.1    77  0.361   0.328 
+ 9     3     3  80.7    77  0.410   0.328 
+10     4     1  62.3    43 -1.09   -2.59  
+# ℹ 167 more rows
 ```
 ]
+
+---
+
+## Medidas repetidas de saturação de oxigênio
+
+&lt;img src="Aula_08_Modelos_Hierarquicos_I_files/figure-html/oxygen-data-plot-1.png" alt="" width="85%" /&gt;
+
+---
+
+## Tirando as médias de cada criança
+
+&lt;img src="Aula_08_Modelos_Hierarquicos_I_files/figure-html/oxygen-data-plot-means-1.png" alt="" width="85%" /&gt;
+
+---
+
+## Modelo hierárquico para saturação de oxigênio (com medidas repetidas)
+
+Para cada criança `\(i\)` e réplica `\(r=1,\ldots,R_i\)`, as medidas padronizadas são modeladas em torno dos valores verdadeiros da criança:
+
+.pull-left[
+$$
+`\begin{aligned}
+\text{CO}_{ir} &amp;\sim \operatorname{Normal}(\text{CO}^{true}_i,\sigma^{err}_{CO}),\\
+\text{pulse}_{ir} &amp;\sim \operatorname{Normal}(\text{pulse}^{true}_i,\sigma^{err}_{pulse}).
+\end{aligned}`
+$$
+
+Os valores latentes são estimádos para cada criança e se relacionam linearmente:
+
+$$
+`\begin{aligned}
+    \text{CO}^{true}_i &amp;\sim \operatorname{Normal}(\alpha+\beta \text{pulse}^{true}_i,\sigma_{CO}),\\
+	\text{pulse}^{true}_i &amp;\sim \operatorname{Normal}(0,\sigma_{pulse}).
+\end{aligned}`
+$$
+]
+.pull-right[
+$$
+`\begin{aligned}
+\alpha,\beta &amp;\sim \operatorname{Normal}(0,0.3),\\
+\sigma_{CO},\sigma_{pulse},\sigma^{err}_{CO},\sigma^{err}_{pulse} &amp;\sim \operatorname{Exponencial}(1).
+\end{aligned}`
+$$
+
+- Os desvios `\(\sigma^{err}_{CO}\)` e `\(\sigma^{err}_{pulse}\)` representam erro de mensuração
+- Os desvios `\(\sigma_{CO}\)` e `\(\sigma_{pulse}\)` representam variação entre crianças.
+]
+
+---
+
+## Modelo de regressão de variáveis latentes
+
+**Dados**
+
+
+``` r
+dlist_ox &lt;- list(
+  N_item = length(unique(wide_ox$item)), # Numero de crianças
+  sCO = wide_ox$sCO,                     # Medidas de CO padronizadas
+  sPulse = wide_ox$sPulse,               # Medidas de oximetro padronizadas
+  item_i = wide_ox$item,             # Indice da criança para cada medida (com replicas)
+  id = unique(wide_ox$item)          # Indice da criança para cada medida (sem replicas)
+)
+```
+
+---
+
+## Modelo de regressão de variáveis latentes
+
+
+``` r
+ulam_model &lt;- ulam(
+  alist(
+    # Modelo de erro para os dados observados (likelihood)
+    sCO ~ normal(co_true[item_i], s_error_co),
+    sPulse ~ normal(pulse_true[item_i], s_error_pulse),
+
+    # Modelo linear para os valores latentes
+    vector[N_item]:co_true ~ normal(mu, sigma_co),
+    vector[N_item]:mu &lt;- a + bP * pulse_true[id],
+    vector[N_item]:pulse_true ~ normal(0, sigma_pulse),
+
+    # Parâmetros da regressão linear
+    a ~ normal(0, 0.3),
+    bP ~ normal(0, 0.3),
+
+    # SD das variáveis latentes
+    sigma_co ~ exponential(1),
+    sigma_pulse ~ exponential(1),
+    # SD do erro de mensuração
+    s_error_co ~ exponential(1),
+    s_error_pulse ~ exponential(1)
+  ),
+  data = dlist_ox)
+```
+
+
+---
+
+## Estimativas dos parâmetros do modelo
+
+
+``` r
+precis(ulam_model)
+```
+
+
+```
+                mean    sd   5.5% 94.5%  rhat  ess_bulk
+a             -0.001 0.053 -0.084 0.082 1.001  6375.407
+bP             0.985 0.064  0.885 1.089 1.001  1782.972
+sigma_co       0.249 0.071  0.132 0.359 1.014   294.545
+sigma_pulse    0.917 0.095  0.781 1.079 1.002 10612.377
+s_error_co     0.335 0.022  0.301 0.372 1.000  6247.666
+s_error_pulse  0.454 0.030  0.409 0.504 1.001  2917.077
+```
+
+---
+
+## Estimativas das observações latentes
+
+
+``` r
+precis(ulam_model, depth = 2)
+```
+
+
+```
+                 mean    sd   5.5%  94.5%  rhat  ess_bulk
+co_true[1]      0.075 0.168 -0.193  0.342 1.000 10379.012
+co_true[2]     -0.562 0.170 -0.837 -0.295 1.002 11999.035
+co_true[3]      0.446 0.166  0.181  0.711 1.000 10898.303
+co_true[4]     -0.837 0.172 -1.115 -0.566 1.000 10975.337
+co_true[5]     -0.047 0.170 -0.314  0.219 1.000 11733.475
+co_true[6]      0.242 0.171 -0.030  0.514 1.000 10243.156
+co_true[7]      0.829 0.171  0.553  1.098 1.001 12792.113
+co_true[8]      0.379 0.171  0.106  0.649 1.001  9092.207
+co_true[9]     -0.332 0.167 -0.602 -0.061 1.000 12301.654
+co_true[10]    -1.459 0.188 -1.757 -1.154 1.001  3645.221
+co_true[11]     1.092 0.167  0.823  1.361 1.000  9483.720
+co_true[12]    -3.863 0.179 -4.146 -3.576 1.001  9753.091
+co_true[13]     0.433 0.178  0.139  0.718 1.000  9564.479
+co_true[14]    -0.229 0.177 -0.509  0.058 1.001  6377.948
+co_true[15]     0.578 0.167  0.309  0.842 1.001 10762.765
+co_true[16]     0.121 0.173 -0.152  0.400 1.001  8763.636
+co_true[17]     1.143 0.201  0.822  1.468 1.001  8799.436
+co_true[18]     0.195 0.169 -0.071  0.462 1.000 11787.447
+co_true[19]    -0.161 0.177 -0.446  0.120 1.002 10461.664
+co_true[20]    -0.029 0.199 -0.347  0.286 1.000 10562.060
+co_true[21]     0.524 0.168  0.260  0.796 1.001 10031.128
+co_true[22]     0.027 0.171 -0.246  0.298 1.001 11672.588
+co_true[23]     0.349 0.168  0.083  0.619 1.001  9763.240
+co_true[24]     0.710 0.172  0.433  0.987 1.000 11709.964
+co_true[25]     0.214 0.206 -0.111  0.546 1.000 10153.817
+co_true[26]     0.255 0.167 -0.012  0.518 1.001 10218.570
+co_true[27]    -0.671 0.173 -0.945 -0.394 1.000  8202.620
+co_true[28]    -0.932 0.174 -1.215 -0.651 1.001 11045.475
+co_true[29]     0.113 0.167 -0.149  0.380 1.002  9782.238
+co_true[30]     0.344 0.172  0.072  0.619 1.001  9997.129
+co_true[31]    -2.343 0.171 -2.616 -2.071 1.000 11673.657
+co_true[32]     0.548 0.171  0.277  0.823 1.000  9918.597
+co_true[33]     0.530 0.167  0.263  0.794 1.001 10814.133
+co_true[34]     0.790 0.169  0.515  1.060 1.000 10879.606
+co_true[35]     0.164 0.170 -0.108  0.436 1.000 11505.342
+co_true[36]     0.359 0.169  0.087  0.625 1.003  9854.521
+co_true[37]     0.361 0.167  0.102  0.632 1.000 11043.022
+co_true[38]     0.603 0.163  0.342  0.863 1.001 10634.168
+co_true[39]     0.225 0.274 -0.210  0.666 1.000  9633.560
+co_true[40]    -0.607 0.166 -0.869 -0.339 1.000 10138.215
+co_true[41]     0.101 0.170 -0.168  0.376 1.002  9948.178
+co_true[42]    -0.416 0.173 -0.691 -0.139 1.000 10104.110
+co_true[43]    -1.777 0.173 -2.054 -1.504 1.001  9413.204
+co_true[44]    -1.366 0.172 -1.645 -1.094 1.003 11209.523
+co_true[45]     0.221 0.169 -0.050  0.493 1.000  9841.122
+co_true[46]     0.432 0.174  0.154  0.711 1.001 10858.353
+co_true[47]     0.306 0.167  0.040  0.569 1.000 11299.862
+co_true[48]    -0.309 0.171 -0.580 -0.037 1.000  9404.776
+co_true[49]     0.946 0.171  0.673  1.218 1.000  9357.715
+co_true[50]    -1.929 0.206 -2.256 -1.600 1.002 11655.979
+co_true[51]    -1.517 0.177 -1.799 -1.235 1.000  6953.640
+co_true[52]     0.046 0.171 -0.229  0.315 1.001  9768.103
+co_true[53]    -0.327 0.167 -0.594 -0.060 1.000 11083.281
+co_true[54]     0.066 0.167 -0.204  0.338 1.001  8896.442
+co_true[55]     1.013 0.172  0.739  1.292 1.001  9034.680
+co_true[56]     0.823 0.167  0.557  1.089 1.001 11855.667
+co_true[57]     1.077 0.170  0.810  1.347 1.001 10391.712
+co_true[58]     1.130 0.174  0.847  1.406 1.002 10796.843
+co_true[59]     1.236 0.170  0.965  1.504 1.000  9174.878
+co_true[60]     0.691 0.173  0.417  0.971 1.001 10651.186
+co_true[61]    -0.060 0.168 -0.325  0.204 1.001 10836.097
+pulse_true[1]  -0.008 0.195 -0.321  0.299 1.001  9994.723
+pulse_true[2]  -0.505 0.198 -0.817 -0.185 1.002 10933.781
+pulse_true[3]   0.442 0.193  0.134  0.746 1.001 11348.648
+pulse_true[4]  -0.825 0.201 -1.149 -0.508 1.002 10151.306
+pulse_true[5]  -0.070 0.197 -0.383  0.250 1.001 10337.571
+pulse_true[6]   0.326 0.198  0.006  0.646 1.000  8559.396
+pulse_true[7]   0.796 0.203  0.470  1.117 1.000 12760.503
+pulse_true[8]   0.261 0.199 -0.056  0.576 1.000  7295.093
+pulse_true[9]  -0.283 0.200 -0.601  0.041 1.000 10661.464
+pulse_true[10] -0.824 0.249 -1.222 -0.430 1.005   800.596
+pulse_true[11]  1.021 0.197  0.708  1.329 1.001 10589.447
+pulse_true[12] -3.693 0.218 -4.047 -3.342 1.001  8648.178
+pulse_true[13]  0.172 0.210 -0.162  0.502 1.000  3699.979
+pulse_true[14]  0.101 0.216 -0.239  0.448 1.002  2468.507
+pulse_true[15]  0.497 0.193  0.186  0.801 1.000  9358.693
+pulse_true[16] -0.127 0.208 -0.460  0.202 1.001  3244.691
+pulse_true[17]  1.133 0.228  0.766  1.491 1.000  9190.573
+pulse_true[18]  0.116 0.195 -0.205  0.430 1.001  9730.865
+pulse_true[19] -0.116 0.203 -0.436  0.212 1.000 10419.885
+pulse_true[20] -0.072 0.223 -0.422  0.285 1.001 10429.298
+pulse_true[21]  0.575 0.197  0.268  0.892 1.000  9373.698
+pulse_true[22] -0.032 0.201 -0.358  0.284 1.000 10931.597
+pulse_true[23]  0.449 0.202  0.133  0.775 1.002  9485.223
+pulse_true[24]  0.683 0.200  0.368  1.006 1.000 11266.939
+pulse_true[25]  0.184 0.233 -0.188  0.560 1.000  9646.708
+pulse_true[26]  0.253 0.195 -0.058  0.567 1.001 11194.115
+pulse_true[27] -0.914 0.214 -1.254 -0.577 1.002  3175.119
+pulse_true[28] -0.754 0.202 -1.075 -0.432 1.001  7637.724
+pulse_true[29]  0.075 0.196 -0.234  0.389 1.001  9627.289
+pulse_true[30]  0.155 0.203 -0.174  0.482 1.000  7446.668
+pulse_true[31] -2.302 0.209 -2.638 -1.976 1.000  9658.670
+pulse_true[32]  0.427 0.202  0.106  0.754 1.001  8905.734
+pulse_true[33]  0.628 0.201  0.311  0.961 1.001  8328.629
+pulse_true[34]  0.683 0.199  0.366  1.000 1.000 10805.034
+pulse_true[35]  0.050 0.197 -0.269  0.365 1.001  9077.762
+pulse_true[36]  0.201 0.203 -0.125  0.524 1.001  7623.262
+pulse_true[37]  0.295 0.198 -0.028  0.610 1.000 11135.382
+pulse_true[38]  0.667 0.199  0.348  0.988 1.000  9702.747
+pulse_true[39]  0.271 0.292 -0.191  0.735 1.000 10380.750
+pulse_true[40] -0.713 0.200 -1.034 -0.397 1.001  6785.312
+pulse_true[41] -0.045 0.202 -0.372  0.274 1.000  7600.721
+pulse_true[42] -0.230 0.204 -0.554  0.098 1.001  5569.226
+pulse_true[43] -1.512 0.210 -1.851 -1.178 1.001  5669.158
+pulse_true[44] -1.197 0.198 -1.510 -0.877 1.001  8462.225
+pulse_true[45]  0.175 0.195 -0.138  0.479 1.001  9499.241
+pulse_true[46]  0.361 0.202  0.038  0.683 1.000  9760.370
+pulse_true[47]  0.303 0.194 -0.004  0.613 1.001 10685.145
+pulse_true[48] -0.127 0.204 -0.448  0.205 1.000  8004.816
+pulse_true[49]  0.803 0.198  0.486  1.118 1.001  8591.019
+pulse_true[50] -1.945 0.239 -2.330 -1.568 1.001  6787.568
+pulse_true[51] -1.765 0.215 -2.120 -1.423 1.001  2668.153
+pulse_true[52] -0.038 0.202 -0.364  0.285 1.000 10127.626
+pulse_true[53] -0.199 0.197 -0.509  0.120 1.003  9337.557
+pulse_true[54]  0.224 0.199 -0.092  0.550 1.000  6474.609
+pulse_true[55]  1.114 0.202  0.792  1.439 1.001  5880.120
+pulse_true[56]  0.817 0.199  0.505  1.134 1.000 11303.920
+pulse_true[57]  1.133 0.199  0.809  1.453 1.002  8713.357
+pulse_true[58]  1.106 0.200  0.791  1.420 1.000 10083.126
+pulse_true[59]  1.341 0.204  1.025  1.672 1.001  7231.439
+pulse_true[60]  0.568 0.201  0.245  0.889 1.001 10043.751
+pulse_true[61] -0.158 0.198 -0.476  0.155 1.000  9427.224
+a              -0.001 0.053 -0.084  0.082 1.001  6375.407
+bP              0.985 0.064  0.885  1.089 1.001  1782.972
+sigma_co        0.249 0.071  0.132  0.359 1.014   294.545
+sigma_pulse     0.917 0.095  0.781  1.079 1.002 10612.377
+s_error_co      0.335 0.022  0.301  0.372 1.000  6247.666
+s_error_pulse   0.454 0.030  0.409  0.504 1.001  2917.077
+```
+
+---
+
+## Estimativas das observações latentes (cont.)
+
+&lt;img src="Aula_08_Modelos_Hierarquicos_I_files/figure-html/plot-latent-ox-1.png" alt="" width="85%" /&gt;
 
 ---
 
