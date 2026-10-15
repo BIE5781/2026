@@ -111,3 +111,5 @@ Ao final da disciplina, espera-se que estudantes sejam capazes de:
 - Royall, R. M. (2000). Statistical Evidence: A Likelihood Paradigm. London, Chapman and Hall.
 - Royle, J. A. & Dorazio, R. (2008). Hierarchical Modeling And Inference In Ecology: The Analysis Of Data From Populations, Metapopulations And Communities. Oxford, Academic Press.
 - Taper, M. L. & Lele, S. R. (2004). The Nature of Scientific Evidence – Statistical, Philosophical and Empirical Considerations. Chicago, Chicago University Press. 
+
+[Link para bibliografia](https://paperpile.com/shared/Refer%C3%AAncias-modelagem-estat%C3%ADstica-fro70f1B3QVeHP4bafEkNEQ)
