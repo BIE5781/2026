@@ -573,7 +573,7 @@ desvio-padrão residual correspondentes, enquanto a inclinação de `Root`
 é compartilhada. Assim, `sigma` contém um parâmetro para cada tratamento,
 em vez de um único desvio-padrão comum a todas as plantas. Como o modelo usa parâmetros armazenados em vetores, precisamos usar o argumento `depth = 2` na função `precis()` para que ela mostre os dois interceptos e os dois desvios-padrão residuais. Compare os valores estimados de a com os valores obtidos no modelo anterior. O que mudou? Compare os desvios-padrão residuais estimados para cada grupo. Existe evidencia de diferença na variabilidade residual entre os dois grupos? 
 
-### Testendo a diferneça na variabilidade residual entre os grupos
+### Testando a diferença na variabilidade residual entre os grupos
 
 Para testar a diferença na variabilidade residual entre os grupos, podemos extrair amostras da posterior e calcular a diferença entre os dois desvios-padrão residuais. Em seguida, podemos calcular a proporção de amostras em que o desvio-padrão do grupo protegido é maior que o desvio-padrão do grupo não protegido (ou vice-versa).
 
@@ -736,7 +736,7 @@ espécies.
 
 ## Entendendo a distribuição $t$ de Student 
 
-Na distribuição $t$, o parâmetro $\nu$ (graus de liberdade) controla o
+Na distribuição $t$, o parâmetro $\nu$ (graus de liberdade, letra grega "nu") controla o
 peso das caudas. Uma intuição útil é pensar que a $t$ combina uma normal
 com uma variância incerta. Essa incerteza sobre a variância
 permite que alguns valores fiquem muito mais dispersos do que outros.
@@ -778,7 +778,6 @@ Esse fator é a razão entre o desvio-padrão e $\sigma$. Por exemplo, com $\nu=
 
 ```{r animals_student_fits, eval=FALSE, message=FALSE, warning=FALSE}
 
-animals$log_brain <- animals$log_brain - mean(animals$log_brain)
 m_animals_student_all <- ulam(
   alist(
     log_brain ~ student_t(nu, mu, sigma),
@@ -878,7 +877,7 @@ legend("topleft",
 ```
 
 O modelo com resíduos $t$ de Student é menos sensível neste exemplo se
-suas duas retas ajustadas estiverem mais próximas entre si do que as
+suas duas retas ajustadas estiverem mais próximas e tiverem incinações mais parecidas entre si do que as
 duas retas do modelo com resíduos normais. Isso não significa que resíduos $t$ seja imunes a outliers, 
 apenas mais robusto e capaz de lidar com observaçõs extremas sem grandes mudanças nas estimativas de regressão. 
 Além disso, as medidas dos dinossauros são estimativas, e esses animais podem diferir sistematicamente dos
