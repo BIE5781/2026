@@ -33,7 +33,7 @@ desconhecido é a média $\mu$.
 Verossimilhança:
 
 $$
-y_i \sim Normal(\mu, \sigma = 1) 
+y_i \sim Normal(\mu, \sigma = 1)
 $$
 
 Distribuição a priori:
@@ -46,13 +46,11 @@ Para modelos muito simples, como este, podemos escrever e calcular a
 posterior diretamente. Em seguida, usamos os valores calculados para
 representar a distribuição posterior completa.
 
-Vamos escrever essa posterior em R:
-
-No código a seguir, percorremos os valores possíveis de $\mu$ e
-calculamos sua probabilidade posterior usando o produto entre a
-distribuição a priori e a verossimilhança (ou a soma na escala
-logarítmica). Isso revela a forma da distribuição posterior, que podemos
-representar e examinar para tirar conclusões.
+No código a seguir, escrevemos essa posterior em R. Percorremos os
+valores possíveis de $\mu$ e calculamos sua densidade probabilística posterior
+usando o produto entre a distribuição a priori e a verossimilhança (ou a
+soma, na escala logarítmica). Isso revela a forma da distribuição
+posterior, que podemos representar e examinar para tirar conclusões.
 
 ```{r}
 set.seed(2)
@@ -81,8 +79,9 @@ plot(posterior_density ~ x, type = "l", lwd = 2, col = 2,
 abline(v = 2, lty = 2)
 ```
 
-Com base nessa posterior, qual é o valor mais provável do parâmetro? 
-Altere os parâmetros do prior e veja como a posteriori de comporta.
+Com base nessa posterior, qual é o valor mais provável do parâmetro?
+Altere os parâmetros da distribuição a priori e veja como a posterior se
+comporta.
 
 ## Quando o desvio-padrão também é desconhecido
 
@@ -119,16 +118,17 @@ library(ggplot2)
 ggplot(parameter_grid,
     aes(x = mu, y = sigma, fill = posterior_density)) +
   geom_raster() +
-  xlim(1.5, 2.3) + ylim(0.9, 1.4) +
+  coord_cartesian(xlim = c(1.5, 2.3), ylim = c(0.9, 1.4)) +
   scale_fill_viridis_c(name = "Densidade posterior", option = "A") +
   labs(x = "Média (mu)", y = "Desvio-padrão (sigma)")
 ```
 
 Cada ponto da superfície corresponde à densidade posterior de uma
 combinação de $\mu$ e $\sigma$. Valores mais altos indicam combinações
-mais compatíveis com os dados e com as distribuições a priori. Claro que 
-essa estratégia é inviável quando não sabemos qual a região com 
-probabilidade alta inicialmente e quando temos um número maior de parâmetros.
+mais compatíveis com os dados e com as distribuições a priori. É claro
+que essa estratégia é inviável quando não sabemos de antemão qual é a
+região de alta probabilidade e quando temos um número maior de
+parâmetros.
 
 # Instalando o pacote `rethinking`
 
@@ -157,6 +157,7 @@ as bibliotecas com `cmdstanr::install_cmdstan()`. Esse trabalho inicial
 vale a pena e só precisa ser feito uma vez.
 
 Por fim, instale `rethinking` no R com:
+
 ```
 install.packages(c("coda","mvtnorm","remotes","loo","dagitty","shape","rstanarm"))
 remotes::install_github("rmcelreath/rethinking")
@@ -164,8 +165,8 @@ remotes::install_github("rmcelreath/rethinking")
 
 O pacote `rethinking` não está no CRAN; ele é distribuído pelo GitHub.
 Se aparecer uma mensagem dizendo que o pacote não está disponível para
-sua versão do R, confira se tentou instalá-lo pelo CRAN. Use o comando
-do GitHub mostrado acima.
+sua versão do R, confira se você tentou instalá-lo pelo CRAN. Use o
+comando para instakação a partir do GitHub, mostrado acima.
 
 # Especificando um modelo com o pacote `rethinking`
 
@@ -174,28 +175,29 @@ usada em aula. Por exemplo, podemos especificar uma regressão linear
 simples de $y_i$ em $x_i$ com distribuições a priori razoáveis:
 
 $$
-\begin{aligned} 
+\begin{aligned}
   y_i &\sim Normal(\mu_i, \sigma) \\
   \mu_i &= \alpha + \beta x_i  \\
   \alpha &\sim Normal(0, 1) \\
   \beta &\sim Normal(0, 1) \\
   \sigma &\sim Exponential(1) \\
-\end{aligned} 
+\end{aligned}
 $$
+
 Primeiro, vamos visualizar as distribuições a priori assumidas para os
 três parâmetros.
 
 Distribuição normal com $\mu = 0$ e $\sigma = 1$:
 
 ```{r}
-curve(dnorm(x, mean = 0, sd = 1), -3, 3, lwd = 2, col = 2, 
+curve(dnorm(x, mean = 0, sd = 1), -3, 3, lwd = 2, col = 2,
             ylab = "Densidade", xlab = "Valor do parâmetro")
 ```
 
 Distribuição exponencial com $\lambda = 1$:
 
 ```{r}
-curve(dexp(x, rate = 1), 0, 3, lwd = 2, col = 2, 
+curve(dexp(x, rate = 1), 0, 3, lwd = 2, col = 2,
             ylab = "Densidade", xlab = "Valor do parâmetro" )
 ```
 
@@ -227,15 +229,15 @@ library(rethinking)
 ## Código do `rethinking`
 m1 = quap(alist(
   y ~ dnorm(mu, sigma),     # Verossimilhança
-  mu <- a + b * x,           # Modelo linear
+  mu <- a + b * x,          # Modelo linear
   a ~ dnorm(0, 1),          # Distribuição a priori do intercepto
   b ~ dnorm(0, 1),          # Distribuição a priori da inclinação
-  sigma ~ dexp(1)),   # Distribuição a priori do desvio-padrão residual
+  sigma ~ dexp(1)),         # Distribuição a priori do desvio-padrão residual
   data = list(y = y, x = x) # Lista de dados
-) 
+)
 ```
 
-A função `precis()` gera uma tabela resumida com as estimativas dos
+A função `precis()` gera uma tabela com resumo das estimativas dos
 coeficientes:
 
 ```{r }
@@ -255,27 +257,29 @@ tamanho da amostra, alterando `N`. As distribuições a priori fazem mais
 diferença agora?
 
 
-# Ajustando modelos com métodos Bayesianos
+# Ajustando modelos com métodos bayesianos
 
-Nos tutoriais  anteriores, ajustamos modelos lineares pelo método OLS. Agora,
-vamos ajustar o mesmo modelo usando algumas abordagens diferentes, 
-e comparar as estimativas de cada uma. Vamos usar OLS, um pacote que utiliza a 
-a mesma sintaxe de fórmulas do lm(), mas usando uma maquinaria Bayesiana, e o pacote rethinking, que permite especificar modelos de forma mais explícita.
+Nos tutoriais anteriores, ajustamos modelos lineares pelo método OLS.
+Agora, vamos ajustar o mesmo modelo usando algumas abordagens diferentes
+e comparar as estimativas de cada uma. Vamos usar OLS; o pacote
+`rstanarm`, que utiliza a mesma sintaxe de fórmulas da função `lm()`,
+mas com uma maquinaria bayesiana; e o pacote `rethinking`, que permite
+especificar modelos de forma mais explícita.
 
-A abordagem Bayesiana para a regressão linear se baseia na distribuição
+A abordagem bayesiana para a regressão linear se baseia na distribuição
 posterior dos parâmetros $\alpha$ e $\beta$. Essa posterior é
 proporcional ao produto entre a verossimilhança dos dados, condicionada
 aos parâmetros, e as distribuições a priori dos parâmetros.
 
-A verossimilhança dos dados, dados os parâmetros, é a mesma usada no
+A verossimilhança dos dados, dados os parâmetros, é igual à obtida com o 
 ajuste OLS. Em geral, atribuímos aos parâmetros distribuições a priori
 normais, com média zero e desvio-padrão fixo.
 
 Vamos gerar um novo conjunto de dados com parâmetros conhecidos para
-ilustrar algumas diferenças entre os métodos OLS e Bayesiano.
+ilustrar algumas diferenças entre os métodos OLS e bayesiano.
 
 ```{r create_dataset2}
-set.seed(4) 
+set.seed(4)
 
 x = runif(50, 50, 100)
 y = 1000 + 150 * x + rnorm(50, 0, 1000)
@@ -303,7 +307,7 @@ Agora, vamos ajustar o modelo com o pacote `rstanarm`, que utiliza a
 linguagem Stan e fornece um conjunto padrão de distribuições a priori
 fracamente informativas.
 
-```{r fit_bayesian, messages=FALSE, eval=FALSE}
+```{r fit_bayesian, message=FALSE, eval=FALSE}
 suppressPackageStartupMessages(library(rstanarm))
 mod_bayesian <- stan_glm(y ~ x, data = data)
 
@@ -326,17 +330,17 @@ bayesian_intercept <- coef(mod_bayesian)[1]
 bayesian_slope <- coef(mod_bayesian)[2]
 
 
-ggplot(data, aes(x, y)) + 
+ggplot(data, aes(x, y)) +
   geom_point() +
   geom_abline(intercept = ols_intercept, slope = ols_slope, color = "red", linetype = "solid") +
-  geom_abline(intercept = bayesian_intercept, slope = bayesian_slope, color = "blue", linetype = "dashed") + 
+  geom_abline(intercept = bayesian_intercept, slope = bayesian_slope, color = "blue", linetype = "dashed") +
   theme_bw()
 
 ```
 
 Quão semelhantes são as estimativas dos dois métodos?
 
-### Especificando o modelo explicitamente com `rethinking`
+## Especificando o modelo explicitamente com `rethinking`
 
 Agora, vamos usar o pacote `rethinking` para ajustar o modelo com
 algumas das distribuições a priori padrão usadas em aula.
@@ -359,14 +363,15 @@ precis(mod_rethinking)
 
 Como ficaram as estimativas agora?^[Péssimas!]
 
-Isso acontece porque as distribuições a priori padrão usadas no código
-de `rethinking` estão muito distantes dos valores verdadeiros dos
+Isso acontece porque as distribuições a priori que usamos no código
+de `rethinking` (normais padrão) estão muito distantes dos valores verdadeiros dos
 parâmetros. Uma forma de evitar esse problema é padronizar as variáveis
-antes de ajustar o modelo. O pacote rstanarm faz esse tipo de padronização automaticamente, e usa priors padrões que são melhores em lidar com diferenças de escalas entre os dados. Como nós estamos trabalhando com o pacote Rethinking e montando nossos modelos de forma mais artesanal, precisamos pensar nesse tipo de questão.
+antes de ajustar o modelo. O pacote `rstanarm` resolve isto ajustando a escala das distribuições a priori à escala do ados. Como estamos trabalhando com o pacote `rethinking` e montando nossos modelos
+de forma mais artesanal, precisamos pensar nesse tipo de questão.
 
 ```{r scale, eval=FALSE}
-data$x_scaled = scale(data$x)
-data$y_scaled = scale(data$y)
+data$x_scaled = as.numeric(scale(data$x))
+data$y_scaled = as.numeric(scale(data$y))
 
 mod_rethinking_scaled = quap(
   alist(
@@ -391,8 +396,8 @@ coef(mod_rethinking_scaled)
 ```
 
 Padronizar as variáveis é uma boa prática ao ajustar modelos
-Bayesianos. O escalonamento melhora a eficiência computacional e facilita a
-definição de distribuições a priori razoáveis.
+bayesianos. O escalonamento melhora a eficiência computacional e
+facilita a definição de distribuições a priori razoáveis.
 
 # Estendendo a regressão linear
 
@@ -406,15 +411,15 @@ resultados.
 
 # Modelo linear múltiplo aditivo
 
-Em uma regressão linear múltipla aditiva, o valor esperado da resposta
-$\mu$ é a soma dos efeitos de vários preditores $X_i$, cada um
+Em uma regressão linear múltipla aditiva, o valor esperado da resposta,
+$\mu$, é a soma dos efeitos de vários preditores $X_i$, cada um
 ponderado por seu próprio coeficiente $\beta_i$:
 
 $$
-\begin{align}
+\begin{aligned}
 y_i &\sim Normal(\mu_i, \sigma) \\
-\mu_i & = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots + \beta_j x_{ij} \\
-\end{align}
+\mu_i & = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots + \beta_k x_{ik}\\
+\end{aligned}
 $$
 
 ## Ajustando o modelo
@@ -429,8 +434,8 @@ Prepare os dados:
 ```{r data, eval=TRUE}
 df <- read.csv("https://raw.githubusercontent.com/lmmx/crawley-r-statistics-book-notes/master/code/ipomopsis.csv")
 names(df) <- c("Root", "Fruit", "Grazing")
-df$Root <- scale(df$Root, center = TRUE, scale = TRUE)
-df$Fruit <- scale(df$Fruit, center = TRUE, scale = TRUE)
+df$Root <- as.numeric(scale(df$Root, center = TRUE, scale = TRUE))
+df$Fruit <- as.numeric(scale(df$Fruit, center = TRUE, scale = TRUE))
 
 # Plantas sem proteção são o controle; as protegidas por cerca recebem o tratamento:
 df$Grazing0 <- ifelse(df$Grazing == "Ungrazed", 1, 0)
@@ -444,10 +449,10 @@ m1 <- quap(
   alist(
     Fruit ~ dnorm(mu, sigma),
     mu <- a + b * Grazing0 + c * Root,
-    a ~ dnorm(0, 1),  
-    b ~ dnorm(0, 1),   
-    c ~ dnorm(0, 1),  
-    sigma ~ dexp(1)          
+    a ~ dnorm(0, 1),
+    b ~ dnorm(0, 1),
+    c ~ dnorm(0, 1),
+    sigma ~ dexp(1)
   ),
   data = df
 )
@@ -467,18 +472,19 @@ Crie um gráfico com os dados observados e os valores previstos:
 
 ```{r plot_predictions}
 # Representa os dados observados
-plot(df$Fruit ~ df$Root, 
-     col = ifelse(df$Grazing0 == 1, "red", "black"), 
+plot(df$Fruit ~ df$Root,
+     col = ifelse(df$Grazing0 == 1, "red", "black"),
      pch = ifelse(df$Grazing0 == 1, 17, 16),
-     xlab = "Basal diameter (z-scores)", 
-     ylab = "Fruit dry weight (z-scores)")
+     xlab = "Diâmetro basal (escore z)",
+     ylab = "Massa seca dos frutos (escore z)")
 
-# Adiciona as retas previstas
-abline(a = m1_coef["a", ], b = m1_coef["b", ], col = "black", lwd = 2)
-abline(a = m1_coef["a", ] + m1_coef["c", ], b = m1_coef["b", ], col = "red", lwd = 2)
+# Adiciona as retas previstas: as duas retas compartilham a inclinação c
+# e diferem no intercepto pelo efeito do tratamento, b
+abline(a = m1_coef["a", ], b = m1_coef["c", ], col = "black", lwd = 2)
+abline(a = m1_coef["a", ] + m1_coef["b", ], b = m1_coef["c", ], col = "red", lwd = 2)
 
 # Adiciona a legenda
-legend("topleft", legend = c("Fenced", "Control"), col = c("red", "black"), 
+legend("topleft", legend = c("Protegidas (cerca)", "Controle"), col = c("red", "black"),
        pch = c(17, 16), lty = 1, bty = "n")
 
 ```
@@ -513,20 +519,39 @@ $$
 
 Portanto, $\mathrm{sd}(X)=\sqrt{p(1-p)}$. Quando os grupos têm
 frequências aproximadamente iguais, $p\approx0{,}5$, o desvio-padrão da
-codificação 0/1 é aproximadamente $0{,}5$. Podemos recodificar o contraste usando a transformação z, que padroniza a variável para ter média zero e desvio-padrão 1. A transformação z de $X$ é:
+codificação 0/1 é aproximadamente $0{,}5$. Podemos recodificar o
+contraste usando a transformação z, que padroniza a variável para ter
+média zero e desvio-padrão 1. A transformação z de $X$ é:
 
 $$
 C = \frac{X-E[X]}{\mathrm{sd}(X)}
   = \frac{X-p}{\sqrt{p(1-p)}}.
 $$
 
-Quando $p=0{,}5$, essa transformação altera os valores do preditor de $0$ e $1$ para valores $-1$ e $1$.
+Quando $p=0{,}5$, essa transformação altera os valores do preditor de
+$0$ e $1$ para $-1$ e $1$.
 
-Com essa codificação e grupos aproximadamente equilibrados, o coeficiente
-de $b$ representa a mudança esperada por um desvio-padrão do preditor e
-pode ser comparado, em magnitude, ao coeficiente de `Root`, também medido
-na escala de desvio-padrão. O coeficiente de $b$ é metade da diferença entre as
-médias dos grupos. Essa recodificação muda a escala do coeficiente, não o ajuste do modelo. A vantagem de usar essa codificação dos dois tratamentos é que agora o coeficiente do tratamento e o coeficiente associado ao diâmetro das plantas pode, potencialmente^[Os coeficientes padronizados dependem da população usada para definir cada desvio-padrão. Se a população de plantas protegidas for muito diferente da população de plantas não protegidas, o desvio-padrão do contraste pode não ser representativo da população geral. Por isso, é importante interpretar as comparações entre coeficientes padronizados com cautela. Da mesma forma, a dedução que usamos supôs um numero similar de plantas em cada grupo. Se os grupos forem muito desbalanceados, a interpretação do coeficiente do contraste como uma mudança por desvio-padrão pode não ser adequada.], ser comparado diretamente. Ajuste o modelo novamente e interprete os coeficientes. Usando essa escala comprarável e supondo que os efeitos são boas estimativas causais, qual dos dois efeitos tem influência maior na resposta?
+Com essa codificação e grupos aproximadamente equilibrados, o
+coeficiente $b$ representa a mudança esperada por um desvio-padrão do
+preditor e pode ser comparado, em magnitude, ao coeficiente de `Root`,
+também medido na escala de desvio-padrão. O coeficiente $b$ passa a ser
+metade da diferença entre as médias dos grupos. Essa recodificação muda
+a escala do coeficiente, não o ajuste do modelo. A vantagem de usar essa
+codificação dos dois tratamentos é que agora o coeficiente do tratamento
+e o coeficiente associado ao diâmetro das plantas podem,
+potencialmente^[Os coeficientes padronizados dependem da população usada
+para definir cada desvio-padrão. Se a população de plantas protegidas
+for muito diferente da população de plantas não protegidas, o
+desvio-padrão do contraste pode não ser representativo da população
+geral. Por isso, é importante interpretar as comparações entre
+coeficientes padronizados com cautela. Da mesma forma, a dedução que
+usamos supôs um número similar de plantas em cada grupo. Se os grupos
+forem muito desbalanceados, a interpretação do coeficiente do contraste
+como uma mudança por desvio-padrão pode não ser adequada.], ser
+comparados diretamente. Ajuste o modelo novamente e interprete os
+coeficientes. Usando essa escala comparável e supondo que os efeitos
+sejam boas estimativas causais, qual dos dois efeitos tem maior
+influência na resposta?
 
 
 ```{r binary_contrast}
@@ -535,7 +560,15 @@ df$Grazing_contrast <- ifelse(df$Grazing0 == 1, 1, -1)
 
 ## Modelando a variabilidade residual
 
-Neste modelo, e até agora no curso, sempre usamos a versão mais simples do ajuste da regressão linear, que assume que a variabilidade residual é constante para todos os valores de $x$. Essa suposição é chamada de **homocedasticidade**. Quando a variabilidade residual muda com o valor do preditor, dizemos que há **heterocedasticidade**. Vamos tentar modelar a variabilidade residual como uma função do preditor. Para isso, incluir um modelo explicito para o desvio-padrão residual em função do tramento experimental, de forma exatamente análoga a como modelamos a média da resposta. 
+Neste modelo, e até agora no curso, sempre usamos a versão mais simples
+do ajuste da regressão linear, que assume que a variabilidade residual é
+constante para todos os valores de $x$. Essa suposição é chamada de
+**homocedasticidade**. Quando a variabilidade residual muda com o valor
+do preditor, dizemos que há **heterocedasticidade**. Vamos tentar
+modelar a variabilidade residual como uma função do preditor. Para isso,
+vamos incluir um modelo explícito para o desvio-padrão residual em
+função do tratamento experimental, de forma exatamente análoga à maneira
+como modelamos a média da resposta.
 
 $$
 \begin{aligned}
@@ -548,7 +581,16 @@ c &\sim Normal(0, 1) \\
 \end{aligned}
 $$
 
-Esse modelo usa uma estretégia de codificação do tratamento levemente diferente, mas equivalente à usada anteriormente. Agora, vamos usar um vetor indice para indicar o grupo de cada observação. Esse vetor, que vai conter os valores 1 e 2, será usado para indexar os dois vetores que armazenam o intercepto e os dois desvios-padrão residuais, um para cada grupo. A vantagem dessa abordagem é que ela pode ser facilmente estendida para mais de dois grupos. Podemos usar essa estratégia aqui devido à flexibilidade do pacote `rethinking`, ela seria equivalente ao uso de contrastes com codificação _one-hot_ em funções como `rstanarm` e `lm()`.
+Esse modelo usa uma estratégia de codificação do tratamento levemente
+diferente da usada anteriormente, mas equivalente a ela. Agora, vamos
+usar um vetor de índices para indicar o grupo de cada observação. Esse
+vetor, que vai conter os valores 1 e 2, será usado para indexar os dois
+vetores que armazenam os interceptos e os desvios-padrão residuais, um
+para cada grupo. A vantagem dessa abordagem é que ela pode ser
+facilmente estendida para mais de dois grupos. Podemos usar essa
+estratégia aqui graças à flexibilidade do pacote `rethinking`; ela seria
+equivalente ao uso de contrastes com codificação _one-hot_ em funções
+como `rstanarm` e `lm()`.
 
 ```{r heteroskedastic_model}
 df$Grazing_i <- ifelse(df$Grazing0 == 1, 2, 1)
@@ -570,12 +612,22 @@ precis(m_heteroskedastic, depth = 2)
 O índice `Grazing_i` associa cada observação a um dos dois grupos. O
 modelo usa esse índice para selecionar tanto o intercepto quanto o
 desvio-padrão residual correspondentes, enquanto a inclinação de `Root`
-é compartilhada. Assim, `sigma` contém um parâmetro para cada tratamento,
-em vez de um único desvio-padrão comum a todas as plantas. Como o modelo usa parâmetros armazenados em vetores, precisamos usar o argumento `depth = 2` na função `precis()` para que ela mostre os dois interceptos e os dois desvios-padrão residuais. Compare os valores estimados de a com os valores obtidos no modelo anterior. O que mudou? Compare os desvios-padrão residuais estimados para cada grupo. Existe evidencia de diferença na variabilidade residual entre os dois grupos? 
+é compartilhada. Assim, `sigma` contém um parâmetro para cada
+tratamento, em vez de um único desvio-padrão comum a todas as plantas.
+Como o modelo usa parâmetros armazenados em vetores, precisamos usar o
+argumento `depth = 2` na função `precis()` para que ela mostre os dois
+interceptos e os dois desvios-padrão residuais. Compare os valores
+estimados de `a` com os valores obtidos no modelo anterior. O que mudou?
+Compare os desvios-padrão residuais estimados para cada grupo. Há
+evidência de diferença na variabilidade residual entre os dois grupos?
 
 ### Testando a diferença na variabilidade residual entre os grupos
 
-Para testar a diferença na variabilidade residual entre os grupos, podemos extrair amostras da posterior e calcular a diferença entre os dois desvios-padrão residuais. Em seguida, podemos calcular a proporção de amostras em que o desvio-padrão do grupo protegido é maior que o desvio-padrão do grupo não protegido (ou vice-versa).
+Para testar a diferença na variabilidade residual entre os grupos,
+podemos extrair amostras da posterior e calcular a diferença entre os
+dois desvios-padrão residuais. Em seguida, podemos calcular a proporção
+de amostras em que o desvio-padrão do grupo protegido é maior que o
+desvio-padrão do grupo não protegido (ou vice-versa).
 
 ```{r test_variance_difference}
 posterior_samples <- extract.samples(m_heteroskedastic, n = 1000)
@@ -588,30 +640,47 @@ proportion <- mean(difference > 0)
 proportion
 ```
 
-É importante fazer essa comparação explicita entre os coeficientes, já que comparação visual entre os intervalos de credibilidade pode ser enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma diferença entre os grupos devido à correlações entre as estiamativas dos dois parâmetros. A proporção calculada acima nos dá uma medida direta da evidência de diferença na variabilidade residual entre os grupos.
+É importante fazer essa comparação explícita entre os coeficientes, já
+que a comparação visual entre os intervalos de credibilidade pode ser
+enganosa. Mesmo que os intervalos se sobreponham, ainda pode haver uma
+diferença entre os grupos devido a correlações entre as estimativas dos
+dois parâmetros. A proporção calculada acima nos dá uma medida direta da
+evidência de diferença na variabilidade residual entre os grupos.
 
-**Exercício opcional**: ajuste o modelo introduzindo uma dependência entre a variância residual e o diâmetro basal das plantas. Por exemplo, podemos modelar o desvio-padrão residual como uma função não-linear do diâmetro basal, como uma lei de potência com dois parâmetros. (existem diversas estratégias, mas todas devem lidar o fato de que o desvio-padrão residual deve ser positivo)^[Quais outras estratégias vimos em aula? Talvez uma transformação?]. Compare os resultados com o modelo anterior.
+**Exercício opcional**: ajuste o modelo introduzindo uma dependência
+entre a variância residual e o diâmetro basal das plantas. Por exemplo,
+podemos modelar o desvio-padrão residual como uma função não linear do
+diâmetro basal, como uma lei de potência com dois parâmetros. Existem
+diversas estratégias, mas todas devem lidar com o fato de que o
+desvio-padrão residual deve ser positivo.^[Quais outras estratégias
+vimos em aula? Talvez uma transformação?] Compare os resultados com o
+modelo anterior.
 
 # Regressão robusta
 
-Uma vantagem dos métodos Bayesianos é poder adaptar os modelos mantendo
-a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada para criar modelos sob medida para
-problemas específicos.
+Uma vantagem dos métodos bayesianos é poder adaptar os modelos mantendo
+a sintaxe usada nos exemplos simples. Essa flexibilidade pode ser usada
+para criar modelos sob medida para problemas específicos.
 
-Vamos ilustrar essa ideia com a regressão robusta. Em modelos lineares, observações atípicas (_outliers_) podem resultar de erros de medição ou de processos biológicos reais que produzem valores fora da faixa esperada por uma distribuição normal. Nesse segundo caso, excluí-las pode descartar informação importante.
+Vamos ilustrar essa ideia com a regressão robusta. Em modelos lineares,
+observações atípicas (_outliers_) podem resultar de erros de medição ou
+de processos biológicos reais que produzem valores fora da faixa
+esperada por uma distribuição normal. Nesse segundo caso, excluí-las
+pode descartar informação importante.
 
 Para ilustrar, vamos usar um conjunto de dados em que algumas espécies
 extremas alteram as estimativas de uma regressão simples.
 
-## Observações de alta alavancagem em dados reais
+## Observações de alta influência em dados reais
 
 O conjunto `Animals`, do pacote `MASS`, contém as massas corporal e
 cerebral de 28 espécies de animais terrestres. Vamos modelar o
 logaritmo da massa cerebral como uma função linear do logaritmo da massa
 corporal, uma relação alométrica simples usada para comparar espécies.
-O conjunto inclui grandes dinossauros cujas medidas são claramente discordantes dos demais.
-Esses indivíduos possuem massas corporais muito altas e massas cerebrais relativamente baixas, 
-o que os torna observações distoantes das demais. 
+O conjunto inclui grandes dinossauros cujas medidas são claramente
+discordantes das demais. Essas espécies têm massas corporais muito altas
+e massas cerebrais relativamente baixas, o que as torna observações
+destoantes das demais.
 
 Primeiro, vamos visualizar os dados:
 
@@ -629,16 +698,17 @@ point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
                        "firebrick", "grey35")
 
 plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
-  xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+  xlab = "Log da massa corporal (kg)", ylab = "Log da massa cerebral (g)")
 text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
      labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
-``` 
+```
 
-Como você espera que a inclusão dessas espécies influencie a inclinação da reta ajustada? E o desvio-padrão residual?
+Como você espera que a inclusão dessas espécies influencie a inclinação
+da reta ajustada? E o desvio-padrão residual?
 
 ## Ajustando os modelos com `ulam`
 
-Ajuste a mesma regressão Gaussiana com todas as espécies e com os dados
+Ajuste a mesma regressão gaussiana com todas as espécies e com os dados
 sem os três dinossauros. Os dois modelos usam as mesmas distribuições a
 priori fracamente informativas.
 
@@ -683,9 +753,10 @@ essas espécies devam ser descartadas.
 
 ## Visualizando a influência no ajuste
 
-O codigo abaixo mostra graficamente as médias posteriores dos dois modelos no mesmo
-gráfico de dispersão. As espécies destacadas estão incluídas no ajuste
-com todos os dados e são excluídas juntas no segundo ajuste.
+O código abaixo mostra graficamente as médias posteriores dos dois
+modelos no mesmo gráfico de dispersão. As espécies destacadas estão
+incluídas no ajuste com todos os dados e são excluídas juntas no
+segundo ajuste.
 
 ```{r animals_fit_comparison, eval=FALSE, fig.asp=1}
 
@@ -697,7 +768,7 @@ point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
                        "firebrick", "grey35")
 
 plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
-  xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+  xlab = "Log da massa corporal (kg)", ylab = "Log da massa cerebral (g)")
 text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
      labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
 lines(body_values,
@@ -708,7 +779,7 @@ lines(body_values,
         mean(posterior_without_dinosaurs$b) * body_values_c,
       col = "darkorange3", lwd = 2, lty = 2)
 legend("topleft",
-       legend = c("All species", "Without large dinosaurs", "Large dinosaurs"),
+       legend = c("Todas as espécies", "Sem os grandes dinossauros", "Grandes dinossauros"),
        col = c("navy", "darkorange3", "firebrick"),
        lty = c(1, 2, NA), pch = c(NA, NA, 19), bty = "n")
 ```
@@ -716,33 +787,33 @@ legend("topleft",
 O que acontece com a inclinação quando os três dinossauros são
 retirados? Antes de excluir espécies influentes, investigue as medidas
 e considere se uma única reta alométrica é adequada para mamíferos e
-dinossauros. 
+dinossauros.
 
 # Modificando o modelo para reduzir a sensibilidade a observações atípicas
 
-Uma vantagem da modelagem Bayesiana é que podemos mudar a distribuição
+Uma vantagem da modelagem bayesiana é que podemos mudar a distribuição
 dos resíduos sem alterar o preditor linear. Um modelo com caudas mais
 pesadas pode reduzir a influência de observações muito distantes da
-reta ajustada. 
+reta ajustada.
 
-Algumas observações atípicas são erros de medição, outras são
+Algumas observações atípicas são erros de medição; outras são
 observações legítimas de processos biológicos com variação mais extrema
-do que a permitida por um modelo Gaussiano. Excluir uma observação
+do que a permitida por um modelo gaussiano. Excluir uma observação
 legítima pode descartar informação importante. Em vez disso, vamos
-manter os três dinossauros e substituir a distribuição Gaussiana dos
+manter os três dinossauros e substituir a distribuição gaussiana dos
 resíduos por uma distribuição $t$ de Student. Em seguida, vamos
 comparar a sensibilidade dos modelos, ajustando cada um com e sem essas
 espécies.
 
-## Entendendo a distribuição $t$ de Student 
+## Entendendo a distribuição $t$ de Student
 
-Na distribuição $t$, o parâmetro $\nu$ (graus de liberdade, letra grega "nu") controla o
-peso das caudas. Uma intuição útil é pensar que a $t$ combina uma normal
-com uma variância incerta. Essa incerteza sobre a variância
-permite que alguns valores fiquem muito mais dispersos do que outros.
-Com $\nu$ baixo, essa incerteza é maior e valores extremos recebem mais
-probabilidade. Com $\nu$ alto, a variância fica mais concentrada e a
-$t$ se aproxima da normal.
+Na distribuição $t$, o parâmetro $\nu$ (graus de liberdade, letra grega
+"nu") controla o peso das caudas. Uma intuição útil é pensar que a $t$
+combina uma normal com uma variância incerta. Essa incerteza sobre a
+variância permite que alguns valores fiquem muito mais dispersos do que
+outros. Com $\nu$ baixo, essa incerteza é maior e valores extremos
+recebem mais probabilidade. Com $\nu$ alto, a variância fica mais
+concentrada e a $t$ se aproxima da normal.
 
 O gráfico compara distribuições com a mesma localização e escala. A
 escala vertical logarítmica deixa visível a diferença entre as caudas.
@@ -760,27 +831,36 @@ plot(x, curve_normal, type = "l", log = "y", ylim = c(1e-6, 1),
 lines(x, curve_t_low, col = curve_colors[2], lwd = 2)
 lines(x, curve_t_high, col = curve_colors[3], lwd = 2, lty = 2)
 legend("topright",
-       legend = c("Normal", "Student-t (nu = 3)", "Student-t (nu = 10)"),
+       legend = c("Normal", "t de Student (nu = 3)", "t de Student (nu = 10)"),
        col = curve_colors, lwd = 2, lty = c(1, 1, 2), bty = "n")
 ```
 
 ## Incluindo a distribuição $t$ de Student no modelo
 
-No modelo abaixo, vamos incluir um parâmetro adicional no modelo que controla os graus de liberdade da distribuição $t$ dos resíduos. 
-O parâmetro $\nu = 2 + \exp(\text{log_nu})$ mantém os graus de liberdade acima de 2, de modo que a variância dos resíduos 
-seja finita.^[Quando $\nu=1$, a distribuição $t$ é a distribuição de Cauchy, uma distribuição com caudas muito pesadas e uma série de propriedades bizarras. 
-Por exemplo, a distribuição de Cauchy não tem média nem variância definidas. Se você amostrar valores de uma distribuição de Cauchy, os valores serão extremamente 
-dispersos e a média das amostras nunca vai convergir pra um valor, mesmo com muitas amostras, ela vai só crescer indefinidamente.  
-Voltando para a $t$-student, a média da distribuição $t$ só existe para $\nu>1$, e a variância só para $\nu>2$. Além disso, o parâmetro $\sigma$ que aparece na distribuição $t$ 
-é um parâmetro de escala, não o desvio-padrão. Para $\nu>2$, o desvio-padrão é dado por $\sigma\sqrt{\nu/(\nu-2)}$. 
-Esse fator é a razão entre o desvio-padrão e $\sigma$. Por exemplo, com $\nu=3$ e $\sigma=1$, o desvio-padrão é $\sqrt{3}\approx1{,}73$, não 1. 
-À medida que $\nu$ aumenta, o fator se aproxima de 1; no limite normal, o desvio-padrão coincide com $\sigma$.]
+No modelo abaixo, vamos incluir um parâmetro adicional que controla os
+graus de liberdade da distribuição $t$ dos resíduos. O parâmetro
+$\nu = 2 + \exp(\text{log_nu})$ mantém os graus de liberdade acima de 2,
+de modo que a variância dos resíduos seja finita.^[Quando $\nu=1$, a
+distribuição $t$ é a distribuição de Cauchy, uma distribuição com caudas
+muito pesadas e uma série de propriedades bizarras. Por exemplo, a
+distribuição de Cauchy não tem média nem variância definidas. Se você
+amostrar valores de uma distribuição de Cauchy, os valores serão
+extremamente dispersos, e a média das amostras nunca vai convergir para
+um valor, mesmo com muitas amostras. Voltando à $t$ de Student, a média da distribuição $t$
+só existe para $\nu>1$, e a variância só para $\nu>2$. Além disso, o
+parâmetro $\sigma$ que aparece na distribuição $t$ é um parâmetro de
+escala, não o desvio-padrão. Para $\nu>2$, o desvio-padrão é dado por
+$\sigma\sqrt{\nu/(\nu-2)}$. Esse fator é a razão entre o desvio-padrão e
+$\sigma$. Por exemplo, com $\nu=3$ e $\sigma=1$, o desvio-padrão é
+$\sqrt{3}\approx1{,}73$, não 1. À medida que $\nu$ aumenta, o fator se
+aproxima de 1; no limite normal, o desvio-padrão coincide com
+$\sigma$.]
 
 ```{r animals_student_fits, eval=FALSE, message=FALSE, warning=FALSE}
 
 m_animals_student_all <- ulam(
   alist(
-    log_brain ~ student_t(nu, mu, sigma),
+    log_brain ~ dstudent(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
     a ~ dnorm(0, 1),
@@ -794,7 +874,7 @@ m_animals_student_all <- ulam(
 
 m_animals_student_without_dinosaurs <- ulam(
   alist(
-    log_brain ~ student_t(nu, mu, sigma),
+    log_brain ~ dstudent(nu, mu, sigma),
     mu <- a + b * log_body_c,
     nu <- 2 + exp(log_nu),
     a ~ dnorm(0, 1),
@@ -851,7 +931,7 @@ point_colors <- ifelse(seq_len(nrow(animals)) %in% dinosaur_indices,
                        "firebrick", "grey35")
 
 plot(log_brain ~ log_body, data = animals, pch = 19, col = point_colors,
-     xlab = "Log body weight (kg)", ylab = "Log brain weight (g)")
+     xlab = "Log da massa corporal (kg)", ylab = "Log da massa cerebral (g)")
 text(animals$log_body[dinosaur_indices], animals$log_brain[dinosaur_indices],
   labels = dinosaur_labels, pos = 2, col = "firebrick", cex = 0.8)
 
@@ -863,24 +943,28 @@ lines(body_values,
       col = "navy", lwd = 2, lty = 2)
 lines(body_values,
   mean(post_student_all$a) + mean(post_student_all$b) * body_values_c,
-      col = "firebrick", lwd = 2)
+      col = "darkorange3", lwd = 2)
 lines(body_values,
   mean(post_student_without$a) + mean(post_student_without$b) * body_values_c,
-      col = "firebrick", lwd = 2, lty = 2)
+      col = "darkorange3", lwd = 2, lty = 2)
 
 legend("topleft",
-  legend = c("Normal: all species", "Normal: without large dinosaurs",
-    "Student-t: all species", "Student-t: without large dinosaurs",
-    "Large dinosaurs"),
-       col = c("navy", "navy", "firebrick", "firebrick", "grey35"),
+  legend = c("Normal: todas as espécies", "Normal: sem os grandes dinossauros",
+    "t de Student: todas as espécies", "t de Student: sem os grandes dinossauros",
+    "Grandes dinossauros"),
+       col = c("navy", "navy", "darkorange3", "darkorange3", "firebrick"),
        lty = c(1, 2, 1, 2, NA), pch = c(NA, NA, NA, NA, 19), bty = "n")
 ```
 
 O modelo com resíduos $t$ de Student é menos sensível neste exemplo se
-suas duas retas ajustadas estiverem mais próximas e tiverem incinações mais parecidas entre si do que as
-duas retas do modelo com resíduos normais. Isso não significa que resíduos $t$ seja imunes a outliers, 
-apenas mais robusto e capaz de lidar com observaçõs extremas sem grandes mudanças nas estimativas de regressão. 
-Além disso, as medidas dos dinossauros são estimativas, e esses animais podem diferir sistematicamente dos
-mamíferos. Outra opção aqui seria modelar diretamente essa diferença, incluindo mais preditores no modelo. 
-A escolha entre essas abordagens depende do problema e dos dados disponíveis, nem sempre temos acesso a informações
-que expliquem as diferenças entre observações. 
+suas duas retas ajustadas estiverem mais próximas e tiverem inclinações
+mais parecidas entre si do que as duas retas do modelo com resíduos
+normais. Isso não significa que um modelo com resíduos $t$ seja imune a
+_outliers_, apenas que ele é mais robusto e capaz de lidar com
+observações extremas sem grandes mudanças nas estimativas da regressão.
+Além disso, as medidas dos dinossauros são estimativas, e esses animais
+podem diferir sistematicamente dos mamíferos. Outra opção seria modelar
+diretamente essa diferença, incluindo mais preditores no modelo. A
+escolha entre essas abordagens depende do problema e dos dados
+disponíveis; nem sempre temos acesso a informações que expliquem as
+diferenças entre as observações.
