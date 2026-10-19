@@ -1,0 +1,730 @@
+---
+title: "Inferência causal"
+subtitle: "Conectando modelos científicos e estatísticos"
+author: "Diogo Melo"
+date: "19 de outubro de 2026"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)
+knitr::opts_chunk$set(
+  prompt = FALSE, comment = "", eval = FALSE, echo = TRUE,
+  warning = FALSE, message = FALSE, out.width = "85%"
+)
+library(xaringanthemer)
+library(rethinking)
+```
+
+```{r xaringan-themer, include=FALSE, eval=TRUE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3",
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"),
+  text_font_size = "24px",
+  code_font_size = "1rem"
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+```
+
+```{r funcao-plot-dag, include=FALSE, eval=TRUE}
+## Desenha um DAG do dagitty com ggplot2, usando as coordenadas definidas em
+## `pos` (se ausentes, usa dagitty::graphLayout). Fundo transparente.
+## `labels`: vetor nomeado opcional para trocar os rótulos dos nós; rótulos entre
+## $...$ são interpretados como LaTeX, ex.: labels = c(x = "$\\beta_x$").
+## Os nomes dos nós no DAG devem ser simples (ex.: ux), sem `$` nem `\`.
+## `node_radius` (unidades de coordenadas) é calculado automaticamente a partir de
+## `node_size` e de fig.width/fig.height do chunk, para as setas começarem e
+## terminarem na borda dos nós; pode ser fornecido manualmente.
+plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
+                     node_radius = NULL, padding = 0.7, arrow_mm = 4,
+                     fig_width = knitr::opts_current$get("fig.width"),
+                     fig_height = knitr::opts_current$get("fig.height"),
+                     node_fill = "#eee8d5", node_color = "#586e75",
+                     edge_color = "#657b83", text_color = "#073642") {
+  if (is.character(dag)) dag <- dagitty::dagitty(dag)
+  coords <- dagitty::coordinates(dag)
+  if (anyNA(coords$x) || anyNA(coords$y)) {
+    coords <- dagitty::coordinates(dagitty::graphLayout(dag))
+    # Reescala para que a maior dimensão ocupe 2 unidades (mesma escala do uso manual)
+    escala <- 2 / max(diff(range(coords$x)), diff(range(coords$y)))
+    coords$x <- (coords$x - min(coords$x)) * escala
+    coords$y <- (coords$y - min(coords$y)) * escala
+    dagitty::coordinates(dag) <- coords
+  }
+  nodes <- data.frame(node = names(coords$x), x = unname(coords$x),
+                      y = unname(coords$y))
+  nodes$label <- nodes$node
+  if (!is.null(labels)) {
+    i <- match(names(labels), nodes$node)
+    nodes$label[i] <- labels
+  }
+  # Rótulos entre $...$ são interpretados como LaTeX (latex2exp); os demais, como texto
+  nodes$label_expr <- vapply(nodes$label, function(l) {
+    expr <- if (grepl("\\$", l)) latex2exp::TeX(l, output = "character") else deparse(l)
+    paste0("bold(", expr, ")")
+  }, character(1))
+
+  if (is.null(node_radius)) {
+    if (is.null(fig_width)) fig_width <- 7
+    if (is.null(fig_height)) fig_height <- 5
+    # polegadas por unidade de coordenada (coord_equal usa a menor escala)
+    pol_por_unid <- min(
+      fig_width / (diff(range(nodes$x)) + 2 * padding),
+      fig_height / (diff(range(nodes$y)) + 2 * padding)
+    )
+    # raio do círculo (shape 21) em polegadas, mais uma pequena folga
+    raio_pol <- 0.375 * (node_size * ggplot2::.pt + 1.2 * ggplot2::.stroke / 2) / 72
+    node_radius <- (raio_pol + 0.08) / pol_por_unid
+  }
+
+  edges <- dagitty::edges(dag)
+  edges <- edges[edges$e %in% c("->", "<->"), ]
+  from <- match(edges$v, nodes$node)
+  to <- match(edges$w, nodes$node)
+  dx <- nodes$x[to] - nodes$x[from]
+  dy <- nodes$y[to] - nodes$y[from]
+  len <- sqrt(dx^2 + dy^2)
+  edges <- data.frame(
+    x = nodes$x[from] + node_radius * dx / len,
+    y = nodes$y[from] + node_radius * dy / len,
+    xend = nodes$x[to] - node_radius * dx / len,
+    yend = nodes$y[to] - node_radius * dy / len,
+    bidirected = edges$e == "<->"
+  )
+
+  seta <- function(ends) {
+    grid::arrow(type = "closed", ends = ends, length = grid::unit(arrow_mm, "mm"))
+  }
+  p <- ggplot2::ggplot()
+  for (bi in c(FALSE, TRUE)) {
+    e <- edges[edges$bidirected == bi, ]
+    if (nrow(e) == 0) next
+    p <- p + ggplot2::geom_segment(
+      data = e, ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+      linewidth = 1.1, color = edge_color,
+      arrow = seta(if (bi) "both" else "last")
+    )
+  }
+  p +
+    ggplot2::geom_point(
+      data = nodes, ggplot2::aes(x = x, y = y), shape = 21, size = node_size,
+      stroke = 1.2, fill = node_fill, color = node_color
+    ) +
+    ggplot2::geom_text(
+      data = nodes, ggplot2::aes(x = x, y = y, label = label_expr), parse = TRUE,
+      color = text_color, fontface = "bold", size = label_size
+    ) +
+    ggplot2::coord_equal(
+      xlim = range(nodes$x) + c(-padding, padding),
+      ylim = range(nodes$y) + c(-padding, padding), expand = FALSE
+    ) +
+    ggplot2::theme_void() +
+    ggplot2::theme(
+      plot.background = ggplot2::element_rect(fill = "transparent", color = NA),
+      panel.background = ggplot2::element_rect(fill = "transparent", color = NA),
+      plot.margin = ggplot2::margin(8, 12, 8, 12)
+    )
+}
+```
+
+# Para que servem os modelos?
+
+- Previsões: 
+  
+  - O que vai acontecer?
+  - Qual a probabilidade de um evento dado um conjunto de condições? 
+
+--
+
+- Inferência causal:
+  - O que causou o evento?
+  - Qual o efeito de uma intervenção?
+
+--
+
+- Inferência Contrafactual: 
+  - O que teria acontecido se a intervenção tivesse sido diferente?
+
+---
+
+## Causação e correlação
+
+.center[
+**Por que correlação não implica causalidade?**
+]
+
+---
+
+## Representação gráfica de modelos
+
+Podemos representar nosso modelo causal proposto por  meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+
+```{r figura-dag-xy, echo=FALSE, eval=TRUE, out.width="55%", fig.width=8, fig.height=3, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  ux [pos=\"-1,1\"]
+  uy [pos=\"3,1\"]
+  ux -> x
+  uy -> y
+  x -> y
+}", labels = c(ux = "$u_x$", uy = "$u_y$"))
+```
+
+As variáveis $u_x$ e $u_y$ representam fatores não observados que afetam $x$ e $y$, respectivamente. 
+Essas variáveis normalmente são implicitas nos DAGs e omitidas nas representações gráficas.
+
+Todas essas variáveis que afetam apenas um nó são independentes entre si por hipotese. 
+
+---
+
+## Introdução à inferência causal
+
+```{r figura-introducao-causal, echo=FALSE, eval=TRUE, out.width="30%", fig.align="center"}
+knitr::include_graphics("../../figures/primer.jpeg")
+```
+
+---
+
+# Caminhos, bifurcações e colisores
+
+## Tríades elementares
+
+.center[
+**Pipe**
+
+```{r figura-caminho, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/pipe.svg")
+```
+
+**Fork**
+
+```{r figura-bifurcacao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/fork.svg")
+```
+
+**Collider**
+
+```{r figura-colisor, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/colider.svg")
+```
+]
+
+---
+
+## Simulando fatores de confusão
+
+Como um fator de confusão afeta nossa estimativa do efeito de $x$ sobre $y$?
+
+```{r figura-dag-confundimento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_all.svg")
+```
+
+---
+
+# Fork
+
+Efeito direto de $x$ sobre $y$, mais um fator de confusão $z$
+
+```{r figura-dag-fork-efeito, echo=FALSE, eval=TRUE, out.width="45%", fig.width=8, fig.height=4, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,1\"]
+  x -> y
+  z -> x 
+  z -> y
+}")
+```
+
+Modelo gerador implícito neste DAG: 
+
+$$
+\begin{aligned}
+y &= \mathcal{f}(x, z, u_y) \\
+x &= \mathcal{f}(z, u_x) \\
+z &= \mathcal{f}(u_z)
+\end{aligned}
+$$
+
+---
+
+## Modelo sem o fator de confusão
+
+```{r figura-dag-fork-sem-confusao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
+```
+
+Modelo estatístico sem o fator de confusão:
+
+$$
+\begin{aligned}
+y &\sim \mathrm{Normal}(\mu, \sigma) \\
+\mu &= a + bx \\
+a &\sim \mathrm{Normal}(0, 0.3) \\
+b &\sim \mathrm{Normal}(0, 0.3) \\
+\sigma &\sim \mathrm{Exponential}(1)
+\end{aligned}
+$$
+
+---
+
+## Modelo `ulam` sem o fator de confusão
+
+```{r figura-dag-fork-ulam, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
+```
+
+```{r modelo-fork-sem-confusao}
+N <- 100
+z <- rnorm(N)             # z ~ Normal(0, 1)
+x <- rnorm(N, 1 + z)      # x ~ Normal(1 + z, 1)
+y <- rnorm(N, 1 + x + z)  # y ~ Normal(1 + x + z, 1)
+
+m1 <- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x)
+)
+```
+
+---
+
+## Estimativas do modelo sem o fator de confusão
+
+```text
+> precis(m1)
+      mean   sd 5.5% 94.5% n_eff Rhat4
+a     0.54 0.14 0.32  0.77  1274     1
+bx    1.47 0.08 1.34  1.60  1432     1  # Estimativa do efeito de x sobre y
+sigma 1.33 0.10 1.19  1.49  1418     1
+```
+
+---
+
+## $P(\beta_{yx} \mid x, y)$ sem o fator de confusão
+
+```{r figura-fork-sem-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_fork_non_corrected.png")
+```
+
+---
+
+## Incluindo o fator de confusão
+
+```{r modelo-fork-com-confusao}
+m2 <- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Novo parâmetro para o fator de confusão
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z)
+)
+```
+
+```text
+> precis(m2)
+       mean   sd 5.5% 94.5% n_eff Rhat4
+a      0.95 0.14 0.72  1.17   942     1
+bx     1.06 0.10 0.91  1.22   837     1
+bz     0.82 0.12 0.62  1.02   889     1
+sigma  1.09 0.08 0.97  1.22  1200     1
+```
+
+---
+
+## $P(\beta_{yx} \mid x, y)$ com o fator de confusão
+
+```{r figura-fork-com-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_fork_corrected.png")
+```
+
+---
+
+## Exemplos de bifurcações ou fatores de confusão
+
+- Esta é a variável de controle por excelência.
+- Muitas variáveis são incluídas no modelo sob a suposição de que são fatores de confusão cujos efeitos precisam ser considerados.
+
+```{r figura-dag-fork-exemplos, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
+```
+
+---
+
+## Tabagismo e câncer
+
+R. A. Fisher, famoso, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
+
+```{r figura-tabagismo-cancer, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
+knitr::include_graphics("../../figures/smoking_cancer.png")
+```
+
+---
+
+## Viés por variável omitida
+
+```{r figura-variavel-omitida, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("../../figures/omitted.png")
+```
+
+- Carlos Cinelli e Chad Hazlett (2020).
+
+---
+
+## Distribuições de espécies
+
+Podemos querer avaliar o efeito de um predador sobre a distribuição de uma presa. Porém, a distribuição espacial de ambos pode ser afetada por algum fator abiótico:
+
+```{r figura-distribuicao-especies, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
+knitr::include_graphics("../../figures/species_predator.png")
+```
+
+---
+
+# Caminho
+
+## Todo o efeito de $x$ sobre $y$ é mediado por $z$
+
+```{r figura-dag-pipe-efeito, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_pipe2.svg")
+```
+
+---
+
+## Modelo gerador implícito neste DAG
+
+$$
+\begin{aligned}
+y &\sim \mathrm{Normal}(\alpha_y + \beta_{yz}z, \sigma_y) \\
+z &\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x, \sigma_z) \\
+x &\sim \mathrm{Normal}(\alpha_x, \sigma_x)
+\end{aligned}
+$$
+
+---
+
+## Modelo sem o mediador
+
+```{r figura-dag-pipe-sem-mediador, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_pipe2.svg")
+```
+
+```{r modelo-caminho-sem-mediador}
+set.seed(1)
+N <- 100
+x <- rnorm(N)        # x ~ Normal(0, 1)
+z <- rnorm(N, 1 + x) # z ~ Normal(1 + x, 1)
+y <- rnorm(N, 1 + z) # y ~ Normal(1 + z, 1)
+
+m1 <- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+---
+
+## $P(\beta_{yx} \mid x, y)$ sem o mediador
+
+```{r modelo-caminho-sem-mediador-reajuste}
+m1 <- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+```{r figura-pipe-sem-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_pipe_non_corrected.png")
+```
+
+---
+
+## Incluindo o mediador
+
+```{r modelo-caminho-com-mediador}
+m2 <- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Mediador
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+```{r figura-pipe-com-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_pipe_corrected.png")
+```
+
+---
+
+## Caminho versus bifurcação
+
+```{r figura-pipe-versus-fork, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
+knitr::include_graphics("../../figures/pipe_vs_fork.svg")
+```
+
+---
+
+## Exemplos de caminhos ou mediadores
+
+Incluir um mediador em nossos modelos pode ter consequências graves. Um erro comum é incluir variáveis medidas após o tratamento.
+
+```{r figura-dag-pipe-exemplos, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_pipe.svg")
+```
+
+---
+
+## Variáveis pós-tratamento
+
+Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento pode ser mediada pela presença do fungo. Portanto, incluir a presença do fungo no modelo mascararia o efeito do tratamento.
+
+```{r figura-tratamento-fungico, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("../../figures/fungal_treatment.png")
+```
+
+---
+
+## Condicionamento em variáveis pós-tratamento
+
+```{r figura-variaveis-pos-tratamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/post_treatment_paper.png")
+```
+
+Montgomery et al. (2018).
+
+---
+
+# Colisor
+
+## $x$ não afeta $y$, mas ambos afetam $z$
+
+```{r figura-dag-colisor-introducao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
+```
+
+---
+
+## Modelo gerador implícito neste DAG
+
+$$
+\begin{aligned}
+y &\sim \mathrm{Normal}(\alpha_y, \sigma_y) \\
+x &\sim \mathrm{Normal}(\alpha_x, \sigma_x) \\
+z &\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x + \beta_{zy}y, \sigma_z)
+\end{aligned}
+$$
+
+---
+
+## Modelo sem o colisor
+
+```{r figura-dag-colisor-modelo, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
+```
+
+```{r modelo-colisor-sem-condicionamento}
+set.seed(1)
+N <- 100
+x <- rnorm(N)            # x ~ Normal(0, 1)
+y <- rnorm(N)            # y ~ Normal(0, 1)
+z <- rnorm(N, 1 + x + y) # z ~ Normal(1 + x + y, 1): colisor
+
+m1 <- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+---
+
+## $P(\beta_{yx} \mid x, y)$ sem condicionar no colisor
+
+```{r modelo-colisor-sem-condicionamento-reajuste}
+m1 <- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+```{r figura-colisor-sem-condicionamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_colider_non_corrected.png")
+```
+
+---
+
+## $P(\beta_{yx} \mid x, y)$ condicionando no colisor
+
+```{r modelo-colisor-com-condicionamento}
+m2 <- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Colisor
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+```{r figura-colisor-com-condicionamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/x-y_colider_corrected.png")
+```
+
+---
+
+## Colisores podem enviesar nossas amostras
+
+.center[
+```{r figuras-exemplos-colisor, echo=FALSE, eval=TRUE, out.width=c("40%", "50%"), fig.show="hold", fig.align="center"}
+knitr::include_graphics(c(
+  "../../figures/restaurant_colider.svg",
+  "../../figures/research_colider.svg"
+))
+```
+]
+
+---
+
+## Usando DAGs para construir modelos
+
+Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+
+- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+
+---
+
+## Caminhos abertos e fechados
+
+- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
+- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+
+---
+
+## Identifique todos os caminhos abertos de $X$ a $Y$
+
+```{r figura-caminhos-dag, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/paths_dag.png")
+```
+
+---
+
+## Critério da porta dos fundos
+
+Para estimar o efeito causal de $X$ sobre $Y$, identifique um conjunto de variáveis de controle que não contenha descendentes de $X$ e bloqueie todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$.
+
+---
+
+## Nem todas as estimativas são causais
+
+```{r figura-tabela-2, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("../../figures/table_2.png")
+```
+
+- Westreich et al. (2013).
+
+---
+
+# Tabela 1
+
+```{r figura-tabela-1-exemplo, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("../../figures/table_1ex.png")
+```
+
+---
+
+# Tabela 2
+
+```{r figura-tabela-2-exemplo, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("../../figures/table_2ex.png")
+```
+
+---
+
+## HIV e acidente vascular cerebral
+
+```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, out.width="40%", fig.align="center"}
+knitr::include_graphics("../../figures/DAGS/hiv_stroke.svg")
+```
+
+---
+
+## Bons controles
+
+- Bloqueiam caminhos não causais.
+- Melhoram a precisão.
+- Permitem inferências causais.
+
+---
+
+## Maus controles
+
+- Bloqueiam caminhos causais (bloqueando caminhos).
+- Abrem caminhos não causais (abrindo colisores).
+- Reduzem a precisão.
+- Impedem inferências causais.
+
+---
+
+## Referências
+
+- Cinelli e Hazlett (2020).
+- Montgomery et al. (2018).
+- Westreich et al. (2013).
