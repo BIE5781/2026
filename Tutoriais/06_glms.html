@@ -2600,18 +2600,24 @@ população de cada país por faixa etária, que vamos precisar mais adiante.</p
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://yihui.org/knitr/">knitr</a></span><span class="op">)</span></span>
 <span><span class="va">repo</span> <span class="op">&lt;-</span> <span class="st">&quot;https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/&quot;</span></span>
-<span><span class="va">obitos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/gzcon.html">gzcon</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html">url</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="va">repo</span>, <span class="st">&quot;obitos_covid_paises_selecionados.rds&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">obitos</span><span class="op">)</span></span></code></pre>
+<span><span class="va">obitos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/gzcon.html">gzcon</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html">url</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="va">repo</span>, <span class="st">&quot;obitos_covid_paises_selecionados.rds&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>Cada linha é uma faixa etária de um país, com o número de óbitos
 (<code>obitos</code>), a população (<code>pop</code>), a população em unidades de 100 mil
 habitantes (<code>pop.e5</code>), a taxa de óbitos por 100 mil habitantes (<code>taxa</code>)
-e o ponto médio da faixa etária (<code>idade.meio</code>)<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+e o ponto médio da faixa etária (<code>idade.meio</code>)<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">obitos</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
 <h2 id="óbitos-totais">Óbitos totais</h2>
 <p>Vamos começar pelo total de óbitos de cada país. Para comparação,
 acrescentamos o total do Brasil no mesmo período: 614.186 óbitos,
-segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar este valor e também carregar os dados demográficos do país para uso neste tutorial</p>
+segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar
+este valor e também carregar os dados demográficos do país para uso
+neste tutorial</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## Guarde o total de obitos no Brasil neste objeto</span></span>
@@ -2695,14 +2701,8 @@ segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar este val
 <p>A primeira razão é óbvia: os países têm populações muito diferentes.
 Para comparar, precisamos de <strong>taxas</strong>: o número de óbitos dividido pelo
 tamanho da população. Para o Brasil, usamos a população do Censo 2022
-(IBGE, 2023), que vamos carregar agora e usar até o final do tutorial.
-O script <code>prepara_dados_ibge.R</code>, anexo, prepara esses dados. Carregue estes dados com:</p>
-<div class="layout-chunk" data-layout="l-body">
-<div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">pop.br</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html">readRDS</a></span><span class="op">(</span><span class="st">&quot;pop_brasileira_censo_2022.rds&quot;</span><span class="op">)</span></span></code></pre>
-</div>
-</div>
-<p>E aqui está a tabela com número de casos por países</p>
+(IBGE, 2023), que já carregamos. A tabela abaixo mostra as taxas de
+óbitos por 100 mil habitantes:</p>
 <div class="layout-chunk" data-layout="l-body">
 <table>
 <thead>
@@ -3366,9 +3366,9 @@ international data. <em>Scientific Data</em> 9, 93.
 <a href="https://doi.org/10.1038/s41597-022-01191-y" class="uri">https://doi.org/10.1038/s41597-022-01191-y</a>. Dados: INED,
 <em>The Demography of COVID-19 Deaths</em>, <a href="https://dc-covid.site.ined.fr/en/" class="uri">https://dc-covid.site.ined.fr/en/</a>;
 cópia de dezembro de 2021 no figshare:
-<a href="https://doi.org/10.6084/m9.figshare.c.5807027" class="uri">https://doi.org/10.6084/m9.figshare.c.5807027</a>. Processados para este tutorial com <a href="prepara_dados_ined.R">este script</a></p></li>
+<a href="https://doi.org/10.6084/m9.figshare.c.5807027" class="uri">https://doi.org/10.6084/m9.figshare.c.5807027</a>. Processados para este tutorial com <a href="(https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ined.R)">este script</a></p></li>
 <li><p>IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
-Panorama do Censo 2022, <a href="https://censo2022.ibge.gov.br/panorama/" class="uri">https://censo2022.ibge.gov.br/panorama/</a>. Processados para este tutorial com <a href="prepara_dados_ibge.R">este script</a></p></li>
+Panorama do Censo 2022, <a href="https://censo2022.ibge.gov.br/panorama/" class="uri">https://censo2022.ibge.gov.br/panorama/</a>. Processados para este tutorial com <a href="(https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ibge.R)">este script</a></p></li>
 <li><p>McElreath, R. (2020). <em>Statistical Rethinking: A Bayesian Course
 with Examples in R and Stan</em>. 2nd ed. CRC Press.</p></li>
 </ul>

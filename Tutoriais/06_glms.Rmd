@@ -58,25 +58,30 @@ Os dados brutos estão disponíveis no
 [site do INED](https://dc-covid.site.ined.fr/en/) e numa
 [cópia no figshare](https://doi.org/10.6084/m9.figshare.c.5807027), e já estão processados para este tutorial. basta carregá-los:
 
-```{r dados}
+```{r dados, eval=TRUE}
 library(dplyr)
 library(ggplot2)
 library(knitr)
 repo <- "https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/"
 obitos <- readRDS(gzcon(url(paste0(repo, "obitos_covid_paises_selecionados.rds"))))
-head(obitos)
 ```
 
 Cada linha é uma faixa etária de um país, com o número de óbitos
 (`obitos`), a população (`pop`), a população em unidades de 100 mil
 habitantes (`pop.e5`), a taxa de óbitos por 100 mil habitantes (`taxa`)
-e o ponto médio da faixa etária (`idade.meio`)[^meio].
+e o ponto médio da faixa etária (`idade.meio`)[^meio]:
+
+```{r head-dados}
+head(obitos)
+```
 
 ## Óbitos totais
 
 Vamos começar pelo total de óbitos de cada país. Para comparação,
 acrescentamos o total do Brasil no mesmo período: 614.186 óbitos,
-segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar este valor e também carregar os dados demográficos do país para uso neste tutorial
+segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar
+este valor e também carregar os dados demográficos do país para uso
+neste tutorial
 
 ```{r obitos-br, eval=TRUE}
 ## Guarde o total de obitos no Brasil neste objeto
@@ -106,14 +111,8 @@ O Brasil teve mais óbitos que todos esses países, isso quer dizer que a pandem
 A primeira razão é óbvia: os países têm populações muito diferentes.
 Para comparar, precisamos de **taxas**: o número de óbitos dividido pelo
 tamanho da população. Para o Brasil, usamos a população do Censo 2022
-(IBGE, 2023), que vamos carregar agora e usar até o final do tutorial.
-O script `prepara_dados_ibge.R`, anexo, prepara esses dados. Carregue estes dados com:
-
-```{r dados-ibge, eval=TRUE}
-pop.br <- readRDS("pop_brasileira_censo_2022.rds")
-```
-
-E aqui está a tabela com número de casos por países
+(IBGE, 2023), que já carregamos. A tabela abaixo mostra as taxas de
+óbitos por 100 mil habitantes:
 
 ```{r tabela-taxas, echo=FALSE, eval = TRUE}
 tab2 <- obitos |>
@@ -762,10 +761,10 @@ mean(total.sim2>=obitos.br)
   <https://doi.org/10.1038/s41597-022-01191-y>. Dados: INED,
   *The Demography of COVID-19 Deaths*, <https://dc-covid.site.ined.fr/en/>;
   cópia de dezembro de 2021 no figshare:
-  <https://doi.org/10.6084/m9.figshare.c.5807027>. Processados para este tutorial com [este script](prepara_dados_ined.R)
+  <https://doi.org/10.6084/m9.figshare.c.5807027>. Processados para este tutorial com [este script]((https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ined.R))
 
 * IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
-  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>. Processados para este tutorial com [este script](prepara_dados_ibge.R)
+  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>. Processados para este tutorial com [este script]((https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ibge.R))
 
 * McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
   with Examples in R and Stan*. 2nd ed. CRC Press.
