@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelos lineares generalizados</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelos lineares generalizados
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI
+]
+.date[
+### 26 de outubro de 2026
+]
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+## Objetivos da aula
+
+.f3[
+* Generalizar o conceito de modelos lineares para outras distribuições de probabilidades;
+]
+
+--
+
+.f3[
+* Exemplificar essa generalização com modelos Poisson e binomial;
+]
+
+--
+
+.f3[
+* Mostrar os comandos básicos no R para ajustar e avaliar esses modelos;
+]
+
+--
+
+.f3[
+* Mostrar que alguns deles pertencem à classe dos modelos lineares generalizados (GLMs);
+]
+
+
+---
+
+## Onde estamos
+
+Até agora vimos modelos Gaussianos lineares. Ou seja que têm em sua função de verossimilhança:
+
+`$$\begin{align}
+Y &amp; \sim \text{Normal}(\mu=a_0+a_1X_1, \, \sigma=b_0)  \\[0.5em] 
+Y &amp; \sim \text{Normal} \left( \mu=a_0+a_1X_1+a_2X_2, \, \sigma=e^{b_0+b_1X_1} \right)  \\ 
+&amp; \cdots
+\end{align}$$`
+
+---
+
+## Para onde vamos
+
+Hoje veremos modelos com verossimilhanças não Gaussianas com preditoras, como:
+
+--
+
+* Modelos binomiais:
+
+`$$Y \, \sim \, \text{Bin}(N=n, \, p= g(X_i))$$`
+
+--
+
+* Modelos Poisson:
+
+`$$Y \, \sim \, \text{Pois}(\lambda= g(X_i))$$`
+
+---
+
+## Ou seja
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Uma expressão geral modelos estatísticos**
+
+$$
+`\begin{aligned}
+Y\, &amp;\sim \, f(Y \mid \Theta=g(X_i))\\[0.5em]
+\theta_j &amp;\sim h_j(\theta_j)
+\end{aligned}`
+$$
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Em palavras**
+
+* `\(Y\)` é uma variável aleatória, cujos valores têm probabilidades
+definidas pela função de densidade `\(f(Y)\)`, cujos parâmetros
+`\(\Theta\)` são uma função qualquer `\(g\)` de outras medidas
+(preditoras) `\(X_i\)`. 
+
+* Cada um dos parâmetros do conjunto `\(\Theta\)` tem uma distribuição a priori `\(h_j(\theta_j)\)`
+]
+
+---
+class: inverse, middle, center
+
+# Distribuições de probabilidade discretas
+
+---
+
+## Distribuição Bernoulli
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+
+* *Bernoulli* é a distribuição de probabilidades mais simples dentre as
+  variáveis discretas.
+
+* Mais que uma distribuição, é interessante vê-la como um ensaio com
+  resultado estocástico.
+
+* A partir desse ensaio aleatório, podem-se conceituar diversas
+  distribuições de probabilidades de variáveis discretas.
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável binária**
+
+* Dois resultados possíveis:
+  * *fracasso* ( `\(X=0\)` ): o evento não ocorre;
+  * *sucesso* ( `\(X=1\)` ): o evento ocorre.
+
+* Parâmetro: a probabilidade de sucesso ( `\(p\)` ).
+]
+
+---
+
+## Distribuição Bernoulli: apresentação formal
+
+### Função de densidade
+
+`$$f(x) = p^x (1 - p)^{1 - x}, \qquad x=0, 1$$`
+
+--
+
+### Resultados
+
+* Fracasso: `\(f(0) = P(X=0) = 1-p\)`
+* Sucesso: `\(f(1) = P(X=1) = p\)`
+
+--
+
+### Momentos
+
+* Esperança: `\(E[X] = p\)`
+* Variância: `\(\text{Var}[X] = p\,(1-p)\)`
+
+
+---
+
+## Distribuição binomial
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Situação**
+
+* Uma série de `\(n\)` *ensaios Bernoulli independentes*
+* Parâmetro tamanho da série: `\(n\)`
+* Parâmetro probabilidade de sucesso *constante*: `\(p\)`
+* Distribuição de máxima entropia para variáveis que são contagens até um valor máximo possível.
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável**
+
+* `\(X =\)` o número de sucessos nos `\(n\)` ensaios
+* Espaço amostral: `\(x = 0, 1, 2, \ldots, n\)`
+]
+
+--
+
+**Exemplos:** nº de caras em 10 lançamentos de moeda; nº de fêmeas
+em ninhadas  de 5 filhotes; nº de cobaias mortas em bioensaio
+(dose-resposta).
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/binom1-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/binom2-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/binom3-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Distribuição binomial: apresentação formal
+### Função de densidade
+
+`$$f(x) = \frac{n!}{x!(n-x)!} p^x (1 - p)^{n - x}, \qquad x=0, 1,2,\ldots,n$$`
+
+### Parâmetros
+
+* `\(n\)`: Tamanho da amostra (número de ensaios);
+* `\(p\)`: Probabilidade de sucesso em cada ensaio.
+
+
+--
+
+### Momentos
+
+* Esperança: `\(E[X] = n\,p\)`
+* Variância: `\(\text{Var}[X] = n\,p\,(1-p)\)`
+]
+
+---
+
+## Exemplo de distribuição binomial
+
+6.115 famílias de 12 filhos na Saxônia: nº de filhos atribuídos ao
+gênero masculino ao nascer (Geissler 1889, *apud* Lindsey (2004)):
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/saxonia-1.png" alt="" width="75%" /&gt;
+]
+
+---
+
+## Distribuição Poisson
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Situação**
+
+* Contagem de eventos independentes.
+* A contagem é *por unidade* de tempo e/ou espaço.
+* Os eventos ocorrem a uma taxa constante por unidade (`\(\lambda\)`).
+* Distribuição de máxima entropia para contagens sem limite máximo pré-definido
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável**
+
+* `\(X =\)` o número de eventos em cada unidade.
+* Espaço amostral: `\(x = 0, 1, 2, \ldots\)`
+]
+
+--
+
+**Exemplos:** nº de árvores por parcela; nº de capturas por unidade de
+tempo; número de casos por 100 mil habitantes.
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/pois1-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/pois2-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/pois3-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Distribuição Poisson: apresentação formal
+
+### Função de densidade
+
+`$$f(x) = \frac{\lambda^x\, e^{-\lambda}}{x!}, \qquad x=0, 1, 2, \ldots$$`
+
+### Parâmetro
+
+`\(\lambda\)`: taxa de ocorrência por unidade de observação
+
+--
+
+### Momentos
+
+* Esperança: `\(E[X] = \lambda\)`
+* Variância: `\(\text{Var}[X] = \lambda\)`
+* Parâmetro `\(\lambda\)` = esperança = variância
+
+---
+
+## Exemplo de distribuição Poisson
+
+Distribuição de bombas V1 lançadas em Londres na II Guerra:
+
+`$$\lambda~=~\frac{535 ~\text{bombas}}{576 ~\text{quadriculas}} ~  \simeq ~ 0{,}929/ \text{quadricula}$$`
+
+.center[
+&lt;img src="bomb-sight-map.jpg" alt="" width="25%" /&gt;
+]
+
+---
+
+## Exemplo de distribuição Poisson
+
+Distribuição dos locais de impacto de bombas V1 lançadas em 1944 no sul de Londres:
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/london-1.png" alt="" width="65%" /&gt;
+]
+.right[[Clarke 1946](https://www.cambridge.org/core/journals/journal-of-the-institute-of-actuaries/article/abs/an-application-of-the-poisson-distribution/F75111847FDA534103BD4941BD96A78E)]
+
+---
+
+## Caso limite
+
+A Poisson é um caso limite da distribuição binomial.
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/poisbin1-1.png" alt="" width="65%" /&gt;
+]
+
+---
+
+## Caso limite
+
+.pull-left[
+A Poisson é um caso limite da distribuição binomial:
+
+* quando o tamanho da amostra tende a infinito ( `\(n\rightarrow\infty\)` ),
+* a probabilidade de sucesso tende a zero ( `\(p\rightarrow 0\)` ),
+* mas o valor esperado permanece constante: `\(n\,p = \lambda\)`.
+]
+
+.pull-right[
+&lt;img src="Aula_07_glms_files/figure-html/poisbin2-1.png" alt="" width="75%" /&gt;
+]
+
+---
+
+## Distribuições de probabilidade no R
+
+.pull-left[
+### Binomial
+
+* `dbinom(x, size, prob, log = FALSE)`
+* `pbinom(q, size, prob, lower.tail = TRUE, log.p = FALSE)`
+* `qbinom(p, size, prob, lower.tail = TRUE, log.p = FALSE)`
+* `rbinom(n, size, prob)`
+]
+
+.pull-right[
+### Poisson
+
+* `dpois(x, lambda, log = FALSE)`
+* `ppois(q, lambda, lower.tail = TRUE, log.p = FALSE)`
+* `qpois(p, lambda, lower.tail = TRUE, log.p = FALSE)`
+* `rpois(n, lambda)`
+]
+
+&lt;br&gt;
+.center[... e funções equivalentes para outras distribuições (`?Distributions`).]
+
+---
+class: inverse, middle, center
+
+# Modelos com distribuição binomial
+
+---
+
+## Modelos binomiais
+
+* Descrevem o número de ocorrências de uma variável binária em um certo número de tentativas,
+  em função de variáveis preditoras contínuas ou discretas.
+
+--
+
+### Úteis principalmente quando temos:
+  
+  * Respostas binárias (regressão logística!)
+  
+  * Proporções
+
+--
+
+### Exemplos de respostas binomiais:
+  
+  * Presença de alguma espécie em manchas, fragmentos, sítios;
+  
+  * Ocorrência de morte, doença ou qualquer outro evento por indivíduo;
+  
+  * Proporção de frutos parasitados.
+
+---
+
+## Modelos binomiais: um exemplo
+
+.pull-left[
+### Sobrevivência de sementes colocadas a diferentes distâncias da árvore-mãe
+
+* 8 distâncias, 3 réplicas de 100 sementes
+
+* Resposta: número de sobreviventes após 60 dias ]
+
+.pull-right[
+
+|   | distancia| nsobrev|
+|:--|---------:|-------:|
+|1  |       0.0|       8|
+|2  |       0.0|       8|
+|3  |       0.0|       3|
+|4  |       0.5|       7|
+|5  |       0.5|       6|
+|6  |       0.5|       5|
+|19 |      20.0|      12|
+|20 |      20.0|      12|
+|21 |      20.0|      16|
+|22 |      50.0|      33|
+|23 |      50.0|      35|
+|24 |      50.0|      30|
+]
+---
+
+## Modelos binomiais: um exemplo
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/grafico-seeds-1.png" alt="" width="50%" /&gt;
+]
+
+---
+
+## Modelo binomial: função logística
+
+* A verossimilhança de nosso modelo é:
+
+`$$Y \, \sim \, \text{Bin}(N=100, \, p=g(\text{distancia}))$$`
+
+--
+
+* Que função usar para o efeito da distância sobre `\(p\)`?
+
+--
+
+* Uma função sigmoide limitada entre zero e um, como:
+
+`$$p = \frac{e^{a_0+a_1\text{dist}}}{1 + e^{a_0+a_1\text{dist}}}$$`
+
+--
+
+* O que implica que:
+
+`$$\ln\left(\frac{p}{1-p}\right)\, = \, a_0+a_1\text{dist}$$`
+
+---
+
+## Modelo binomial: funções logística e *logito*
+
+.pull-left[
+.center[
+`$$p = \frac{e^{a+bX}}{1 + e^{a+bX}}$$`
+
+&lt;img src="Aula_07_glms_files/figure-html/logistica-1.png" alt="" width="75%" /&gt;
+]
+]
+
+.pull-right[
+.center[
+`$$Y=\ln\left(\frac{p}{1-p}\right)$$`
+
+&lt;img src="Aula_07_glms_files/figure-html/logit-p-1.png" alt="" width="75%" /&gt;
+]
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+
+.pull-left[
+
+ * Para modelos lineares, já vimos que distribuições *a priori*
+achatadas podem expressar expectativas irrealistas ou mesmo
+impossíveis de aocntecer. 
+
+* Para preditores não lineares, distribuições *a priori* muito
+  achatadas de parâmetros não resultam tipos de curva de resposta bem
+  distribuídas. Ao contrário, podem expressar uma premissa de maior
+  probabilidade de uma forma específica de resposta.
+
+* Ao lado: 30 curvas logísticas geradas com 30 valores dos dois
+parâmetros sorteados de uma normal com `\(\mu=0\)` e `\(\sigma=10\)` ]
+
+.pull-right[ 
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/logist-prior-prep-1.png" alt="" width="85%" /&gt;
+]]
+
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+
+.pull-left[
+
+&lt;img src="Aula_07_glms_files/figure-html/logist-prior-1.png" alt="" width="85%" /&gt;
+
+]
+
+.pull-right[]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+.pull-left[
+&lt;img src="Aula_07_glms_files/figure-html/logist-prior2-1.png" alt="" width="85%" /&gt;
+]
+
+.pull-right[
+&lt;img src="Aula_07_glms_files/figure-html/logist-prior3-1.png" alt="" width="85%" /&gt;
+]
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Especificação do modelo
+
+.pull-left[
+
+`$$\begin{aligned}
+Y_i &amp;\sim \textrm{Binomial}(N, p_i) \\[0.5em]
+\ln \left(\frac{p_i}{1-p_i}\right) &amp;= \beta_0 + \beta_1 \textrm{Dist}_i \\[0.5em]
+N &amp;= 100 \\[0.5em]
+\beta_0 &amp;\sim \textrm{Normal}(\mu = -1, \sigma = 2) \\[0.5em]
+\beta_1 &amp;\sim \textrm{Normal}(\mu = 0, \sigma = 0{,}2)
+\end{aligned}$$`
+]
+
+.pull-right[
+
+
+``` r
+&gt; mbin1.f &lt;- alist(
++     nsobrev ~ dbinom(100 , p),
++     logit(p) &lt;- b0 + b1*distc,
++     b0 ~ dnorm(-1, 2),
++     b1 ~ dnorm(0, 0.2)
++     )
+&gt;     
+&gt; mbin1 &lt;- ulam(mbin1.f,
++                data = pred.seed,
++                chains = 4,
++                cores = 4)
+```
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Coeficientes e seus intervalos
+
+
+``` r
+&gt; precis(mbin1)
+```
+
+```
+          mean          sd        5.5%       94.5%     rhat ess_bulk
+b0 -2.33241252 0.076416318 -2.45667947 -2.21183519 1.004075 503.5336
+b1  0.04158737 0.003319859  0.03612441  0.04681036 1.002019 779.4852
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior do preditor
+
+.pull-left[
+
+``` r
+&gt; mbin1.post &lt;- extract.samples(mbin1)
+&gt; plot(I(nsobrev/100) ~ distc, data=pred.seed, 
++      xlab="Distância centrada da árvore-mãe", 
++      ylab="Proporção sobrevivente", type="n")
+&gt; for(i in 1:length(mbin1.post$b0))
++     with(mbin1.post,
++          curve(exp(b0[i] + b1[i]*x) /
++                (1 + exp(b0[i] + b1[i]*x)),
++                    add=TRUE, col="grey"))
+```
+]
+
+.pull-right[
+&lt;img src="Aula_07_glms_files/figure-html/unnamed-chunk-1-1.png" alt="" width="85%" /&gt;
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+Crie uma tabela com os valores dos preditores para fazer previsões e passe à função `sim()`:
+
+
+``` r
+&gt; grade &lt;- data.frame(distc=unique(pred.seed$distc))
+&gt; mbin1.sim &lt;- sim(mbin1, data = grade, n = 1000)
+```
+
+Objeto resultante: matriz de amostras de valores
+previstos (linhas) para cada valor do preditor (colunas):
+
+
+``` r
+&gt; head(mbin1.sim, 3)
+```
+
+```
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    5   10   11    5   10   16   39
+[2,]    6    8    3    8    7    6    8   28
+[3,]    5    4    8    6    9    8   15   40
+```
+
+``` r
+&gt; dim(mbin1.sim)
+```
+
+```
+[1] 1000    8
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+Com estas amostras, você pode calcular médias e intervalos de incerteza para cada valor previsto:
+
+
+```
+     distc   media     inf  sup
+1 -10.9375 0.05795 0.02000 0.11
+2 -10.4375 0.05885 0.02000 0.11
+3  -9.9375 0.06004 0.02000 0.11
+4  -8.9375 0.06342 0.02000 0.12
+5  -6.9375 0.06867 0.02000 0.12
+6  -0.9375 0.08677 0.04000 0.15
+7   9.0625 0.12315 0.06000 0.20
+8  39.0625 0.33069 0.22975 0.44
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+.pull-left[
+
+``` r
+&gt; plot(I(nsobrev/100) ~ distc, data=pred.seed, 
++      xlab="Distância centrada da árvore-mãe", 
++      ylab="Proporção sobrevivente",
++      ylim = c(min(mbin1.pred$inf),
++               max(mbin1.pred$sup)))
+&gt; points(media ~ distc, data = mbin1.pred,
++        col="darkblue", pch = 19)
+&gt; with(mbin1.pred,
++      segments(x0 = distc, x1 = distc,
++          y0 = inf, y1 = sup, lwd=1.5,
++          col = "darkblue"))
+```
+]
+
+.pull-right[
+
+&lt;img src="Aula_07_glms_files/figure-html/unnamed-chunk-4-1.png" alt="" width="80%" /&gt;
+
+]
+
+
+---
+class: inverse, middle, center
+
+# Modelos Poisson
+
+---
+
+## Modelos Poisson
+
+* Descrevem contagens de eventos independentes em função de variáveis preditoras contínuas ou discretas.
+
+--
+
+* Úteis principalmente quando temos:
+  
+  * contagens com médias baixas;
+  
+  * contagens com variância igual à média.
+
+--
+
+* Exemplos de respostas Poisson:
+  
+  * Número de capturas, avistamentos, registros por unidade de tempo ou espaço;
+  
+  * Taxas de ocorrência de eventos (*e.g.* fotos/hora, células/área, casos/pacientes).
+
+---
+
+## Modelos Poisson: um exemplo
+
+.pull-left[
+### Amostragem de aves em fragmentos de floresta
+
+* Capturas de *Pyriglena leucoptera* em redes de neblina
+
+* 20 fragmentos de diferentes tamanhos, 500 horas/rede
+
+* Resposta: número de capturas
+
+* Preditora: ln da área do fragmento em ha (a partir de agora, simplesmente "área"):
+]
+
+.pull-right[
+
+|   | area|    larea| ncap|
+|:--|----:|--------:|----:|
+|1  |  736| 6.601230|    8|
+|2  |  753| 6.624065|    3|
+|3  |  265| 5.579730|    5|
+|4  |  673| 6.511745|    8|
+|5  |  531| 6.274762|    1|
+|6  |  439| 6.084499|    3|
+|15 |  397| 5.983936|    0|
+|16 |  755| 6.626718|    7|
+|17 |  784| 6.664409|    1|
+|18 |  138| 4.927254|    0|
+|19 |  406| 6.006353|    5|
+|20 |  470| 6.152733|    4|
+]
+---
+
+## Modelo Poisson: gráfico
+
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/scatterplot-poisson-1.png" alt="" width="50%" /&gt;
+]
+
+---
+
+## Modelos Poisson
+
+* A verossimilhança de nosso modelo é:
+
+`$$Y_i \, \sim \, \text{Poisson} ( \lambda_i = g(\ln \text{area}_i) )$$`
+
+--
+
+* Que função usar para o efeito do logaritmo da área sobre `\(\lambda\)`?
+
+--
+
+* Uma função monotônica positiva, como a exponencial:
+
+`$$\lambda_i\, = \, e^{\beta_0 ~+~ \beta_1 \ln \text{area}_i}$$`
+
+--
+
+* O que implica que:
+
+`$$\ln(\lambda_i) \, = \, \beta_0 ~+~ \beta_1 \ln \text{area}_i$$`
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+.pull-left[
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/poisson-prior1-1.png" alt="" width="85%" /&gt;
+]
+]
+
+.pull-right[
+.center[
+&lt;img src="Aula_07_glms_files/figure-html/poisson-prior2-1.png" alt="" width="85%" /&gt;
+]
+]
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Especificação do modelo
+
+.pull-left[
+
+$$
+`\begin{aligned}
+Y_i &amp;\sim \textrm{Poisson}(\lambda) \\[0.5em]
+\ln \lambda &amp;= \beta_0 + \beta_1 \ln \textrm{area}_i \\[0.5em]
+\beta_0 &amp;\sim \textrm{Normal}(\mu = 0, \sigma = 1 ) \\[0.5em]
+\beta_1 &amp;\sim \textrm{LogNormal}(\mu = 0, \sigma = 1 ) 
+\end{aligned}`
+$$
+
+]
+
+.pull-right[
+
+``` r
+&gt; mpois1.f &lt;- alist(
++     ncap ~ dpois(lambda),
++     log(lambda) &lt;- b0 + b1*lareac,
++     b0 ~ dnorm(0, 1),
++     b1 ~ dlnorm(0, 1)
++     )
+&gt;     
+&gt; mpois1 &lt;- ulam(mpois1.f,
++                data = aves,
++                chains = 4,
++                cores = 4)
+```
+]
+
+---
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Coeficientes e seus intervalos
+
+
+``` r
+&gt; precis(mpois1)
+```
+
+```
+        mean        sd      5.5%    94.5%     rhat ess_bulk
+b0 1.2354508 0.1199512 1.0306648 1.418205 1.006483 973.8309
+b1 0.7112874 0.2674147 0.3095376 1.161840 1.008183 757.4853
+```
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Posterior do preditor
+
+.pull-left[
+
+
+``` r
+&gt; grade &lt;- data.frame(
++     lareac = seq(min(aves$lareac),
++                 max(aves$lareac),
++                 length=100))
+&gt; mpois1.lp &lt;- link(mpois1, data = grade)
+&gt; plot(ncap~lareac, data=aves,
++      xlab="Ln área do fragmento (ha)",
++      ylab="N de capturas", type="n")
+&gt; for(i in 1:nrow(mpois1.lp))
++     lines(grade$lareac, mpois1.lp[i,],
++           col="grey")
+```
+]
+
+.pull-right[
+&lt;img src="Aula_07_glms_files/figure-html/unnamed-chunk-5-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+.pull-left[
+
+
+``` r
+&gt; ## Posterior dos previstos
+&gt; mpois1.lpm &lt;- apply(mpois1.lp,2,mean)
+&gt; ## quantis de cada Poisson
+&gt; inf &lt;- qpois(0.025, lambda= mpois1.lpm)
+&gt; sup &lt;- qpois(0.975, lambda= mpois1.lpm)
+&gt; ## IC e média
+&gt; mpois1.pred &lt;- data.frame(
++     lareac=grade$lareac,
++     media = mpois1.lpm,
++     inf   = inf,
++     sup   = sup)
+```
+]
+
+.pull-right[
+
+&lt;img src="Aula_07_glms_files/figure-html/unnamed-chunk-6-1.png" alt="" width="80%" /&gt;
+]
+
+---
+
+## GLMs: exemplo Poisson
+
+### Função `glm` no R
+
+
+``` r
+&gt; aves.glm1 &lt;- glm(ncap ~ lareac, data = aves,
++                  family=poisson)
+&gt; coef(aves.glm1)
+```
+
+```
+(Intercept)      lareac 
+  1.2643537   0.7190406 
+```
+
+``` r
+&gt; coef(mpois1)
+```
+
+```
+       b0        b1 
+1.2354508 0.7112874 
+```
+
+---
+
+## Modelos lineares generalizados (GLMs)
+
+* Generalizam a lógica da regressão linear Gaussiana para algumas outras distribuições;
+
+* Preservam várias propriedades dos modelos lineares Gaussianos;
+
+* Abrangem vários modelos sob um conjunto único de soluções analíticas e de propriedades matemáticas;
+
+* Ou seja, uma teoria unificada;
+
+* Definiram a sintaxe de modelos do R e de várias outras linguagens computacionais.
+
+---
+
+## Modelos lineares generalizados (GLMs)
+
+.center[
+&lt;img src="nelder1972.png" alt="" width="50%" /&gt;
+]
+
+---
+
+## A família exponencial de distribuições
+
+.center[
+&lt;img src="familia_exponencial.png" alt="" width="50%" /&gt;
+]
+.right[Figura 10.6 de McElreath (2016)]
+
+
+---
+
+## A função de ligação
+
+* Os GLMs têm esse nome porque generalizam a ideia de estabelecer uma relação do valor esperado com
+  uma combinação linear de covariáveis:
+
+`$$\eta(E[Y]) \, = \, \beta_0 + \beta_1X_1 + \ldots + \beta_iX_i \, = \,\sum_0^i \beta_iX_i$$`
+
+
+* A função `\(\eta\)` estabelece essa relação. Ela é chamada de **função de ligação**.
+
+
+* Na teoria de GLMs, há uma generalização dos métodos de mínimos
+  quadrados para ajuste de modelos não-gaussianos e com funções de
+  ligação.
+
+---
+
+## Consequências da função de ligação: coeficientes difíceis de interpretar
+
+
+
+.pull-left[
+
+
+|   | Média|  2,5%| 97,5%|
+|:--|-----:|-----:|-----:|
+|β₀ | 1,235| 0,992| 1,462|
+|β₁ | 0,711| 0,239| 1,269|
+
+&lt;br&gt;
+
+O efeito da área sobre o número esperado de capturas é a derivada:
+
+`$$\frac{d\lambda}{dx} = \beta_1 \, e^{\beta_0 + \beta_1 x} = \beta_1 \, \lambda(x)$$`
+
+O efeito de `\(x\)` depende do próprio valor de `\(x\)`: é como se `\(x\)`
+**interagisse consigo mesmo**.
+]
+
+.pull-right[
+
+&lt;img src="Aula_07_glms_files/figure-html/tangentes-pois-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Na escala da função de ligação, o efeito é constante
+
+.pull-left[
+
+`$$\ln \lambda = \beta_0 + \beta_1 x$$`
+
+`$$\frac{d \ln \lambda}{dx} = \beta_1$$`
+
+* Na escala do preditor linear, o efeito de `\(x\)` é o mesmo em qualquer
+  ponto: `\(\beta_1 \approx\)` 0.71.
+
+* As tangentes nos dois pontos coincidem com a própria reta.
+
+* Na escala da resposta (número de capturas), o efeito depende de onde
+  estamos na curva.
+]
+
+.pull-right[
+
+&lt;img src="Aula_07_glms_files/figure-html/ligacao-pois-1.png" alt="" width="100%" /&gt;
+
+.right[Fragmentos sem capturas não aparecem: ln(0) não existe.]
+]
+
+---
+
+## Função de ligação log: efeito relativo é constante
+
+
+
+.pull-left[
+
+Dividindo a derivada pelo valor esperado:
+
+`$$\frac{1}{\lambda}\frac{d\lambda}{dx} = \frac{d \ln \lambda}{dx} = \beta_1$$`
+
+* O efeito **absoluto** de `\(x\)` (em número de capturas) depende de `\(x\)`.
+
+* O efeito **relativo** é constante: cada unidade a mais de `\(x\)`
+  multiplica o número esperado de capturas por `\(e^{\beta_1}\)`, em
+  qualquer ponto da curva.
+
+* Por isso, nos modelos Poisson com ligação log, interpretamos
+  `\(e^{\beta_1}\)` como um efeito multiplicativo.
+]
+
+.pull-right[
+
+
+|    x| λ(x)| λ(x+1)| Diferença| Razão|
+|----:|----:|------:|---------:|-----:|
+| -0,7| 2,16|   4,29|      2,13|  2,11|
+|  0,2| 3,99|   8,47|      4,47|  2,11|
+
+&lt;br&gt;
+
+A diferença muda entre os dois pontos, mas a razão é a mesma, e igual a
+`\(e^{\beta_1} \approx\)` 2.11.
+]
+
+---
+
+## O que é constante depende da função de ligação
+
+Para qualquer função de ligação `\(g\)`, o efeito é constante na escala da ligação:
+
+`$$g(\mu(x+1)) - g(\mu(x)) = \beta_1$$`
+
+
+O que esse efeito constante representa na escala da resposta depende de `\(g\)`:
+
+| Ligação | Constante a cada unidade de `\(x\)` | Interpretação de `\(\beta_1\)` |
+|:--|:--|:--|
+| Identidade: `\(\mu\)` | diferença: `\(\mu(x+1) - \mu(x)\)` | efeito aditivo |
+| Log: `\(\ln \mu\)` | razão: `\(\mu(x+1)/\mu(x)\)` | `\(e^{\beta_1}\)`: efeito multiplicativo |
+| Logito: `\(\ln \frac{p}{1-p}\)` | razão das chances: `\(\frac{p(x+1)/[1-p(x+1)]}{p(x)/[1-p(x)]}\)` | `\(e^{\beta_1}\)`: razão de chances |
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Com funções de ligação não lineares, a forma mais segura de interpretar
+os efeitos é calcular os previstos na escala da resposta e compará-los.
+]
+
+---
+
+## Com duas preditoras: interação embutida
+
+
+
+.pull-left[
+
+`$$\ln \lambda = \beta_0 + \beta_1 x_1 + \beta_2 x_2$$`
+
+Não há nenhum termo de interação no preditor linear. Mas:
+
+`$$\frac{\partial \lambda}{\partial x_1} = \beta_1 \, e^{\beta_0 + \beta_1 x_1 + \beta_2 x_2} = \beta_1 \, \lambda(x_1, x_2)$$`
+
+* O efeito absoluto de `\(x_1\)` depende também do valor de `\(x_2\)`.
+
+* Com função de ligação não linear, as preditoras **interagem** na
+  escala da resposta, mesmo sem termos de interação no modelo
+  (McElreath 2016).
+]
+
+.pull-right[
+
+&lt;img src="Aula_07_glms_files/figure-html/grafico-duas-preditoras-1.png" alt="" width="100%" /&gt;
+
+.right[Ilustração com uma preditora binária hipotética, `\(\beta_2 = 0{,}8\)`]
+]
+
+---
+
+## Mensagens para levar para casa
+
+ * Modelos generalizados lineares estendem a lógica de modelos
+   lineares Gaussianos para outras distribuições de resposta.
+ 
+--
+
+ * Para respostas que são contagens até um máximo, a distribuição de
+   máxima entropia é a binomial.
+
+--
+
+ * A Poisson é um caso particular da binomial, usado para contagens
+   sem um máximo conhecido.
+
+--
+
+ * Os glms clássicos inluem outras distribuição da chamada família
+   exponencial. Mas na abordagem Bayesiana vocẽ pode criar modelos com
+   qualquer distribuição.
+
+--
+
+* A necessidade de escolher uma função de ligação para o preditor
+   linear em glms requer cuidados adicionais na especificação, estimativa e
+   interpretação desses modelos.
+ 
+ 
+---
+
+## Para saber mais
+
+* McElreath, R. (2016). Statistical rethinking: A Bayesian course with
+  examples in R and Stan (Vol. 122). Boca Raton, FL: CRC press. caps
+  10 a 12.
+
+* Bolker, B.M. 2008. Ecological Models and Data in R. Princeton:
+  Princeton University Press, caps. 6 e 9.
+
+* Dobson, A.J. 1990. An Introduction to Generalized Linear
+  Models. London: Chapman and Hall.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
