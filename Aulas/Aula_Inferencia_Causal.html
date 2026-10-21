@@ -570,21 +570,29 @@ O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pe
 
 ---
 
-## Z é um Pipe versus Z é um Fork
+## Z é um Pipe vs. Z é um Fork
 
 .pull-left[
 &lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+- Incluir o mediador `\(z\)` no modelo bloqueia o **caminho causal** de `\(x\)` para `\(y\)`, mascarando o efeito total de `\(x\)` sobre `\(y\)`.
+
 ]
 .pull-right[
 
 &lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+- Incluir o fator de confusão `\(z\)` no modelo bloqueia o **caminho espúrio** de `\(x\)` para `\(y\)`, recuperando o efeito causal de `\(x\)` sobre `\(y\)`.
+
 ]
 
 ---
 
 ## Exemplos de caminhos ou mediadores
 
-Incluir um mediador em nossos modelos pode ter consequências graves. Um erro comum é incluir variáveis medidas após o tratamento.
+- Incluir um mediador em nossos modelos pode ter consequências graves. 
+
+- Um erro comum é incluir variáveis medidas após o tratamento.
 
 &lt;img src="../../figures/DAGS/x-y_pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
@@ -592,9 +600,68 @@ Incluir um mediador em nossos modelos pode ter consequências graves. Um erro co
 
 ## Variáveis pós-tratamento
 
-Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento pode ser mediada pela presença do fungo. Portanto, incluir a presença do fungo no modelo mascararia o efeito do tratamento.
+Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento sobre o peso final pode ser mediada pela presença do fungo. Como o fungo é medido após o tratamento, incluí-lo como controle pode mascarar o efeito total da intervenção.
 
-&lt;img src="../../figures/fungal_treatment.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-tratamento-fungico-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Exemplo: intervenção, educação e qualidade parental
+
+Intervenção de apoio familiar (`\(T\)`), qualidade parental pós-tratamento (`\(Q\)`) e nota na prova (`\(Y\)`). Educação dos pais (`\(X\)`) é pré-tratamento.
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-intervencao-educacao-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+Intervenção **randomizada**; fixamos uma categoria de educação parental (`\(X\)`). A tabela mostra perfis potenciais de `\(Q\)` e notas sem/com intervenção.
+
+| Perfil potencial | Proporção | Qualidade parental sem `\(T\)` `\(\to\)` com `\(T\)` | Nota na prova sem `\(T\)` `\(\to\)` com `\(T\)` |
+|:--|--:|:--:|:--:|
+| Qualidade baixa de qualquer forma | 10% | Baixa `\(\to\)` Baixa | 60 `\(\to\)` 70 |
+| Qualidade melhora com a intervenção | 70% | Baixa `\(\to\)` Alta | 65 `\(\to\)` 80 |
+| Qualidade alta de qualquer forma | 20% | Alta `\(\to\)` Alta | 90 `\(\to\)` 100 |
+
+
+``` r
+media_controle   &lt;- 0.1 * 60 + 0.7 * 65 + 0.2 * 90
+media_tratamento &lt;- 0.1 * 70 + 0.7 * 80 + 0.2 * 100
+media_tratamento-media_controle
+```
+
+```
+[1] 13.5
+```
+
+---
+
+## Condicionar em `\(Q\)` 
+
+Condicionar em `\(Q\)` mistura perfis potenciais diferentes:
+
+| Qualidade observada | Controle | Tratamento | Efeito (errado) |
+|:--|:--|:--|--:|
+| Baixa | Baixa de qualquer forma + melhora com tratamento; nota média **64,4** | Só baixa de qualquer forma; nota média **70,0** | **+5,6** |
+| Alta | Só alta de qualquer forma; nota média **90,0** | Melhora com tratamento + alta de qualquer forma; nota média **84,4** | **−5,6** |
+
+
+``` r
+c(Q_baixa = 70 - (0.1 * 60 + 0.7 * 65) / 0.8,
+  Q_alta = (0.7 * 80 + 0.2 * 100) / 0.9 - 90)
+```
+
+```
+  Q_baixa    Q_alta 
+ 5.625000 -5.555556 
+```
+
+Em `\(Q\)` baixa, o controle também inclui quem melhoraria com a intervenção; em `\(Q\)` alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamentocomparam grupos distintos.
+
+---
+
+## Nota na prova: sem e com condicionamento em `\(Q\)`
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-simulacao-pos-tratamento-1.png" alt="" width="95%" style="display: block; margin: auto;" /&gt;
 
 ---
 
