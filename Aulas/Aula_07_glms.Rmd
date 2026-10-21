@@ -1,0 +1,1264 @@
+---
+title: "Modelos lineares generalizados"
+subtitle: "Disciplina BIE5781 - IB - USP"
+author: "PI"
+date: ' 26 de outubro de 2026'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%",
+                      ## Figuras: mesma largura em todos os chunks (texto com tamanho consistente),
+                      ## alta resolução, e fundo transparente para herdar a cor dos slides
+                      fig.width = 8, fig.asp = 0.618,
+                      dpi = 300, fig.retina = 1,
+                      dev.args = list(bg = "transparent"),
+                      ## parâmetros gráficos dos gráficos base (hook abaixo)
+                      par = TRUE)
+## Parâmetros gráficos aplicados antes de cada chunk (gráficos base do R),
+## com as cores do tema solarized
+knitr::knit_hooks$set(par = function(before, options, envir) {
+    if (before && isTRUE(options$par))
+        par(lwd = 2, cex.lab = 1.5, cex.axis = 1.5, las = 1,
+            mar = c(5, 5.5, 2, 2), mgp = c(4, 1, 0), bty = "l",
+            fg = "#586e75", col.axis = "#657b83", col.lab = "#586e75")
+})
+library(xaringanthemer)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(kableExtra)
+library(MASS)
+```
+
+```{r xaringan-themer, include=FALSE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",# base 3
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3", # base 3
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"), text_font_size = "24px",
+  code_font_size="1rem",
+  extra_css = list(
+      ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+
+## clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+## ggplot theme
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+    (theme_foundation(base_size=base_size, base_family=base_family)
+        + theme(plot.title = element_text(face = "bold",
+                                          size = rel(1.2), hjust = 0.5),
+                text = element_text(colour="#586e75"), # solarized base01
+                panel.background = element_rect(fill = "transparent", colour = NA),
+                plot.background = element_rect(fill = "transparent", colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(1)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text = element_text(colour="#657b83"), # solarized base00
+                axis.line = element_line(colour="#586e75"), # solarized base01
+                axis.ticks = element_line(colour="#586e75"),
+                panel.grid.major = element_line(colour="#eee8d5"), # solarized base2
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(fill = "transparent", colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                legend.spacing = unit(0.2, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#eee8d5",fill="#eee8d5"), # solarized base2
+                strip.text = element_text(face="bold", colour="#586e75")
+                ))
+}
+```
+
+```{r funcoes-acessorias-discretas}
+## Gráfico de barras das probabilidades de uma distribuição discreta
+plot_prob <- function(x, p, titulo, xlab = "x", cor = "#268bd2") {
+    ggplot(data.frame(x = x, p = p), aes(x, p)) +
+        geom_col(fill = cor, width = 0.7) +
+        labs(title = titulo, x = xlab, y = "Probabilidade") +
+        theme_Publication(18)
+}
+## Gráfico de barras lado a lado: proporções observadas x previstas por um modelo
+plot_obs_prev <- function(x, obs, prev, nome.modelo, titulo, xlab, ylab) {
+    df <- data.frame(x = factor(rep(x, 2), levels = x),
+                     p = c(obs, prev),
+                     fonte = factor(rep(c("Observado", nome.modelo), each = length(x)),
+                                    levels = c("Observado", nome.modelo)))
+    ggplot(df, aes(x, p, fill = fonte)) +
+        geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+        scale_fill_manual(values = c("#268bd2", "#93a1a1"), name = NULL) +
+        labs(title = titulo, x = xlab, y = ylab) +
+        theme_Publication(18) +
+        theme(legend.key.size = unit(0.5, "cm"))
+}
+```
+
+```{r dados-seeds}
+## Dados simulados: sobrevivência de sementes
+set.seed(42)
+dist <- rep(c(0,0.5,1,2,4,10,20,50),each=3)
+p.esp <- exp(-3+0.05*dist)/(1+exp(-3+0.05*dist))
+nobs <- rbinom(24,size=100,prob=p.esp)
+pred.seed <-
+    data.frame(distancia=dist, nsobrev=nobs) |>
+    mutate(distc = distancia - mean(distancia))
+```
+
+```{r aves-data}
+## Dados simulados: capturas de aves
+set.seed(42)
+area <- round(runif(20,50,800))
+ncap <- rpois(20,lambda=exp(-5+1*log(area)))
+aves <- data.frame(area=area,larea=log(area),ncap=ncap)
+aves$lareac <- aves$larea-mean(aves$larea)
+```
+
+## Objetivos da aula
+
+.f3[
+1. Generalizar o conceito de modelos lineares para outras distribuições de probabilidades;
+]
+
+--
+
+.f3[
+3. Exemplificar essa generalização com modelos Poisson e binomial;
+]
+
+--
+
+.f3[
+4. Mostrar os comandos básicos no R para ajustar e avaliar esses modelos;
+]
+
+--
+
+.f3[
+5. Mostrar que alguns deles pertencem à classe dos modelos lineares generalizados (GLMs);
+]
+
+
+---
+
+## Onde estamos
+
+Até agora vimos modelos Gaussianos lineares. Ou seja que têm em sua função de verossimilhança:
+
+$$\begin{align}
+Y & \sim \text{Normal}(\mu=a_0+a_1X_1, \, \sigma=b_0)  \\ 
+Y & \sim \text{Normal} \left( \mu=a_0+a_1X_1+a_2X_2, \, \sigma=e^{b_0+b_1X_1} \right)  \\ 
+& \cdots
+\end{align}$$
+
+---
+
+## Para onde vamos
+
+Hoje veremos modelos com verossimilhanças não Gaussianas com preditoras, como:
+
+--
+
+* Modelos binomiais:
+
+$$Y \, \sim \, \text{Bin}(N=n, \, p= g(X_i))$$
+
+--
+
+* Modelos Poisson:
+
+$$Y \, \sim \, \text{Pois}(\lambda= g(X_i))$$
+
+---
+
+## Ou seja
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Uma expressão geral modelosestatísticos**
+
+$$\begin{aligned}
+Y\, &\sim \, f(Y \mid \Theta=g(X_i))\\[0.5em]
+\theta_j &\sim h_j(\theta_j)$$
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Em palavras**
+
+* $Y$ é uma variável aleatória, cujos valores têm probabilidades
+definidas pela função de densidade $f(Y)$, cujos parâmetros
+$\Theta$ são uma função qualquer $g$ de outras medidas
+(preditoras) $X_i$. 
+
+* Cada um dos parâmetros do conjunto $\Theta$ tem uma distribuição a priori $h_j(\theta_j)$
+]
+
+---
+class: inverse, middle, center
+
+# Distribuições de probabilidade discretas
+
+---
+
+## Distribuição Bernoulli
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+
+* *Bernoulli* é a distribuição de probabilidades mais simples dentre as
+  variáveis discretas.
+* Mais que uma distribuição, é interessante vê-la como um ensaio com
+  resultado estocástico.
+* A partir desse ensaio aleatório, podem-se conceituar diversas
+  distribuições de probabilidades de variáveis discretas.
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável binária**
+
+* Dois resultados possíveis:
+  * *fracasso* ( $X=0$ ): o evento não ocorre;
+  * *sucesso* ( $X=1$ ): o evento ocorre.
+* Parâmetro: a probabilidade de sucesso ( $p$ ).
+]
+
+---
+
+## Distribuição Bernoulli: apresentação formal
+
+.pull-left[
+
+### Função de densidade
+
+$$f(x) = p^x (1 - p)^{1 - x}, \qquad x=0, 1$$
+
+--
+
+### Resultados
+
+* Fracasso: $f(0) = P(X=0) = 1-p$
+* Sucesso: $f(1) = P(X=1) = p$
+]
+
+--
+
+.pull-right[
+
+### Função de distribuição
+
+$$F(x) = (1 - p)^{1 - x}, \qquad x= 0, 1$$
+
+--
+
+### Momentos
+
+* Esperança: $E[X] = p$
+* Variância: $\text{Var}[X] = p\,(1-p)$
+]
+
+---
+
+## Distribuição binomial
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Situação**
+
+* Uma série de $n$ *ensaios Bernoulli independentes*
+* Parâmetro tamanho da série: $n$
+* Parâmetro probabilidade de sucesso *constante*: $p$
+* Distribuição de máxima entropia para variáveis que são contagens até um valor máximo possível.
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável**
+
+* $X =$ o número de sucessos nos $n$ ensaios
+* Espaço amostral: $x = 0, 1, 2, \ldots, n$
+]
+
+--
+
+**Exemplos:** nº de caras em 10 lançamentos de moeda; nº de fêmeas
+em ninhadas  de 5 filhotes; nº de cobaias mortas em bioensaio
+(dose-resposta).
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+```{r binom1, out.width = "80%"}
+plot_prob(0:20, dbinom(0:20, size = 20, prob = 0.1),
+          titulo = "N = 20, p = 0,1", xlab = "Número de sucessos")
+```
+]
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+```{r binom2, out.width = "80%"}
+plot_prob(0:20, dbinom(0:20, size = 20, prob = 0.5),
+          titulo = "N = 20, p = 0,5", xlab = "Número de sucessos")
+```
+]
+
+---
+
+## Gráfico: distribuição binomial
+
+.center[
+```{r binom3, out.width = "80%"}
+plot_prob(0:20, dbinom(0:20, size = 20, prob = 0.9),
+          titulo = "N = 20, p = 0,9", xlab = "Número de sucessos")
+```
+]
+
+---
+
+## Distribuição binomial: apresentação formal
+
+.pull-left[
+
+### Função de densidade
+
+$$f(x) = {n\choose x} p^x (1 - p)^{n - x}, \qquad x=0, 1,2,\ldots,n$$
+
+--
+
+### Parâmetros
+
+* Tamanho da amostra: $n$ (número de ensaios);
+* Probabilidade de sucesso em cada ensaio: $p$.
+]
+
+--
+
+.pull-right[
+
+### Coeficiente binomial
+
+$${n\choose x}  =  \frac{n!}{x!(n-x)!}$$
+
+--
+
+### Momentos
+
+* Esperança: $E[X] = n\,p$
+* Variância: $\text{Var}[X] = n\,p\,(1-p)$
+]
+
+---
+
+## Exemplo de distribuição binomial
+
+6.115 famílias de 12 filhos na Saxônia: nº de filhos atribuídos ao
+gênero masculino ao nascer (Geissler 1889, *apud* Lindsey (2004)):
+
+.center[
+```{r saxonia, out.width = "75%"}
+## Exemplo Lindsey p. 171: filhos de gênero masculino em 6115 famílias de 12 filhos
+x <- 0:12
+y <- c(3, 24, 104, 286, 670, 1033, 1343, 1112, 829, 478, 181, 45, 7)
+plot_obs_prev(x, obs = y/sum(y), prev = dbinom(x, size = 12, prob = 0.5),
+              nome.modelo = "Binomial", titulo = "N = 12, p = 0,5",
+              xlab = "Nº de filhos atribuídos ao gênero masculino",
+              ylab = "Proporção das famílias")
+```
+]
+
+---
+
+## Distribuição Poisson
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Situação**
+
+* Contagem de eventos independentes.
+* A contagem é *por unidade* de tempo e/ou espaço.
+* Os eventos ocorrem a uma taxa constante por unidade.
+* Essa taxa é o único parâmetro, $\lambda$.
+* Distribuição de máxima entropia para contagens sem limite máximo pré-definido
+]
+
+--
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Variável**
+
+* $X =$ o número de eventos em cada unidade.
+* Espaço amostral: $x = 0, 1, 2, \ldots$
+]
+
+--
+
+**Exemplos:** nº de árvores por parcela; nº de capturas por unidade de
+tempo; nº de bombas V1 por área em Londres<sup>1</sup>.
+
+.footnote[[1] R.D. Clarke 1946, Journal of the Institute of Actuaries, 72, 481.]
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+```{r pois1, out.width = "80%"}
+plot_prob(0:15, dpois(0:15, lambda = 1),
+          titulo = expression(lambda == 1), xlab = "Número de eventos")
+```
+]
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+```{r pois2, out.width = "80%"}
+plot_prob(0:15, dpois(0:15, lambda = 3),
+          titulo = expression(lambda == 3), xlab = "Número de eventos")
+```
+]
+
+---
+
+## Gráfico: distribuição Poisson
+
+.center[
+```{r pois3, out.width = "80%"}
+plot_prob(0:15, dpois(0:15, lambda = 6),
+          titulo = expression(lambda == 6), xlab = "Número de eventos")
+```
+]
+
+---
+
+## Distribuição Poisson: apresentação formal
+
+.pull-left[
+
+### Função de densidade
+
+$$f(x) = \frac{\lambda^x\, e^{-\lambda}}{x!}, \qquad x=0, 1, 2, \ldots$$
+
+--
+
+### Parâmetro
+
+$\lambda$: valor esperado da contagem
+]
+
+--
+
+.pull-right[
+
+### Função de distribuição
+
+$$F(x) =  \sum_{k=0}^x \frac{\lambda^k\, e^{-\lambda}}{k!}, \qquad x=0, 1,2,\ldots$$
+
+--
+
+### Momentos
+
+* Esperança: $E[X] = \lambda$
+* Variância: $\text{Var}[X] = \lambda$
+* Parâmetro $\lambda$ = esperança = variância
+]
+
+---
+
+## Exemplo de distribuição Poisson
+
+Distribuição de bombas V1 lançadas em Londres na II Guerra:
+
+$$\lambda~=~\frac{535 ~\text{bombas}}{576 ~\text{quadrículas}} ~  \simeq ~ 0{,}929/ \text{quadrícula}$$
+
+.center[
+```{r V1bombs, out.width = "65%"}
+knitr::include_graphics("bomb-sight-map.jpg")
+```
+]
+
+---
+
+## Exemplo de distribuição Poisson
+
+Distribuição dos locais de impacto de bombas V1 lançadas em 1944 no sul de Londres:
+
+$$\lambda~=~\frac{535 ~\text{bombas}}{576 ~\text{quadrículas}} ~  \simeq ~ 0{,}929/ \text{quadrícula}$$
+
+.center[
+```{r london, out.width = "65%"}
+## Bombas V1 no sul de Londres (Clarke 1946)
+y <- c(229, 211, 93, 35, 7, 1, 0)
+plot_obs_prev(0:6, obs = y/sum(y), prev = dpois(0:6, lambda = 535/576),
+              nome.modelo = "Poisson", titulo = expression(lambda == 535/576),
+              xlab = "Nº de bombas", ylab = "Proporção das quadrículas")
+```
+]
+.right[[Clarke 1946](https://www.cambridge.org/core/journals/journal-of-the-institute-of-actuaries/article/abs/an-application-of-the-poisson-distribution/F75111847FDA534103BD4941BD96A78E)]
+
+---
+
+## Caso limite
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+A Poisson é um caso limite da distribuição binomial.
+]
+
+.center[
+```{r poisbin1, out.width = "70%"}
+## Só a Poisson, lambda = 1
+plot_prob(0:7, dpois(0:7, lambda = 1),
+          titulo = expression(paste("Poisson, ", lambda == 1)),
+          cor = "#cb4b16") +
+    scale_x_continuous(breaks = 0:7)
+```
+]
+
+---
+
+## Caso limite
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+A Poisson é um caso limite da distribuição binomial:
+
+* quando o tamanho da amostra tende a infinito ( $n\rightarrow\infty$ ),
+* a probabilidade de sucesso tende a zero ( $p\rightarrow 0$ ),
+* mas o valor esperado permanece constante: $n\,p = \lambda$.
+]
+
+.center[
+```{r poisbin2, out.width = "55%"}
+## Binomial com N grande e p pequeno x Poisson de mesma média (lambda = N p = 1)
+plot_obs_prev(0:7, obs = dbinom(0:7, size = 1000, prob = 0.001),
+              prev = dpois(0:7, lambda = 1), nome.modelo = "Poisson",
+              titulo = "Binomial x Poisson",
+              xlab = "x", ylab = "Probabilidade") +
+    scale_fill_manual(values = c("#268bd2", "#cb4b16"), name = NULL,
+                      labels = c("Binomial, N = 1000, p = 0,001",
+                                 expression(paste("Poisson, ", lambda == 1))))
+```
+]
+
+---
+
+## Distribuições de probabilidade no R
+
+.pull-left[
+### Binomial
+
+* `dbinom(x, size, prob, log = FALSE)`
+* `pbinom(q, size, prob, lower.tail = TRUE, log.p = FALSE)`
+* `qbinom(p, size, prob, lower.tail = TRUE, log.p = FALSE)`
+* `rbinom(n, size, prob)`
+]
+
+.pull-right[
+### Poisson
+
+* `dpois(x, lambda, log = FALSE)`
+* `ppois(q, lambda, lower.tail = TRUE, log.p = FALSE)`
+* `qpois(p, lambda, lower.tail = TRUE, log.p = FALSE)`
+* `rpois(n, lambda)`
+]
+
+<br>
+.center[... e funções equivalentes para outras distribuições (`?Distributions`).]
+
+---
+class: inverse, middle, center
+
+# Modelos com distribuição binomial
+
+---
+
+## Modelos binomiais
+
+* Descrevem o número de ocorrências de uma variável binária em um certo número de tentativas,
+  em função de variáveis preditoras contínuas ou discretas.
+
+--
+
+* Úteis principalmente quando temos:
+  
+  * Respostas binárias (regressão logística!)
+  
+  * Proporções
+
+--
+Exemplos de respostas binomiais:
+  
+  * Presença de alguma espécie em manchas, fragmentos, sítios;
+  
+  * Ocorrência de morte, doença ou qualquer outro evento por indivíduo;
+  
+  * Proporção de frutos parasitados;
+  
+  * Experimentos de dose-resposta.
+
+---
+
+## Modelos binomiais: um exemplo
+
+.pull-right[
+## Sobrevivência de sementes colocadas a diferentes distâncias da árvore-mãe
+
+* 8 distâncias, 3 réplicas de 100 sementes
+
+* Resposta: número de sobreviventes após 60 dias ]
+
+.pull-left[
+```{r dados-gendata-seed, Echo=FALSE}
+set.seed(42)
+dist <- rep(c(0,0.5,1,2,4,10,20,50),each=3)
+p.esp <- exp(-3+0.05*dist)/(1+exp(-3+0.05*dist))
+nobs <- rbinom(24, size=100, prob=p.esp)
+pred.seed <- data.frame(distancia=dist, nsobrev=nobs)
+rbind(head(pred.seed), tail(pred.seed)) |> kable()
+```
+]
+---
+
+## Modelos binomiais: um exemplo
+
+.center[
+```{r grafico-seeds, fig.asp = 0.8, out.width = "65%"}
+
+plot(I(nsobrev/100) ~ distancia, data=pred.seed, 
+     xlab="Distância da árvore-mãe", ylab="Proporção sobrevivente")
+```
+]
+
+---
+
+## Modelo binomial: função logística
+
+* A verossimilhança de nosso modelo é:
+
+$$Y \, \sim \, \text{Bin}(N=100, \, p=g(\text{distância}))$$
+
+--
+
+* Que função usar para o efeito da distância sobre $p$?
+
+--
+
+* Uma função sigmoide limitada entre zero e um, como:
+
+$$p = \frac{e^{a_0+a_1\text{dist}}}{1 + e^{a_0+a_1\text{dist}}}$$
+
+--
+
+* O que implica que:
+
+$$\ln\left(\frac{p}{1-p}\right)\, = \, a_0+a_1\text{dist}$$
+
+---
+
+## Modelo binomial: funções logística e *logito*
+
+.pull-left[
+.center[
+$$p = \frac{e^{a+bX}}{1 + e^{a+bX}}$$
+
+```{r logistica, fig.width = 5, fig.asp = 1, out.width = "90%"}
+curve(exp(x)/(1+exp(x)), from = -6, to = 6,
+      xlab = "X", ylab = "p")
+```
+]
+]
+
+.pull-right[
+.center[
+$$Y=\ln\left(\frac{p}{1-p}\right)$$
+
+```{r logit-p, fig.width = 5, fig.asp = 1, out.width = "90%"}
+curve(log((exp(x)/(1+exp(x))) / (1 - exp(x)/(1+exp(x)))),
+      from = -6, to = 6,
+      xlab = "X", ylab = "ln(p/(1-p))")
+```
+]
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+
+.pull-right[
+
+ * Para modelos lineares, já vimos que distribuições *a priori*
+achatadas podem expressar expectativas irrealistas ou mesmo
+impossíveis de aocntecer. 
+
+* Para preditores não lineares, distribuições *a priori* muito
+  achatadas de parâmetros não resultam tipos de curva de resposta bem
+  distribuídas. Ao contrário, podem expressar uma premissa de maior
+  probabilidade de uma forma específica de resposta.
+
+* Ao lado: 30 curvas logísticas geradas com 30 valores dos dois parâmetros sorteados de uma normal com $\mu=0$ e $\sigma=10$
+] 
+
+.pull-left[ 
+.center[
+```{r logist-prior,echo=FALSE}
+n1 <- 30
+b0 <- rnorm(n1, 0,10)
+b1 <- rnorm(n1,0,10)
+plot(0,0, xlim=c(-15,45), ylim=c(0,1), type = "n",
+     xlab="Distância centrada da árvore-mãe", ylab="Proporção sobrevivente")
+for(i in 1:length(b0)) curve(logistica(x, b0[i],b1[i]), add=TRUE, col="grey") 
+```
+]]
+
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+
+.pull-right[
+	```{r logist-prior, echo=FALSE}
+	n1 <- 30
+    b0 <- rnorm(n1, -1, 2)
+    b1 <- rnorm(n1, 0, 8/40)
+    for(i in 1:n1)
+        abline(b0[i],b1[i], col="grey")
+    plot(0,0, xlim=c(-15,45), ylim=c(-5,5), type = "n",
+         xlab="Distância centrada da árvore-mãe",
+         ylab="Logito prop. sobrevivente")
+    abline(h=c(-5,5), lty=2)
+    axis(side=4, at=c(-5,5), labels = c("0.01", "0.99"))
+```
+]
+
+.pull-left[]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+.center[
+$$\beta_0 ~ \textrm{Normal}(\mu = -1, \sigma = 2) ~,~ \beta_1 ~ \textrm{Normal}(\mu = 0, \sigma = 0.2)$$
+]
+
+.pull-right[
+	```{r logist-prior2, echo=FALSE}
+    plot(0,0, xlim=c(-15,45), ylim=c(-5,5), type = "n",
+         xlab="Distância centrada da árvore-mãe",
+         ylab="Logito prop. sobrevivente")
+    abline(h=c(-5,5), lty=2)
+    axis(side=4, at=c(-5,5), labels = c("0.01", "0.99"))
+    n1 <- 30
+    b0 <- rnorm(n1, -1, 2)
+    b1 <- rnorm(n1, 0, 8/40)
+    for(i in 1:n1)
+        abline(b0[i],b1[i], col="grey")
+```
+]
+
+.pull-left[
+```{r logist-prior3, echo=FALSE}
+plot(0,0, xlim=c(-15,45), ylim=c(0,1), type = "n",
+     xlab="Distância centrada da árvore-mãe", ylab="Proporção sobrevivente")
+for(i in 1:length(b0)) curve(logistica(x, b0[i],b1[i]), add=TRUE, col="grey")
+```
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Especificação do modelo
+
+.pull-left[
+
+$$\begin{aligned}
+Y_i &\sim \textrm{Binomial}(N, p_i) \\[0.5em]
+\ln \left(\frac{p_i}{1-p_i}\right) = \beta_0 + \beta_1 \textrm{Dist}_i \\[0.5em]
+N = 100 \\[0.5em]
+\beta_0 &\sim \textrm{Normal}(\mu = -1, \sigma = 2 ) \\[0.5em]
+\beta_1 &\sim \textrm{Normal}(\mu = 0, \sigma = 0.2 ) 
+\end{aligned}$$
+
+]
+
+.pull-right[
+```{r fit-binom, echo=TRUE}
+mbin1.f <- alist(
+    nsobrev ~ dbinom(100 , p),
+    logit(p) <- b0 + b1*distc,
+    b0 ~ dnorm(-1, 2),
+    b1 ~ dnorm(0, 0.2)
+    )
+    
+mbin1 <- ulam(mbin1.f,
+               data = pred.seed,
+               chains = 4,
+               cores = 4)
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Coeficientes e seus intervalos
+
+```{r seeds-coefs, echo=TRUE}
+precis(mbin1)
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior do preditor
+
+.pull-left[
+```{r seeds-predicted-plot-code, echo=TRUE, eval=FALSE}
+mbin1.post <- extract.samples(mbin1)
+plot(I(nsobrev/100) ~ distc, data=pred.seed, 
+     xlab="Distância centrada da árvore-mãe", 
+     ylab="Proporção sobrevivente", type="n")
+for(i in 1:length(mbin1.post$b0))
+    with(mbin1.post,
+         curve(exp(b0[i] + b1[i]*x) /
+               (1 + exp(b0[i] + b1[i]*x)),
+                   add=TRUE, col="grey"))
+```
+]
+
+.pull-right[
+```{r , ref.label="seeds-predicted-plot-code", echo=FALSE, eval=TRUE}
+]
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+Crie uma tabela com os valores dos preditores (distância no caso) para
+os quais fazer previsões e passe à função `sim()`:
+
+```{r seeds-predicted-plot-code, echo=TRUE, eval=TRUE}
+grade <- data.frame(distc=unique(pred.seed$distc))
+ysim <- sim(mbin1, data = grade, n = 1000)
+```
+
+O objeto resultante é uma matriz de amostras (linhas) de valores
+previstos para cada valor do preditor passado (colunas):
+
+```{r }
+head(ysim)
+dim(ysim)
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+Com estas amostras, você pode médias e intervalos de incerteza:
+
+```{r }
+## quantis de 95% de cada coluna
+IC <- apply(mbin1.sim, 2, PI, prob = 0.95)
+## Data frame com os quantis (IC a 95%) e média dos previstos
+mbin1.pred <- data.frame(
+    distc=grade$distc,
+    media = colMeans(ysim)/100,
+    inf   = IC[1, ]/100,
+    sup   = IC[2, ]/100)
+## Exibe o objeto
+mbin1.pred
+```
+
+---
+
+## Modelo binomial: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+.pull-left[
+```{r plot-modelo-bin, echo=TRUE, eval =FALSE}
+plot(I(nsobrev/100) ~ distc, data=pred.seed, 
+     xlab="Distância centrada da árvore-mãe", 
+     ylab="Proporção sobrevivente",
+     ylim = c(min(mbin1.pred$inf),
+              max(mbin1.pred$sup)))
+points(media ~ distc, data = mbin1.pred,
+       col="darkblue", pch = 19)
+with(mbin1.pred,
+     segments(x0 = distc, x1 = distc,
+         y0 = inf, y1 = sup, lwd=1.5,
+         col = "darkblue"))
+```
+]
+
+.pull-right[
+
+```{r ref.label="plot-modelo-bin", echo=FALSE, eval=TRUE}
+
+```
+
+]
+
+
+---
+class: inverse, middle, center
+
+# Modelos Poisson
+
+---
+
+## Modelos Poisson
+
+* Descrevem contagens de eventos independentes em função de variáveis preditoras contínuas ou discretas.
+
+--
+
+* Úteis principalmente quando temos:
+  
+  * contagens com médias baixas;
+  
+  * contagens com variância igual à média.
+
+--
+
+* Exemplos de respostas Poisson:
+  
+  * Número de capturas, avistamentos, registros por unidade de tempo ou espaço;
+  
+  * Taxas de ocorrência de eventos (*e.g.* fotos/hora, células/área, casos/pacientes).
+
+---
+
+## Modelos Poisson: um exemplo
+
+.pull-left[
+
+* Capturas de *Pyriglena leucoptera* em redes de neblina
+
+* 20 fragmentos de diferentes tamanhos, 500 horas/rede
+
+* Resposta: número de capturas
+
+* Preditora: ln da área do fragmento em ha (a partir de agora, simplesmente "área"):
+]
+
+.pull-right[
+```{r aves-data-summary, echo=FALSE}
+rbind(head(aves),tail(aves)) |> kable() 
+```
+]
+---
+
+## Modelo Poisson: gráfico
+
+.center[
+```{r scatterplot-poisson, fig.asp = 0.8, out.width = "65%"}
+plot(ncap~larea, data=aves,
+     xlab="Ln área do fragmento (ha)",
+     ylab="N de capturas")
+```
+]
+
+---
+
+## Modelos Poisson
+
+* A verossimilhança de nosso modelo é:
+
+$$Y_i \, \sim \, \text{Poisson} ( \lambda_i = g(\ln \text{área}_i) )$$
+
+--
+
+* Que função usar para o efeito do logaritmo da área sobre $\lambda$?
+
+--
+
+* Uma função monotônica positiva, como a exponencial:
+
+$$\lambda_i\, = \, e^{\beta_0 + beta_1 \ln \text{área}_i}$$
+
+--
+
+* O que implica que:
+
+$$\ln(\lambda_i) \, = \, beta_0 + beta_1 \ln \text{área}_i$$
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Distribuições *a priori*
+.center[
+.pull-left[
+$$\beta_0 ~ \textrm{Normal}(\mu = 0, \sigma = 3) ~,~ \beta_0 ~ \textrm{Normal}(\mu = 0, \sigma = 3)$$
+```{r poisson-prior1, echo=FALSE}
+set.seed(42)
+n1 <- 50
+b0 <- rnorm(n1, 0,3)
+b1 <- rnorm(n1, 0,3)
+plot(1,1,
+     xlim=range(aves$lareac),
+     ylim=c(0,max(exp(b0+b1*max(aves$lareac)))),
+     type="n",
+     xlab="Ln área do fragmento centrado (ha)",
+     ylab="N de capturas")
+abline(h=max(aves$ncap), lty=2)
+for(i in 1:length(b0))
+    curve(exp(b0[i]+b1[i]*x), add=TRUE,
+          col=ifelse(b1[i]>0, "blue", "red"))
+```
+]
+]
+
+.center[
+.pull-left[
+$$\beta_0 ~ \textrm{Normal}(\mu = 0, \sigma = 1) ~,~ \beta_0 ~ \textrm{LogNormal}(\mu = 0, \sigma = 1)$$
+```{r poisson-prior1, echo=FALSE}
+set.seed(42)
+n1 <- 50
+b0 <- rnorm(n1, 0,1)
+b1 <- rlnorm(n1, 0,1)
+plot(1,1,
+     xlim=range(aves$lareac),
+     ylim=c(0,max(exp(b0+b1*max(aves$lareac)))),
+     type="n",
+     xlab="Ln área do fragmento centrado (ha)",
+     ylab="N de capturas")
+abline(h=max(aves$ncap), lty=2)
+for(i in 1:length(b0))
+    curve(exp(b0[i]+b1[i]*x), add=TRUE,
+          col=ifelse(b1[i]>0, "blue", "red"))
+```
+]
+]
+
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Especificação do modelo
+
+.pull-left[
+
+$$\begin{aligned}
+Y_i &\sim \textrm{Poisson}(\lambda) \\[0.5em]
+\ln \lambda = \beta_0 + \beta_1 \ln \textrm{area}_i \\[0.5em]
+\beta_0 &\sim \textrm{Normal}(\mu = 0, \sigma = 1 ) \\[0.5em]
+\beta_1 &\sim \textrm{LogNormal}(\mu = 0, \sigma = 1 ) 
+\end{aligned}$$
+
+]
+
+.pull-right[
+```{r fit-pois, echo=TRUE}
+mpois1.f <- alist(
+    ncap ~ dpois(lambda),
+    log(lambda) <- b0 + b1*lareac,
+    b0 ~ dnorm(0, 1),
+    b1 ~ dlnorm(0, 1)
+    )
+    
+mpois1 <- ulam(mpois1.f,
+               data = aves,
+               chains = 4,
+               cores = 4)
+```
+
+---
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Coeficientes e seus intervalos
+
+```{r aves-coefs, echo=TRUE}
+precis(mpois1)
+```
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Posterior do preditor
+
+.pull-left[
+```{r aves-predicted-plot-code, echo=TRUE, eval=FALSE}
+grade <- data.frame(
+    lareac = seq(min(aves$lareac),
+                max(aves$lareac),
+                length=100))
+mpois1.lp <- link(mpois1, data = grade)
+plot(ncap~lareac, data=aves,
+     xlab="Ln área do fragmento (ha)",
+     ylab="N de capturas", type="n")
+for(i in 1:nrow(mpois1.lp))
+    lines(grade$lareac, mpois1.lp[i,],
+          col="grey")
+```
+]
+
+.pull-right[
+```{r , ref.label="aves-predicted-plot-code", echo=FALSE, eval=TRUE}
+```
+]
+
+---
+
+## Modelo Poisson: ajuste Bayesiano no R
+
+### Posterior dos previstos
+
+.pull-left[
+```{r aves-prev-plot-code, echo=TRUE, eval=TRUE}
+## Posterior dos previstos
+mpois1.lpm <- apply(mpois1.lp,2,mean)
+## quantis de cada Poisson
+inf <- qpois(0.025, lambda= mpois1.lpm)
+sup <- qpois(0.975, lambda= mpois1.lpm)
+## IC e média
+mpois1.pred <- data.frame(
+    lareac=grade$lareac,
+    media = mpois1.lpm,
+    inf   = inf,
+    sup   = sup)
+```
+]
+
+.pull-right[
+
+```{r }
+plot(ncap ~ lareac, data=aves,
+     xlab="Ln área do fragmento (ha)",
+     ylab="N de capturas",
+     ylim =c(0,max(mpois1.pred$sup)))
+lines(media ~ lareac, col="darkblue", data = mpois1.pred)
+lines(inf ~ lareac, lty=2, col="darkblue", data = mpois1.pred)
+lines(sup ~ lareac, lty=2, col="darkblue", data = mpois1.pred)
+```
+]
+
+---
+
+
+---
+
+## GLMs: exemplo Poisson
+
+### Função `glm` no R
+
+```{r glm-aves, echo=TRUE}
+aves.glm1 <- glm(ncap ~ lareac, data = aves,
+                 family=poisson)
+coef(aves.glm1)
+coef(mpois1)
+```
+
+---
+
+## Modelos lineares generalizados (GLMs)
+
+* Generalizam a lógica da regressão linear Gaussiana para algumas outras distribuições;
+
+* Preservam várias propriedades dos modelos lineares Gaussianos;
+
+* Abrangem vários modelos sob um conjunto único de soluções analíticas e de propriedades matemáticas;
+
+* Ou seja, uma teoria unificada;
+
+* Definiram a sintaxe de modelos do R e de várias outras linguagens computacionais.
+
+---
+
+## Modelos lineares generalizados (GLMs)
+
+.center[
+```{r nelder1972, out.width = "90%"}
+knitr::include_graphics("nelder1972.png")
+```
+]
+
+---
+
+## A família exponencial de distribuições
+
+.center[
+```{r familia-exp, out.width = "65%"}
+knitr::include_graphics("familia_exponencial.png")
+```
+]
+.right[Figura 10.6 de McElreath (2016)]
+
+
+---
+
+## A função de ligação
+
+* Os GLMs têm esse nome porque generalizam a ideia de estabelecer uma relação do valor esperado com
+  uma combinação linear de covariáveis:
+
+$$\eta(E[Y]) \, = \, \beta_0 + \beta_1X_1 + \ldots + \beta_iX_i \, = \,\sum_0^i \beta_iX_i$$
+
+
+* A função $\eta$ estabelece essa relação. Ela é chamada de **função de ligação**.
+
+
+* Na teoria de GLMs, há uma generalização dos métodos de mínimos
+  quadrados para ajuste de modelos não-gaussianos e com funções de
+  ligação.
+
+---
+
+## Para saber mais
+
+* Bolker, B.M. 2008. Ecological Models and Data in R. Princeton: Princeton University Press, caps. 6 e 9.
+
+* Bolker, B. M., et al. 2009. Generalized linear mixed models: a practical guide for ecology and evolution. Trends in Ecology & Evolution, 24(3): 127-135.
+
+* Crawley, M.J. 2007. The R Book. (caps. 13, 14 e 16)
+
+* Dobson, A.J. 1990. An Introduction to Generalized Linear Models. London: Chapman and Hall.
