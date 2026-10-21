@@ -50,12 +50,22 @@ xaringanExtra::use_tile_view()
 ## `pos` (se ausentes, usa dagitty::graphLayout). Fundo transparente.
 ## `labels`: vetor nomeado opcional para trocar os rótulos dos nós; rótulos entre
 ## $...$ são interpretados como LaTeX, ex.: labels = c(x = "$\\beta_x$").
+## `side_labels`: vetor nomeado com textos longos escritos ao lado do nó (fora do
+## círculo), no lado oposto ao centro do grafo; `side_size` define a fonte e
+## `side_padding` o espaço extra reservado nas laterais. O nó mantém o seu rótulo.
+## `latent`: nós não observados, desenhados com círculo pontilhado e sem preenchimento.
+## Por padrão usa os nós marcados com [latent] no dagitty, ex.: `u [latent]`;
+## também pode ser um vetor de nomes, ex.: latent = c("u", "z").
 ## Os nomes dos nós no DAG devem ser simples (ex.: ux), sem `$` nem `\`.
 ## `node_radius` (unidades de coordenadas) é calculado automaticamente a partir de
 ## `node_size` e de fig.width/fig.height do chunk, para as setas começarem e
 ## terminarem na borda dos nós; pode ser fornecido manualmente.
+library(ggplot2)
+library(rethinking)
+library(bayesplot)
 plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
                      node_radius = NULL, padding = 0.7, arrow_mm = 4,
+                     latent = NULL, side_labels = NULL, side_size = 9, side_padding = 1.6,
                      fig_width = knitr::opts_current$get("fig.width"),
                      fig_height = knitr::opts_current$get("fig.height"),
                      node_fill = "#eee8d5", node_color = "#586e75",
@@ -72,6 +82,8 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
   }
   nodes <- data.frame(node = names(coords$x), x = unname(coords$x),
                       y = unname(coords$y))
+  if (is.null(latent)) latent <- dagitty::latents(dag)
+  nodes$latent <- nodes$node %in% latent
   nodes$label <- nodes$node
   if (!is.null(labels)) {
     i <- match(names(labels), nodes$node)
@@ -83,18 +95,23 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
     paste0("bold(", expr, ")")
   }, character(1))
 
+  # raio do círculo (shape 21) em polegadas
+  raio_pol <- 0.375 * (node_size * ggplot2::.pt + 1.2 * ggplot2::.stroke / 2) / 72
+  circle_radius <- NULL
+  pad_x <- if (is.null(side_labels)) padding else padding + side_padding
   if (is.null(node_radius)) {
     if (is.null(fig_width)) fig_width <- 7
     if (is.null(fig_height)) fig_height <- 5
     # polegadas por unidade de coordenada (coord_equal usa a menor escala)
     pol_por_unid <- min(
-      fig_width / (diff(range(nodes$x)) + 2 * padding),
+      fig_width / (diff(range(nodes$x)) + 2 * pad_x),
       fig_height / (diff(range(nodes$y)) + 2 * padding)
     )
-    # raio do círculo (shape 21) em polegadas, mais uma pequena folga
-    raio_pol <- 0.375 * (node_size * ggplot2::.pt + 1.2 * ggplot2::.stroke / 2) / 72
+    # raio do círculo mais uma pequena folga para as setas
     node_radius <- (raio_pol + 0.08) / pol_por_unid
+    circle_radius <- raio_pol / pol_por_unid
   }
+  if (is.null(circle_radius)) circle_radius <- node_radius * 0.85
 
   edges <- dagitty::edges(dag)
   edges <- edges[edges$e %in% c("->", "<->"), ]
@@ -124,17 +141,39 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
       arrow = seta(if (bi) "both" else "last")
     )
   }
+  if (!is.null(side_labels)) {
+    i <- match(names(side_labels), nodes$node)
+    lateral <- nodes[i, ]
+    lateral$texto <- unname(side_labels)
+    direita <- lateral$x >= mean(nodes$x)
+    deslocamento <- node_radius * 1.15
+    lateral$x <- lateral$x + ifelse(direita, deslocamento, -deslocamento)
+    lateral$hjust <- ifelse(direita, 0, 1)
+    p <- p + ggplot2::geom_text(
+      data = lateral, ggplot2::aes(x = x, y = y, label = texto, hjust = hjust),
+      color = text_color, size = side_size
+    )
+  }
+  obs <- nodes[!nodes$latent, ]
+  lat <- nodes[nodes$latent, ]
+  p <- p + ggplot2::geom_point(
+    data = obs, ggplot2::aes(x = x, y = y), shape = 21, size = node_size,
+    stroke = 1.2, fill = node_fill, color = node_color
+  )
+  if (nrow(lat) > 0) {
+    lat$r <- circle_radius
+    p <- p + ggforce::geom_circle(
+      data = lat, ggplot2::aes(x0 = x, y0 = y, r = r), fill = NA,
+      color = node_color, linetype = "dotted", linewidth = 1.1
+    )
+  }
   p +
-    ggplot2::geom_point(
-      data = nodes, ggplot2::aes(x = x, y = y), shape = 21, size = node_size,
-      stroke = 1.2, fill = node_fill, color = node_color
-    ) +
     ggplot2::geom_text(
       data = nodes, ggplot2::aes(x = x, y = y, label = label_expr), parse = TRUE,
       color = text_color, fontface = "bold", size = label_size
     ) +
     ggplot2::coord_equal(
-      xlim = range(nodes$x) + c(-padding, padding),
+      xlim = range(nodes$x) + c(-pad_x, pad_x),
       ylim = range(nodes$y) + c(-padding, padding), expand = FALSE
     ) +
     ggplot2::theme_void() +
@@ -166,7 +205,7 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
 
 ---
 
-## Causação e correlação
+## Causas e correlações
 
 .center[
 **Por que correlação não implica causalidade?**
@@ -176,14 +215,18 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
 
 ## Representação gráfica de modelos
 
-Podemos representar nosso modelo causal proposto por  meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+- Podemos representar nosso modelo causal proposto por  meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+
+- Directed acyclic graphs (DAGs) são grafos direcionados e acíclicos, ou seja, não possuem ciclos (uma cadeia de setas que retorna ao mesmo nó).
+
+- Um grafo causal deve ser acíclico pois causas precedem e influenciam efeitos, mas não o contrário.
 
 ```{r figura-dag-xy, echo=FALSE, eval=TRUE, out.width="55%", fig.width=8, fig.height=3, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
 plot_dag("dag {
   x [pos=\"0,0\"]
   y [pos=\"2,0\"]
-  ux [pos=\"-1,1\"]
-  uy [pos=\"3,1\"]
+  ux [latent,pos=\"-1,1\"]
+  uy [latent,pos=\"3,1\"]
   ux -> x
   uy -> y
   x -> y
@@ -191,9 +234,8 @@ plot_dag("dag {
 ```
 
 As variáveis $u_x$ e $u_y$ representam fatores não observados que afetam $x$ e $y$, respectivamente. 
-Essas variáveis normalmente são implicitas nos DAGs e omitidas nas representações gráficas.
+Todas essas variáveis que afetam apenas um nó são independentes entre si por hipótese. 
 
-Todas essas variáveis que afetam apenas um nó são independentes entre si por hipotese. 
 
 ---
 
@@ -205,9 +247,130 @@ knitr::include_graphics("../../figures/primer.jpeg")
 
 ---
 
-# Caminhos, bifurcações e colisores
+## Grafos e relações funcionais
 
-## Tríades elementares
+.pull-left[
+- Um grafo causal representa relações funcionais entre variáveis. Por exemplo, o DAG ao lado representa a seguinte relação funcional:
+
+$$
+\begin{aligned}
+x_1 &= \mathcal{f}(u_1) \\
+x_2 &= \mathcal{f}(x_1, u_2) \\
+x_3 &= \mathcal{f}(x_1, u_3) \\
+x_4 &= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &= \mathcal{f}(x_4, u_5)
+\end{aligned}
+$$
+
+- Essas relações são conhecidas como equações estruturais.
+- De forma geral, todas as setas que entram em um nó são os **pais** desse nó, e podemos escrever esse modelos como $x_i = \mathcal{f}({pa}_i, u_i)$, onde ${pa}_i$ são os pais de $x_i$.
+
+]
+.pull-right[
+```{r figura-dag-xy-condicionado_1, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  u1 [pos=\"-0.6,4\"]
+  u2 [pos=\"1.6,3\"]
+  u3 [pos=\"-1.6,3\"]
+  u4 [pos=\"-1.5,1\"]
+  u5 [pos=\"-1.5,0\"]
+  u1 -> x1
+  u2 -> x2
+  u3 -> x3
+  u4 -> x4
+  u5 -> x5
+  x1 -> x2
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(u1 = "$u_1$", u2 = "$u_2$", u3 = "$u_3$", u4 = "$u_4$", u5 = "$u_5$",
+    x1 = "$x_1$", x2 = "$x_2$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$" ))
+```
+]
+
+---
+
+## Consequências das relações causais
+
+.pull-left[
+- Relações causais representadas num DAG implicam relações de independência condicional entre as variáveis.
+
+- Hipótese de independência:
+
+  - Todas as variáveis que afetam apenas uma variável são independentes entre si.
+
+  - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
+]
+.pull-right[
+```{r figura-dag-xy-condicionado, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  u1 [pos=\"-0.6,4\"]
+  u2 [pos=\"1.6,3\"]
+  u3 [pos=\"-1.6,3\"]
+  u4 [pos=\"-1.5,1\"]
+  u5 [pos=\"-1.5,0\"]
+  u1 -> x1
+  u2 -> x2
+  u3 -> x3
+  u4 -> x4
+  u5 -> x5
+  x1 -> x2
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(u1 = "$u_1$", u2 = "$u_2$", u3 = "$u_3$", u4 = "$u_4$", u5 = "$u_5$",
+    x1 = "$x_1$", x2 = "$x_2$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$" ))
+```
+]
+
+
+---
+
+## Consequências das relações causais
+
+.pull-left[
+- Relações causais representadas num DAG implicam relações de independência condicional entre as variáveis.
+
+- Hipótese de independência:
+
+  - Todas as variáveis que afetam apenas uma variável são independentes entre si. (normalmente omitidas nos DAGs)
+
+  - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
+]
+.pull-right[
+```{r figura-dag-xy-condicionado-nou, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  x1 -> x2
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(x1 = "$x_1$", x2 = "$x_2$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$" ))
+```
+]
+
+---
+
+# Tríades elementares
+
+Todo grafo de relações causais pode ser decomposto em três tipos de relações elementares: pipes, forks e colliders.
 
 .center[
 **Pipe**
@@ -246,7 +409,7 @@ knitr::include_graphics("../../figures/DAGS/x-y_all.svg")
 Efeito direto de $x$ sobre $y$, mais um fator de confusão $z$
 
 ```{r figura-dag-fork-efeito, echo=FALSE, eval=TRUE, out.width="45%", fig.width=8, fig.height=4, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
-plot_dag("dag {
+fork = plot_dag("dag {
   x [pos=\"0,0\"]
   y [pos=\"2,0\"]
   z [pos=\"1,1\"]
@@ -254,6 +417,7 @@ plot_dag("dag {
   z -> x 
   z -> y
 }")
+print(fork)
 ```
 
 Modelo gerador implícito neste DAG: 
@@ -268,10 +432,41 @@ $$
 
 ---
 
+```{r funcoes-graficos-simulacao, include=FALSE, eval=TRUE}
+## Funções auxiliares para os gráficos das simulações (fork, pipe e colisor)
+plot_coef <- function(pm, xlim = NULL, verdadeiro = NULL, linha = 1) {
+  plot(pm, xlim = xlim, cex = 2, cex.lab = 1.5)
+  if (!is.null(verdadeiro)) points(verdadeiro, linha, pch = 19, col = 4, cex = 2)
+}
+plot_xy <- function(x, y, z) {
+  plot(x, y, pch = 19, cex.axis = 1.5, cex.lab = 2)
+  points(x[z == 1], y[z == 1], pch = 19, col = 2)
+  legend("topleft", legend = c("z = 0", "z = 1"), col = c(1, 2), pch = 19,
+         bg = "#fdf6e3", box.col = NA, cex = 1.5)
+}
+```
+
+## Fork: dados simulados
+
+Aqui o fator de confusão $z$ é uma variável **discreta** (binária):
+
+```{r fork-simulacao, eval=TRUE, echo=TRUE}
+set.seed(2)
+N <- 200
+z <- rbinom(N, 1, 0.5)          # z ~ Bernoulli(0.5)
+x <- rnorm(N, 1 + z)            # x ~ Normal(1 + z, 1)
+y <- rnorm(N, 1 + 0.5*x + 2*z)  # y ~ Normal(1 + 0.5x + 2z, 1)
+```
+
+O efeito verdadeiro de $x$ sobre $y$ é $\beta_{yx} = 0{,}5$.
+
+---
+
 ## Modelo sem o fator de confusão
 
-```{r figura-dag-fork-sem-confusao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
+.pull-left[
+```{r figura-dag-fork-sem-confusao, echo=FALSE, eval=TRUE, fig.width=8, fig.height=4, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+print(fork)
 ```
 
 Modelo estatístico sem o fator de confusão:
@@ -279,141 +474,281 @@ Modelo estatístico sem o fator de confusão:
 $$
 \begin{aligned}
 y &\sim \mathrm{Normal}(\mu, \sigma) \\
-\mu &= a + bx \\
-a &\sim \mathrm{Normal}(0, 0.3) \\
-b &\sim \mathrm{Normal}(0, 0.3) \\
+\mu &= \alpha + \beta_{x}x \\
+\alpha &\sim \mathrm{Normal}(0, 5) \\
+\beta_{x} &\sim \mathrm{Normal}(0, 0.3) \\
 \sigma &\sim \mathrm{Exponential}(1)
 \end{aligned}
 $$
-
----
-
-## Modelo `ulam` sem o fator de confusão
-
-```{r figura-dag-fork-ulam, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
-```
-
-```{r modelo-fork-sem-confusao}
-N <- 100
-z <- rnorm(N)             # z ~ Normal(0, 1)
-x <- rnorm(N, 1 + z)      # x ~ Normal(1 + z, 1)
-y <- rnorm(N, 1 + x + z)  # y ~ Normal(1 + x + z, 1)
-
-m1 <- ulam(
+]
+.pull-right[
+```{r modelo-fork-sem-confusao, eval=TRUE, echo=TRUE}
+m1 <- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
   ),
   data = list(y = y, x = x)
 )
+precis(m1) |> round(2)
+```
+]
+
+---
+
+## Fork: estimativa de $\beta_{yx}$ sem controlar por $z$
+
+O ponto azul indica o valor verdadeiro ($0.5$).
+
+```{r figura-fork-coef-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m1, pars = "bx"), xlim = c(0, 1.5), verdadeiro = 0.5, linha = 1)
 ```
 
 ---
 
-## Estimativas do modelo sem o fator de confusão
+## Fork: dados e reta ajustada sem controlar por $z$
 
-```text
-> precis(m1)
-      mean   sd 5.5% 94.5% n_eff Rhat4
-a     0.54 0.14 0.32  0.77  1274     1
-bx    1.47 0.08 1.34  1.60  1432     1  # Estimativa do efeito de x sobre y
-sigma 1.33 0.10 1.19  1.49  1418     1
-```
-
----
-
-## $P(\beta_{yx} \mid x, y)$ sem o fator de confusão
-
-```{r figura-fork-sem-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_fork_non_corrected.png")
+```{r figura-fork-dados-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 ```
 
 ---
 
 ## Incluindo o fator de confusão
 
-```{r modelo-fork-com-confusao}
-m2 <- ulam(
+.pull-left[
+```{r figura-dag-fork-com-confusao, echo=FALSE, eval=TRUE, fig.width=8, fig.height=4, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+print(fork)
+```
+
+$$
+\begin{aligned}
+y &\sim \mathrm{Normal}(\mu, \sigma) \\
+\mu &= a + \beta_{x}x + \beta_{z}z \\
+\alpha &\sim \mathrm{Normal}(0, 5) \\
+\beta_{x} &\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{z} &\sim \mathrm{Normal}(0, 0.3) \\
+\sigma &\sim \mathrm{Exponential}(1)
+\end{aligned}
+$$
+]
+.pull-right[
+```{r modelo-fork-com-confusao, eval=TRUE, echo=TRUE}
+m2 <- quap(
   alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Novo parâmetro para o fator de confusão
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 0.3),
+    bz ~ dnorm(0,0.3),
+    sigma ~ dexp(1)
   ),
   data = list(y = y, x = x, z = z)
 )
+precis(m2) |> round(2)
 ```
+]
 
-```text
-> precis(m2)
-       mean   sd 5.5% 94.5% n_eff Rhat4
-a      0.95 0.14 0.72  1.17   942     1
-bx     1.06 0.10 0.91  1.22   837     1
-bz     0.82 0.12 0.62  1.02   889     1
-sigma  1.09 0.08 0.97  1.22  1200     1
+---
+
+## Fork: estimativa de $\beta_{yx}$ controlando por $z$
+
+```{r figura-fork-coef-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m2, pars = c("bx", "bz")), xlim = c(0, 2.5), verdadeiro = 0.5, linha = 2)
 ```
 
 ---
 
-## $P(\beta_{yx} \mid x, y)$ com o fator de confusão
+## Fork: dados e retas ajustadas controlando por $z$
 
-```{r figura-fork-com-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_fork_corrected.png")
+Cinza: reta sem $z$. Preta e vermelha: retas para $z = 0$ e $z = 1$.
+
+```{r figura-fork-dados-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = "gray")
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
 ```
 
 ---
 
-## Exemplos de bifurcações ou fatores de confusão
+## Fork: ausência de efeito de $x$ sobre $y$
+
+Agora $x$ **não** afeta $y$: ambos dependem apenas de $z$.
+
+.pull-left[
+```{r fork-sem-efeito, eval=TRUE, echo=TRUE}
+set.seed(8)
+z <- rbinom(N, 1, 0.5)  
+x <- rnorm(N, 1 + 2*z)
+y <- rnorm(N, 2*z)      
+m1 <- quap(
+  alist(
+    y ~ dnorm(a + bx * x, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x))
+m2 <- quap(
+  alist(
+    y ~ dnorm(a + bx * x + bz * z, sigma),
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1),
+    bz ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x, z = z))
+```
+]
+.pull-right[
+```{r figura-fork-sem-efeito, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = "gray")
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
+```
+]
+
+Sem controlar por $z$ (cinza) aparece uma associação espúria; controlando por $z$ a inclinação é ~0.
+
+---
+
+## Fork: efeito de $x$ com sinal oposto ao da correlação
+
+Sem $z$ (cinza) a inclinação tem o sinal errado (paradoxo de Simpson); com $z$, as retas recuperam o efeito negativo.
+
+.pull-left[
+```{r fork-efeito-oposto, eval=TRUE, echo=TRUE}
+set.seed(1)
+z <- rbinom(N, 1, 0.5) 
+x <- rnorm(N, -1 - 2*z)  
+y <- rnorm(N, -1*x - 5*z) 
+m1 <- quap(
+  alist(
+    y ~ dnorm(a + bx * x, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x))
+m2 <- quap(
+  alist(
+    y ~ dnorm(a + bx * x + bz * z, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1),
+    bz ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x, z = z))
+```
+]
+
+.pull-right[
+```{r figura-fork-efeito-oposto, echo=FALSE, eval=TRUE, fig.width=7, fig.height=7, fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = "gray")
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
+```
+]
+
+
+---
+
+## Exemplos de forks ou fatores de confusão
 
 - Esta é a variável de controle por excelência.
+- É o que todo mundo gostaria de estar fazendo ao incluir preditores.
 - Muitas variáveis são incluídas no modelo sob a suposição de que são fatores de confusão cujos efeitos precisam ser considerados.
 
-```{r figura-dag-fork-exemplos, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_fork.svg")
+```{r figura-dag-fork-exemplos, echo=FALSE, eval=TRUE, fig.height=4, out.width="50%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,1\"]
+  x -> y
+  z -> x 
+  z -> y
+}")
 ```
 
 ---
 
 ## Tabagismo e câncer
 
-R. A. Fisher, famoso, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
+R. A. Fisher, o cara do ML e da teoria evolutiva, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
 
-```{r figura-tabagismo-cancer, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
-knitr::include_graphics("../../figures/smoking_cancer.png")
+```{r figura-dag-fork-tabagismo, echo=FALSE, eval=TRUE, fig.width=8, fig.height=4, out.width="70%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,1\"]
+  x -> y
+  z -> x 
+  z -> y
+}", side_labels = c(x = "Tabaco", y = "Câncer", z = "Genótipo"))
+```
+
+---
+
+## Distribuições de espécies
+
+Em Yellowstone, podemos perguntar se o risco de predação por lobos altera onde os alces usam o habitat. Mas relevo e cobertura vegetal também podem afetar a distribuição de ambas as espécies; por isso, a associação espacial entre lobos e alces, sozinha, não identifica o efeito causal (exemplo inspirado em Ripple e Beschta, 2004).
+
+```{r figura-distribuicao-especies, echo=FALSE, eval=TRUE, fig.width=8, fig.height=3.5, out.width="65%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  L [pos=\"0,0\"]
+  A [pos=\"2,0\"]
+  H [pos=\"1,1\"]
+  L -> A
+  H -> L
+  H -> A
+}", side_labels = c(L = "Lobos", A = "Alces", H = "Habitat"))
 ```
 
 ---
 
 ## Viés por variável omitida
 
-```{r figura-variavel-omitida, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+.pull-left[
+```{r figura-variavel-omitida, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center"}
 knitr::include_graphics("../../figures/omitted.png")
 ```
 
 - Carlos Cinelli e Chad Hazlett (2020).
-
----
-
-## Distribuições de espécies
-
-Podemos querer avaliar o efeito de um predador sobre a distribuição de uma presa. Porém, a distribuição espacial de ambos pode ser afetada por algum fator abiótico:
-
-```{r figura-distribuicao-especies, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
-knitr::include_graphics("../../figures/species_predator.png")
+]
+.pull-right[
+```{r figura-dag-u, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  u [latent, pos=\"1,1\"]
+  z [pos=\"1,-1\"]
+  x -> y
+  u -> x 
+  u -> y
+  z -> x
+  z -> y
+}", side_labels = c(u = "Não observado"))
 ```
+]
 
 ---
 
-# Caminho
+## Pipe
 
-## Todo o efeito de $x$ sobre $y$ é mediado por $z$
+- Todo o efeito de $x$ sobre $y$ é mediado por $z$
 
-```{r figura-dag-pipe-efeito, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_pipe2.svg")
+```{r figura-dag-pipe-efeito, echo=FALSE, eval=TRUE, fig.width=8, fig.height=3, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+pipe = plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,0\"]
+  x -> z 
+  z -> y
+}")
+print(pipe)
 ```
 
 ---
@@ -422,89 +757,144 @@ knitr::include_graphics("../../figures/DAGS/x-y_pipe2.svg")
 
 $$
 \begin{aligned}
-y &\sim \mathrm{Normal}(\alpha_y + \beta_{yz}z, \sigma_y) \\
-z &\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x, \sigma_z) \\
-x &\sim \mathrm{Normal}(\alpha_x, \sigma_x)
+y &= \mathcal{f}(z, u_y) \\
+z &= \mathcal{f}(x, u_z) \\
+x &= \mathcal{f}(u_x)
 \end{aligned}
 $$
+
+--
+
+### Dados simulados
+
+O mediador $z$ também é binário:
+
+```{r pipe-simulation, eval=TRUE, echo=TRUE}
+set.seed(2)
+N <- 200
+x <- rnorm(N)                    # x ~ Normal(0, 1)
+z <- rbinom(N, 1, inv_logit(x))  # z ~ Bernoulli(invlogit(x))
+y <- rnorm(N, 1 + 2*z)           # y ~ Normal(1 + 2z, 1)
+```
 
 ---
 
 ## Modelo sem o mediador
 
-```{r figura-dag-pipe-sem-mediador, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_pipe2.svg")
+.pull-left[
+```{r figura-dag-pipe-sem-mediador, echo=FALSE, eval=TRUE, fig.width=9, fig.height=2.5, out.width="60%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+print(pipe)
 ```
 
-```{r modelo-caminho-sem-mediador}
-set.seed(1)
-N <- 100
-x <- rnorm(N)        # x ~ Normal(0, 1)
-z <- rnorm(N, 1 + x) # z ~ Normal(1 + x, 1)
-y <- rnorm(N, 1 + z) # y ~ Normal(1 + z, 1)
-
-m1 <- ulam(
+```{r modelo-caminho-sem-mediador, eval=TRUE, echo=TRUE}
+m1 <- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x)
 )
+precis(m1) |> round(2)
 ```
+]
+
+--
+
+.pull-right[
+### Estimativa do efeito de $x$ sem controlar por $z$
+
+O ponto azul é o efeito total de $x$ sobre $y$ (aprox. $2\,E[p(1-p)]$, com $p = \mathrm{invlogit}(x)$).
+
+```{r figura-pipe-coef-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+efeito_total <- 2 * mean(inv_logit(x) * (1 - inv_logit(x)))
+plot_coef(precis(m1, pars = "bx"), xlim = c(0, 2.5), verdadeiro = efeito_total, linha = 1)
+```
+]
 
 ---
 
-## $P(\beta_{yx} \mid x, y)$ sem o mediador
+## Pipe: dados e reta ajustada sem controlar por $z$
 
-```{r modelo-caminho-sem-mediador-reajuste}
-m1 <- ulam(
-  alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
-  ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
-)
-```
-
-```{r figura-pipe-sem-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_pipe_non_corrected.png")
+```{r figura-pipe-sem-correcao, echo=FALSE, eval=TRUE, fig.width=7, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 ```
 
 ---
 
 ## Incluindo o mediador
 
-```{r modelo-caminho-com-mediador}
-m2 <- ulam(
+.pull-left[
+```{r modelo-caminho-com-mediador, eval=TRUE, echo=TRUE}
+m2 <- quap(
   alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Mediador
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    bz ~ dnorm(0, 5),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x, z = z),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x, z = z)
 )
+precis(m2) |> round(2)
 ```
+]
 
-```{r figura-pipe-com-correcao, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_pipe_corrected.png")
+--
+
+.pull-right[
+### Estimativa do efeito de $x$ controlando por $z$
+
+O ponto azul é o efeito direto de $x$ sobre $y$ ($0$): controlar pelo mediador bloqueia o caminho.
+
+```{r figura-pipe-coef-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m2, pars = c("bx", "bz")), xlim = c(-0.3, 2.5), verdadeiro = efeito_total, linha = 2)
+```
+]
+
+---
+
+## Pipe: dados e retas ajustadas controlando por $z$
+
+```{r figura-pipe-com-correcao, echo=FALSE, eval=TRUE, fig.width=7, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
 ```
 
 ---
 
-## Caminho versus bifurcação
+## Z é um Pipe versus Z é um Fork
 
-```{r figura-pipe-versus-fork, echo=FALSE, eval=TRUE, out.width="50%", fig.align="center"}
-knitr::include_graphics("../../figures/pipe_vs_fork.svg")
+.pull-left[
+```{r figura-dag-pipe-comp, echo=FALSE, eval=TRUE, fig.width=8, fig.height=4, out.width="90%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,1\"]
+  x -> z 
+  z -> y
+  x -> y
+}")
 ```
+]
+.pull-right[
+
+```{r figura-dag-fork-comp, echo=FALSE, eval=TRUE, fig.width=8, fig.height=4, out.width="90%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,1\"]
+  z -> x
+  z -> y
+  x -> y
+}")
+```
+]
 
 ---
 
@@ -552,11 +942,25 @@ knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
 
 $$
 \begin{aligned}
-y &\sim \mathrm{Normal}(\alpha_y, \sigma_y) \\
-x &\sim \mathrm{Normal}(\alpha_x, \sigma_x) \\
-z &\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x + \beta_{zy}y, \sigma_z)
+y &\sim \mathrm{Normal}(0, 1) \\
+x &\sim \mathrm{Normal}(0, 1) \\
+z &\sim \mathrm{Bernoulli}\big(\mathrm{invlogit}(-2 + 2x + 2y)\big)
 \end{aligned}
 $$
+
+--
+
+### Dados simulados
+
+O colisor $z$ também é binário:
+
+```{r colisor-simulacao, eval=TRUE, echo=TRUE}
+set.seed(1)
+N <- 200
+x <- rnorm(N)                                # x ~ Normal(0, 1)
+y <- rnorm(N)                                # y ~ Normal(0, 1)
+z <- rbinom(N, 1, inv_logit(2*x + 2*y - 2))  # z ~ Bernoulli(invlogit(2x + 2y - 2))
+```
 
 ---
 
@@ -566,66 +970,76 @@ $$
 knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
 ```
 
-```{r modelo-colisor-sem-condicionamento}
-set.seed(1)
-N <- 100
-x <- rnorm(N)            # x ~ Normal(0, 1)
-y <- rnorm(N)            # y ~ Normal(0, 1)
-z <- rnorm(N, 1 + x + y) # z ~ Normal(1 + x + y, 1): colisor
-
-m1 <- ulam(
+```{r modelo-colisor-sem-condicionamento, eval=TRUE, echo=TRUE}
+m1 <- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x)
 )
+(pm1 <- precis(m1))
 ```
 
 ---
 
-## $P(\beta_{yx} \mid x, y)$ sem condicionar no colisor
+## Colisor: estimativa do efeito de $x$ sem condicionar em $z$
 
-```{r modelo-colisor-sem-condicionamento-reajuste}
-m1 <- ulam(
-  alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
-  ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
-)
-```
+O ponto azul indica o valor verdadeiro ($0$).
 
-```{r figura-colisor-sem-condicionamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_colider_non_corrected.png")
+```{r figura-colisor-coef-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m1, pars = "bx"), xlim = c(-0.5, 2.5), verdadeiro = 0, linha = 1)
 ```
 
 ---
 
-## $P(\beta_{yx} \mid x, y)$ condicionando no colisor
+## Colisor: dados e reta ajustada sem condicionar em $z$
 
-```{r modelo-colisor-com-condicionamento}
-m2 <- ulam(
-  alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Colisor
-    sigma ~ exponential(1)
-  ),
-  data = list(y = y, x = x, z = z),
-  iter = 1000, chains = 4, cores = 4
-)
+```{r figura-colisor-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 ```
 
-```{r figura-colisor-com-condicionamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/x-y_colider_corrected.png")
+---
+
+## Condicionando no colisor
+
+```{r modelo-colisor-com-condicionamento, eval=TRUE, echo=TRUE}
+m2 <- quap(
+  alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    bz ~ dnorm(0, 5),
+    sigma ~ dexp(1)
+  ),
+  data = list(y = y, x = x, z = z)
+)
+(pm2 <- precis(m2))
+```
+
+---
+
+## Colisor: estimativa do efeito de $x$ condicionando em $z$
+
+```{r figura-colisor-coef-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m2, pars = c("bx", "bz")), verdadeiro = 0, linha = 2)
+```
+
+---
+
+## Colisor: dados e retas ajustadas condicionando em $z$
+
+Condicionar no colisor cria uma associação espúria entre $x$ e $y$ dentro de cada grupo de $z$.
+
+```{r figura-colisor-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_xy(x, y, z)
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
 ```
 
 ---
@@ -727,4 +1141,5 @@ knitr::include_graphics("../../figures/DAGS/hiv_stroke.svg")
 
 - Cinelli e Hazlett (2020).
 - Montgomery et al. (2018).
+- Ripple, W. J. e Beschta, R. L. (2004). “Wolves and the ecology of fear: Can predation risk structure ecosystems?” *BioScience*, 54(8), 755–766.
 - Westreich et al. (2013).
