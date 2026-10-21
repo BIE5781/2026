@@ -56,18 +56,14 @@ população de cada país por faixa etária, que vamos precisar mais adiante.
 
 Os dados brutos estão disponíveis no
 [site do INED](https://dc-covid.site.ined.fr/en/) e numa
-[cópia no figshare](https://doi.org/10.6084/m9.figshare.c.5807027).
-O script `prepara_dados_ined.R`, anexo, baixa os dados brutos, escolhe
-uma série de dados por país, agrega os óbitos e a população em faixas
-etárias de 20 anos (0-19, 20-39, 40-59, 60-79 e 80 anos ou mais) e salva
-o resultado. Neste tutorial, partimos desse arquivo já processado:
+[cópia no figshare](https://doi.org/10.6084/m9.figshare.c.5807027), e já estão processados para este tutorial. basta carregá-los:
 
 ```{r dados}
 library(dplyr)
 library(ggplot2)
 library(knitr)
-
-obitos <- readRDS("obitos_covid_paises_selecionados.rds")
+repo <- "https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/"
+obitos <- readRDS(gzcon(url(paste0(repo, "obitos_covid_paises_selecionados.rds"))))
 head(obitos)
 ```
 
@@ -80,17 +76,18 @@ e o ponto médio da faixa etária (`idade.meio`)[^meio].
 
 Vamos começar pelo total de óbitos de cada país. Para comparação,
 acrescentamos o total do Brasil no mesmo período: 614.186 óbitos,
-segundo o painel do Ministério da Saúde (Brasil, 2021).
+segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar este valor e também carregar os dados demográficos do país para uso neste tutorial
 
-```{r obitos-br, eval=FALSE}
+```{r obitos-br, eval=TRUE}
 ## Guarde o total de obitos no Brasil neste objeto
 obitos.br <- 614186
+## Leitura dos dados do censo Brasil 2022
+pop.br <- readRDS(gzcon(url(paste0(repo, "pop_brasileira_censo_2022.rds"))))
 ```
+
 A tabela a seguir mostra o total de óbitos por país, incluindo o Brasil:
 
 ```{r tabela-obitos, eval = TRUE, echo=FALSE}
-obitos.br <- 614186
-
 tab <- obitos |>
     group_by(pais) |>
     summarise(obitos = sum(obitos)) |>
@@ -750,6 +747,29 @@ mean(total.sim2>=obitos.br)
   à taxa média geral são similares para cada país. Um modelo
   hierárquico pode levar isso em consideração.
 
+	
+
+# Fontes dos dados e referências
+
+* Brasil, Ministério da Saúde (2021). Painel de casos de doença pelo
+  coronavírus 2019 (COVID-19) no Brasil. Óbitos acumulados até a semana
+  epidemiológica 47 (27/11/2021). Disponível em:
+  <https://infoms.saude.gov.br/extensions/covid-19_html/covid-19_html.html#>. 
+
+* Caporali, A., Garcia, J., Couppié, É. et al. (2022). The demography
+  of COVID-19 deaths database, a gateway to well-documented
+  international data. *Scientific Data* 9, 93.
+  <https://doi.org/10.1038/s41597-022-01191-y>. Dados: INED,
+  *The Demography of COVID-19 Deaths*, <https://dc-covid.site.ined.fr/en/>;
+  cópia de dezembro de 2021 no figshare:
+  <https://doi.org/10.6084/m9.figshare.c.5807027>. Processados para este tutorial com [este script](prepara_dados_ined.R)
+
+* IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
+  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>. Processados para este tutorial com [este script](prepara_dados_ibge.R)
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
+  with Examples in R and Stan*. 2nd ed. CRC Press.
+
 [^datas]: Para cada país, usamos a última contagem disponível até essa
     data, que é a mesma do total de óbitos do Brasil que usaremos para
     comparação. As datas das últimas contagens variam um pouco entre os
@@ -768,28 +788,7 @@ mean(total.sim2>=obitos.br)
 [^stan]: Para usar a função `ulam()`, é preciso instalar o Stan e o
     pacote *cmdstanr*. Veja as instruções na
     [página do pacote rethinking](https://github.com/rmcelreath/rethinking).
-
-# Fontes dos dados e referências
-
-* Brasil, Ministério da Saúde (2021). Painel de casos de doença pelo
-  coronavírus 2019 (COVID-19) no Brasil. Óbitos acumulados até a semana
-  epidemiológica 47 (27/11/2021). Disponível em:
-  <https://infoms.saude.gov.br/extensions/covid-19_html/covid-19_html.html#>.
-
-* Caporali, A., Garcia, J., Couppié, É. et al. (2022). The demography
-  of COVID-19 deaths database, a gateway to well-documented
-  international data. *Scientific Data* 9, 93.
-  <https://doi.org/10.1038/s41597-022-01191-y>. Dados: INED,
-  *The Demography of COVID-19 Deaths*, <https://dc-covid.site.ined.fr/en/>;
-  cópia de dezembro de 2021 no figshare:
-  <https://doi.org/10.6084/m9.figshare.c.5807027>.
-
-* IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
-  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>.
-
-* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
-  with Examples in R and Stan*. 2nd ed. CRC Press.
-
+	
 [^1]: A variável de tamanho
 populacional é o logaritmo do tamanho em unidades de 100 mil
 pessoas. Uma unidade nesta escala corresponde a 100 mil, e o logaritmo de um é zero.
