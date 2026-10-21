@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Inferência causal</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Diogo Melo" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Inferência causal
+]
+.subtitle[
+## Conectando modelos científicos e estatísticos
+]
+.author[
+### Diogo Melo
+]
+.date[
+### 19 de outubro de 2026
+]
+
+---
+
+
+
+
+
+
+# Para que servem os modelos?
+
+---
+
+## Previsão e inferência causal
+
+---
+
+## Causação e correlação
+
+.center[
+**Por que correlação não implica causalidade?**
+]
+
+---
+
+## Representação gráfica de modelos
+
+Podemos representar nosso modelo causal proposto por meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+
+.center[![](../../figures/DAGS/x-y.svg){width=35%}]
+
+---
+
+## Introdução à inferência causal
+
+.center[![](../../figures/primer.jpeg){width=70%}]
+
+---
+
+# Caminhos, bifurcações e colisores
+
+## Tríades elementares
+
+.center[
+**Caminho**
+
+![](../../figures/DAGS/pipe.svg){width=25%}
+
+**Bifurcação**
+
+![](../../figures/DAGS/fork.svg){width=25%}
+
+**Colisor**
+
+![](../../figures/DAGS/colider.svg){width=25%}
+]
+
+---
+
+## Simulando fatores de confusão
+
+Como um fator de confusão afeta nossa estimativa do efeito de `\(x\)` sobre `\(y\)`?
+
+.center[![](../../figures/DAGS/x-y_all.svg){width=55%}]
+
+---
+
+# Bifurcação
+
+## Efeito direto de `\(x\)` sobre `\(y\)`, mais um fator de confusão `\(z\)`
+
+.center[![](../../figures/DAGS/x-y_fork.svg){width=25%}]
+
+## Modelo gerador implícito neste DAG
+
+$$
+`\begin{aligned}
+y &amp;\sim \mathrm{Normal}(\alpha_y + \beta_{yx}x + \beta_{yz}z, \sigma_y) \\
+x &amp;\sim \mathrm{Normal}(\alpha_x + \beta_{xz}z, \sigma_x) \\
+z &amp;\sim \mathrm{Normal}(\alpha_z, \sigma_z)
+\end{aligned}`
+$$
+
+---
+
+## Modelo sem o fator de confusão
+
+.center[![](../../figures/DAGS/x-y_fork.svg){width=25%}]
+
+Modelo estatístico sem o fator de confusão:
+
+$$
+`\begin{aligned}
+y &amp;\sim \mathrm{Normal}(\mu, \sigma) \\
+\mu &amp;= a + bx \\
+a &amp;\sim \mathrm{Normal}(0, 0.3) \\
+b &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\sigma &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}`
+$$
+
+---
+
+## Modelo `ulam` sem o fator de confusão
+
+.center[![](../../figures/DAGS/x-y_fork.svg){width=25%}]
+
+
+``` r
+N &lt;- 100
+z &lt;- rnorm(N)             # z ~ Normal(0, 1)
+x &lt;- rnorm(N, 1 + z)      # x ~ Normal(1 + z, 1)
+y &lt;- rnorm(N, 1 + x + z)  # y ~ Normal(1 + x + z, 1)
+
+m1 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x)
+)
+```
+
+---
+
+## Estimativas do modelo sem o fator de confusão
+
+```text
+&gt; precis(m1)
+      mean   sd 5.5% 94.5% n_eff Rhat4
+a     0.54 0.14 0.32  0.77  1274     1
+bx    1.47 0.08 1.34  1.60  1432     1  # Estimativa do efeito de x sobre y
+sigma 1.33 0.10 1.19  1.49  1418     1
+```
+
+---
+
+## `\(P(\beta_{yx} \mid x, y)\)` sem o fator de confusão
+
+.center[![](../../figures/x-y_fork_non_corrected.png){width=55%}]
+
+---
+
+## Incluindo o fator de confusão
+
+
+``` r
+m2 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Novo parâmetro para o fator de confusão
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z)
+)
+```
+
+```text
+&gt; precis(m2)
+       mean   sd 5.5% 94.5% n_eff Rhat4
+a      0.95 0.14 0.72  1.17   942     1
+bx     1.06 0.10 0.91  1.22   837     1
+bz     0.82 0.12 0.62  1.02   889     1
+sigma  1.09 0.08 0.97  1.22  1200     1
+```
+
+---
+
+## `\(P(\beta_{yx} \mid x, y)\)` com o fator de confusão
+
+.center[![](../../figures/x-y_fork_corrected.png){width=55%}]
+
+---
+
+## Exemplos de bifurcações ou fatores de confusão
+
+- Esta é a variável de controle por excelência.
+- Muitas variáveis são incluídas no modelo sob a suposição de que são fatores de confusão cujos efeitos precisam ser considerados.
+
+.center[![](../../figures/DAGS/x-y_fork.svg){width=25%}]
+
+---
+
+## Tabagismo e câncer
+
+R. A. Fisher, famoso, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
+
+.center[![](../../figures/smoking_cancer.png){width=50%}]
+
+---
+
+## Viés por variável omitida
+
+.center[![](../../figures/omitted.png){width=60%}]
+
+- Carlos Cinelli e Chad Hazlett (2020).
+
+---
+
+## Distribuições de espécies
+
+Podemos querer avaliar o efeito de um predador sobre a distribuição de uma presa. Porém, a distribuição espacial de ambos pode ser afetada por algum fator abiótico:
+
+.center[![](../../figures/species_predator.png){width=50%}]
+
+---
+
+# Caminho
+
+## Todo o efeito de `\(x\)` sobre `\(y\)` é mediado por `\(z\)`
+
+.center[![](../../figures/DAGS/x-y_pipe2.svg){width=25%}]
+
+---
+
+## Modelo gerador implícito neste DAG
+
+$$
+`\begin{aligned}
+y &amp;\sim \mathrm{Normal}(\alpha_y + \beta_{yz}z, \sigma_y) \\
+z &amp;\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x, \sigma_z) \\
+x &amp;\sim \mathrm{Normal}(\alpha_x, \sigma_x)
+\end{aligned}`
+$$
+
+---
+
+## Modelo sem o mediador
+
+.center[![](../../figures/DAGS/x-y_pipe2.svg){width=25%}]
+
+
+``` r
+set.seed(1)
+N &lt;- 100
+x &lt;- rnorm(N)        # x ~ Normal(0, 1)
+z &lt;- rnorm(N, 1 + x) # z ~ Normal(1 + x, 1)
+y &lt;- rnorm(N, 1 + z) # y ~ Normal(1 + z, 1)
+
+m1 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+---
+
+## `\(P(\beta_{yx} \mid x, y)\)` sem o mediador
+
+
+``` r
+m1 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+.center[![](../../figures/x-y_pipe_non_corrected.png){width=55%}]
+
+---
+
+## Incluindo o mediador
+
+
+``` r
+m2 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Mediador
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+.center[![](../../figures/x-y_pipe_corrected.png){width=55%}]
+
+---
+
+## Caminho versus bifurcação
+
+.center[![](../../figures/pipe_vs_fork.svg){width=50%}]
+
+---
+
+## Exemplos de caminhos ou mediadores
+
+Incluir um mediador em nossos modelos pode ter consequências graves. Um erro comum é incluir variáveis medidas após o tratamento.
+
+.center[![](../../figures/DAGS/x-y_pipe.svg){width=25%}]
+
+---
+
+## Variáveis pós-tratamento
+
+Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento pode ser mediada pela presença do fungo. Portanto, incluir a presença do fungo no modelo mascararia o efeito do tratamento.
+
+.center[![](../../figures/fungal_treatment.png){width=60%}]
+
+---
+
+## Condicionamento em variáveis pós-tratamento
+
+.center[![](../../figures/post_treatment_paper.png){width=55%}]
+
+Montgomery et al. (2018).
+
+---
+
+# Colisor
+
+## `\(x\)` não afeta `\(y\)`, mas ambos afetam `\(z\)`
+
+.center[![](../../figures/DAGS/x-y_colider2.svg){width=25%}]
+
+---
+
+## Modelo gerador implícito neste DAG
+
+$$
+`\begin{aligned}
+y &amp;\sim \mathrm{Normal}(\alpha_y, \sigma_y) \\
+x &amp;\sim \mathrm{Normal}(\alpha_x, \sigma_x) \\
+z &amp;\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x + \beta_{zy}y, \sigma_z)
+\end{aligned}`
+$$
+
+---
+
+## Modelo sem o colisor
+
+.center[![](../../figures/DAGS/x-y_colider2.svg){width=25%}]
+
+
+``` r
+set.seed(1)
+N &lt;- 100
+x &lt;- rnorm(N)            # x ~ Normal(0, 1)
+y &lt;- rnorm(N)            # y ~ Normal(0, 1)
+z &lt;- rnorm(N, 1 + x + y) # z ~ Normal(1 + x + y, 1): colisor
+
+m1 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+---
+
+## `\(P(\beta_{yx} \mid x, y)\)` sem condicionar no colisor
+
+
+``` r
+m1 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+.center[![](../../figures/x-y_colider_non_corrected.png){width=55%}]
+
+---
+
+## `\(P(\beta_{yx} \mid x, y)\)` condicionando no colisor
+
+
+``` r
+m2 &lt;- ulam(
+  alist(
+    y ~ normal(a + bx * x + bz * z, sigma),
+    a ~ normal(0, 0.3),
+    bx ~ normal(0, 0.3),
+    bz ~ normal(0, 0.3),  # Colisor
+    sigma ~ exponential(1)
+  ),
+  data = list(y = y, x = x, z = z),
+  iter = 1000, chains = 4, cores = 4
+)
+```
+
+.center[![](../../figures/x-y_colider_corrected.png){width=55%}]
+
+---
+
+## Colisores podem enviesar nossas amostras
+
+.center[
+![](../../figures/restaurant_colider.svg){width=40%}
+
+![](../../figures/research_colider.svg){width=50%}
+]
+
+---
+
+## Usando DAGs para construir modelos
+
+Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+
+- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+
+---
+
+## Caminhos abertos e fechados
+
+- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
+- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+
+---
+
+## Identifique todos os caminhos abertos de `\(X\)` a `\(Y\)`
+
+.center[![](../../figures/DAGS/paths_dag.png){width=55%}]
+
+---
+
+## Critério da porta dos fundos
+
+Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto de variáveis de controle que não contenha descendentes de `\(X\)` e bloqueie todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)`.
+
+---
+
+## Nem todas as estimativas são causais
+
+.center[![](../../figures/table_2.png){width=60%}]
+
+- Westreich et al. (2013).
+
+---
+
+# Tabela 1
+
+.center[![](../../figures/table_1ex.png){width=60%}]
+
+---
+
+# Tabela 2
+
+.center[![](../../figures/table_2ex.png){width=60%}]
+
+---
+
+## HIV e acidente vascular cerebral
+
+.center[![](../../figures/DAGS/hiv_stroke.svg){width=40%}]
+
+---
+
+## Bons controles
+
+- Bloqueiam caminhos não causais.
+- Melhoram a precisão.
+- Permitem inferências causais.
+
+---
+
+## Maus controles
+
+- Bloqueiam caminhos causais (bloqueando caminhos).
+- Abrem caminhos não causais (abrindo colisores).
+- Reduzem a precisão.
+- Impedem inferências causais.
+
+---
+
+## Referências
+
+- Cinelli e Hazlett (2020).
+- Montgomery et al. (2018).
+- Westreich et al. (2013).
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
