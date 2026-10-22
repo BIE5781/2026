@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 175 116" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-399.078,-577.046)">
+        <g transform="matrix(1,0,0,1,194.616,569.442)">
+            <g transform="matrix(48,0,0,48,231.771,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">x</text>
+        </g>
+        <g transform="matrix(1,0,0,1,276.347,490.479)">
+            <g transform="matrix(48,0,0,48,228.171,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">z</text>
+        </g>
+        <g transform="matrix(1,0,0,1,342.633,563.298)">
+            <g transform="matrix(48,0,0,48,231.147,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">y</text>
+        </g>
+        <g transform="matrix(0.401395,0.401395,-0.707107,0.707107,631.627,169.619)">
+            <path d="M389.212,401.737L389.212,396.464L476.093,396.464L467.287,391.568L496.912,399.101L467.287,406.633L476.093,401.737L389.212,401.737Z" style="stroke:black;stroke-width:1.23px;"/>
+        </g>
+        <g transform="matrix(0.480302,-0.448282,0.682319,0.731055,-34.1122,540.402)">
+            <path d="M389.212,401.737L389.212,396.464L478.924,396.464L471.315,391.568L496.912,399.101L471.315,406.633L478.924,401.737L389.212,401.737Z" style="stroke:black;stroke-width:1.18px;"/>
+        </g>
+        <g transform="matrix(1,0,0,1,125.509,86.3592)">
+            <circle cx="366.312" cy="509.392" r="18.205" style="fill-opacity:0;stroke:black;stroke-width:1px;"/>
+        </g>
+    </g>
+</svg>

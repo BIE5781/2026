@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>Inferência causal</title>
+    <title>Inferência causal I</title>
     <meta charset="utf-8" />
     <meta name="author" content="Diogo Melo" />
     <script src="libs/header-attrs/header-attrs.js"></script>
@@ -21,7 +21,7 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# Inferência causal
+# Inferência causal I
 ]
 .subtitle[
 ## Conectando modelos científicos e estatísticos
@@ -39,6 +39,12 @@ class: center, middle, inverse, title-slide
 
 
 
+
+&lt;style type="text/css"&gt;
+.pull-left-70  { float: left;  width: 64%; }
+.pull-right-30 { float: right; width: 32%; }
+.pull-left-70 &gt; :first-child, .pull-right-30 &gt; :first-child { margin-top: 0; }
+&lt;/style&gt;
 
 
 
@@ -78,7 +84,7 @@ class: center, middle, inverse, title-slide
 
 - Um grafo causal deve ser acíclico pois causas precedem e influenciam efeitos, mas não o contrário.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-1.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-xy-1.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
 
 As variáveis `\(u_x\)` e `\(u_y\)` representam fatores não observados que afetam `\(x\)` e `\(y\)`, respectivamente. 
 Todas essas variáveis que afetam apenas um nó são independentes entre si por hipótese. 
@@ -88,7 +94,7 @@ Todas essas variáveis que afetam apenas um nó são independentes entre si por 
 
 ## Introdução à inferência causal
 
-&lt;img src="../../figures/primer.jpeg" alt="" width="30%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/primer.jpeg" alt="" width="30%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -112,7 +118,7 @@ $$
 
 ]
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado_1-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-xy-condicionado_1-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -129,7 +135,7 @@ $$
   - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
 ]
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-xy-condicionado-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ]
 
 
@@ -147,7 +153,7 @@ $$
   - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
 ]
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado-nou-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-xy-condicionado-nou-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -159,15 +165,15 @@ Todo grafo de relações causais pode ser decomposto em três tipos de relaçõe
 .center[
 **Pipe**
 
-&lt;img src="../../figures/DAGS/pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
 **Fork**
 
-&lt;img src="../../figures/DAGS/fork.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/fork.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
 **Collider**
 
-&lt;img src="../../figures/DAGS/colider.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/colider.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -176,7 +182,7 @@ Todo grafo de relações causais pode ser decomposto em três tipos de relaçõe
 
 Como um fator de confusão afeta nossa estimativa do efeito de `\(x\)` sobre `\(y\)`?
 
-&lt;img src="../../figures/DAGS/x-y_all.svg" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/x-y_all.svg" alt="" width="55%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -184,7 +190,7 @@ Como um fator de confusão afeta nossa estimativa do efeito de `\(x\)` sobre `\(
 
 Efeito direto de `\(x\)` sobre `\(y\)`, mais um fator de confusão `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-efeito-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-efeito-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 Modelo gerador implícito neste DAG: 
 
@@ -220,7 +226,7 @@ O efeito verdadeiro de `\(x\)` sobre `\(y\)` é `\(\beta_{yx} = 0{,}5\)`.
 ## Modelo sem o fator de confusão
 
 .pull-left[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-sem-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-sem-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
 
 Modelo estatístico sem o fator de confusão:
 
@@ -264,20 +270,20 @@ sigma 1.33 0.07 1.23  1.44
 
 O ponto azul indica o valor verdadeiro (`\(0.5\)`).
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-coef-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-coef-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Fork: dados e reta ajustada sem controlar por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-dados-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-dados-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Incluindo o fator de confusão
 
 .pull-left[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-com-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-com-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
 
 $$
 `\begin{aligned}
@@ -320,7 +326,7 @@ sigma 0.99 0.05 0.91  1.07
 
 ## Fork: estimativa de `\(\beta_{yx}\)` controlando por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-coef-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-coef-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -328,7 +334,7 @@ sigma 0.99 0.05 0.91  1.07
 
 Cinza: reta sem `\(z\)`. Preta e vermelha: retas para `\(z = 0\)` e `\(z = 1\)`.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-dados-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-dados-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -361,7 +367,7 @@ m2 &lt;- quap(
 ```
 ]
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-sem-efeito-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-sem-efeito-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
 ]
 
 Sem controlar por `\(z\)` (cinza) aparece uma associação espúria; controlando por `\(z\)` a inclinação é ~0.
@@ -398,7 +404,7 @@ m2 &lt;- quap(
 ]
 
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-efeito-oposto-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-efeito-oposto-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
 ]
 
 
@@ -410,7 +416,7 @@ m2 &lt;- quap(
 - É o que todo mundo gostaria de estar fazendo ao incluir preditores.
 - Muitas variáveis são incluídas no modelo sob a suposição de que são fatores de confusão cujos efeitos precisam ser considerados.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-exemplos-1.png" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-exemplos-1.png" alt="" width="50%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -418,7 +424,7 @@ m2 &lt;- quap(
 
 R. A. Fisher, o cara do ML e da teoria evolutiva, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-tabagismo-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-tabagismo-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -426,19 +432,19 @@ R. A. Fisher, o cara do ML e da teoria evolutiva, não estava convencido de que 
 
 Em Yellowstone, podemos perguntar se o risco de predação por lobos altera onde os alces usam o habitat. Mas relevo e cobertura vegetal também podem afetar a distribuição de ambas as espécies; por isso, a associação espacial entre lobos e alces, sozinha, não identifica o efeito causal (exemplo inspirado em Ripple e Beschta, 2004).
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-distribuicao-especies-1.png" alt="" width="65%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-distribuicao-especies-1.png" alt="" width="65%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Viés por variável omitida
 
 .pull-left[
-&lt;img src="../../figures/omitted.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/omitted.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 - Carlos Cinelli e Chad Hazlett (2020).
 ]
 .pull-right[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-u-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-u-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -447,7 +453,7 @@ Em Yellowstone, podemos perguntar se o risco de predação por lobos altera onde
 
 - Todo o efeito de `\(x\)` sobre `\(y\)` é mediado por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-efeito-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-pipe-efeito-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -481,7 +487,7 @@ y &lt;- rnorm(N, 1 + 2*z)           # y ~ Normal(1 + 2z, 1)
 ## Modelo sem o mediador
 
 .pull-left[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-sem-mediador-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-pipe-sem-mediador-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 
 
 ``` r
@@ -513,14 +519,14 @@ sigma 1.35 0.07 1.24  1.45
 
 O ponto azul é o efeito total de `\(x\)` sobre `\(y\)` (aprox. `\(2\,E[p(1-p)]\)`, com `\(p = \mathrm{invlogit}(x)\)`).
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-coef-sem-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-sem-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
 
 ## Pipe: dados e reta ajustada sem controlar por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-sem-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-sem-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -559,28 +565,28 @@ sigma  0.97 0.05  0.89  1.05
 
 O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pelo mediador bloqueia o caminho.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-coef-com-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-com-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
 
 ## Pipe: dados e retas ajustadas controlando por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-com-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-com-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Z é um Pipe vs. Z é um Fork
 
 .pull-left[
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-pipe-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
 - Incluir o mediador `\(z\)` no modelo bloqueia o **caminho causal** de `\(x\)` para `\(y\)`, mascarando o efeito total de `\(x\)` sobre `\(y\)`.
 
 ]
 .pull-right[
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
 - Incluir o fator de confusão `\(z\)` no modelo bloqueia o **caminho espúrio** de `\(x\)` para `\(y\)`, recuperando o efeito causal de `\(x\)` sobre `\(y\)`.
 
@@ -594,7 +600,7 @@ O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pe
 
 - Um erro comum é incluir variáveis medidas após o tratamento.
 
-&lt;img src="../../figures/DAGS/x-y_pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/x-y_pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -602,7 +608,7 @@ O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pe
 
 Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento sobre o peso final pode ser mediada pela presença do fungo. Como o fungo é medido após o tratamento, incluí-lo como controle pode mascarar o efeito total da intervenção.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-tratamento-fungico-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-tratamento-fungico-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -610,9 +616,11 @@ Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do
 
 Intervenção de apoio familiar (`\(T\)`), qualidade parental pós-tratamento (`\(Q\)`) e nota na prova (`\(Y\)`). Educação dos pais (`\(X\)`) é pré-tratamento.
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-intervencao-educacao-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-intervencao-educacao-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
 
 ---
+
+## Calculando o efeito causal médio da intervenção
 
 Intervenção **randomizada**; fixamos uma categoria de educação parental (`\(X\)`). A tabela mostra perfis potenciais de `\(Q\)` e notas sem/com intervenção.
 
@@ -661,23 +669,33 @@ Em `\(Q\)` baixa, o controle também inclui quem melhoraria com a intervenção;
 
 ## Nota na prova: sem e com condicionamento em `\(Q\)`
 
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-simulacao-pos-tratamento-1.png" alt="" width="95%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-simulacao-pos-tratamento-1.png" alt="" width="95%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Condicionamento em variáveis pós-tratamento
 
-&lt;img src="../../figures/post_treatment_paper.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+.pull-left-70[
+&lt;img src="figures/post_treatment_paper.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
 Montgomery et al. (2018).
+]
+
+--
+
+
+- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito de uma droga numa população de macacos. A pergunta é  se a droga afeta a pressão arterial. Ela mediu a quantidade de droga no sangue e a pressão arterial. A dúvida é se ela deveria incluir a quantidade de droga no sangue como covariável no modelo. 
+
+O que você responde?
+
 
 ---
 
-# Colisor
+# Collider
 
 ## `\(x\)` não afeta `\(y\)`, mas ambos afetam `\(z\)`
 
-&lt;img src="../../figures/DAGS/x-y_colider2.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-colisor-introducao-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -685,9 +703,9 @@ Montgomery et al. (2018).
 
 $$
 `\begin{aligned}
-y &amp;\sim \mathrm{Normal}(0, 1) \\
-x &amp;\sim \mathrm{Normal}(0, 1) \\
-z &amp;\sim \mathrm{Bernoulli}\big(\mathrm{invlogit}(-2 + 2x + 2y)\big)
+y &amp;\sim \mathcal{f}(u_y) \\
+x &amp;\sim \mathcal{f}(u_x) \\
+z &amp;\sim \mathcal{f}(x, y, u_z)
 \end{aligned}`
 $$
 
@@ -710,7 +728,8 @@ z &lt;- rbinom(N, 1, inv_logit(2*x + 2*y - 2))  # z ~ Bernoulli(invlogit(2x + 2y
 
 ## Modelo sem o colisor
 
-&lt;img src="../../figures/DAGS/x-y_colider2.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+.pull-left[
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-colisor-linear-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
 
 ``` r
@@ -724,34 +743,34 @@ m1 &lt;- quap(
   ),
   data = list(y = y, x = x)
 )
-(pm1 &lt;- precis(m1))
+precis(m1) |&gt; round(2)
 ```
 
 ```
-             mean         sd       5.5%      94.5%
-a      0.04147604 0.07114080 -0.0722207 0.15517277
-bx    -0.02303034 0.07665704 -0.1455431 0.09948242
-sigma  1.00544676 0.05008532  0.9254007 1.08549278
+       mean   sd  5.5% 94.5%
+a      0.04 0.07 -0.07  0.16
+bx    -0.02 0.08 -0.15  0.10
+sigma  1.01 0.05  0.93  1.09
 ```
+]
+.pull-right[
+- Estimativa do efeito de `\(x\)` sem condicionar em `\(z\)`
+- O ponto azul indica o valor verdadeiro (`\(0\)`).
+
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-colisor-coef-sem-condicionamento-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
-## Colisor: estimativa do efeito de `\(x\)` sem condicionar em `\(z\)`
+## Collider: dados e reta sem condicionar em `\(z\)`
 
-O ponto azul indica o valor verdadeiro (`\(0\)`).
-
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-coef-sem-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Colisor: dados e reta ajustada sem condicionar em `\(z\)`
-
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-sem-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-colisor-sem-condicionamento-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Condicionando no colisor
 
+.pull-left[
 
 ``` r
 m2 &lt;- quap(
@@ -765,38 +784,53 @@ m2 &lt;- quap(
   ),
   data = list(y = y, x = x, z = z)
 )
-(pm2 &lt;- precis(m2))
+precis(m2) |&gt; round(2)
 ```
 
 ```
-            mean         sd       5.5%      94.5%
-a     -0.2908435 0.07595448 -0.4122334 -0.1694536
-bx    -0.2334007 0.07269823 -0.3495865 -0.1172149
-bz     1.1327623 0.14704750  0.8977520  1.3677726
-sigma  0.8835346 0.04402900  0.8131677  0.9539014
+       mean   sd  5.5% 94.5%
+a     -0.29 0.08 -0.41 -0.17
+bx    -0.23 0.07 -0.35 -0.12
+bz     1.13 0.15  0.90  1.37
+sigma  0.88 0.04  0.81  0.95
 ```
-
----
-
-## Colisor: estimativa do efeito de `\(x\)` condicionando em `\(z\)`
-
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-coef-com-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Colisor: dados e retas ajustadas condicionando em `\(z\)`
-
-Condicionar no colisor cria uma associação espúria entre `\(x\)` e `\(y\)` dentro de cada grupo de `\(z\)`.
-
-&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-com-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Colisores podem enviesar nossas amostras
-
-.center[
-&lt;img src="../../figures/restaurant_colider.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;&lt;img src="../../figures/research_colider.svg" alt="" width="50%" style="display: block; margin: auto;" /&gt;
 ]
+
+--
+
+.pull-right[
+- Estimativa do efeito de `\(x\)` condicionando em `\(z\)`
+- O ponto azul indica o valor verdadeiro (`\(0\)`). 
+
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-colisor-coef-com-condicionamento-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## Collider: dados e reta condicionando em `\(z\)`
+
+.pull-left-70[
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-colisor-com-condicionamento-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+.pull-right-30[
+- Condicionar pelo colisor cria uma associação espúria entre `\(x\)` e `\(y\)` dentro de cada grupo de `\(z\)`.
+- Essa associação é significativa e ajuda na previsão de `\(y\)` a partir de `\(x\)`, mas não é causal.
+]
+
+---
+
+## Collideres podem enviesar nossas amostras
+
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-colisor-restaurantes-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Colisor: restaurantes que existem
+
+Qualidade e localização são independentes, mas ambas aumentam a chance de o restaurante existir.
+
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-simulacao-restaurantes-1.png" alt="" width="75%" style="display: block; margin: auto;" /&gt;
+
 
 ---
 
@@ -817,7 +851,7 @@ Se representarmos nossas relações causais propostas por meio de DAGs, teremos 
 
 ## Identifique todos os caminhos abertos de `\(X\)` a `\(Y\)`
 
-&lt;img src="../../figures/DAGS/paths_dag.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/paths_dag.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -829,27 +863,27 @@ Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto d
 
 ## Nem todas as estimativas são causais
 
-&lt;img src="../../figures/table_2.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/table_2.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 
 - Westreich et al. (2013).
 
 ---
 
-# Tabela 1
+## Falácia da tabela 2
 
-&lt;img src="../../figures/table_1ex.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
-
----
-
-# Tabela 2
-
-&lt;img src="../../figures/table_2ex.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
-
----
+.pull-left[
+Tabela 1: resumo da amostra
+&lt;img src="figures/table_1ex.jpeg" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+.pull-right[
+Tabela 2: ajuste do modelo
+&lt;img src="figures/table_2ex.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+Nem todos os coeficientes são estimativas de efeitos causais. 
+]
 
 ## HIV e acidente vascular cerebral
 
-&lt;img src="../../figures/DAGS/hiv_stroke.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figures/DAGS/hiv_stroke.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;
 
 ---
 

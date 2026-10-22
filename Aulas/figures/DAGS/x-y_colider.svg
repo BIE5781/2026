@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 166 142" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-286.354,-352.579)">
+        <g transform="matrix(1,0,0,1,81.8917,286.646)">
+            <g transform="matrix(48,0,0,48,231.771,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">x</text>
+        </g>
+        <g transform="matrix(1,0,0,1,150.823,370.148)">
+            <g transform="matrix(48,0,0,48,228.171,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">z</text>
+        </g>
+        <g transform="matrix(1,0,0,1,220.859,280.619)">
+            <g transform="matrix(48,0,0,48,231.147,116.744)">
+            </g>
+            <text x="203.979px" y="116.744px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">y</text>
+        </g>
+        <g transform="matrix(1,0,0,1,-74.394,-7.18234)">
+            <path d="M389.212,401.737L389.212,396.464L485.094,396.464L480.095,391.568L496.912,399.101L480.095,406.633L485.094,401.737L389.212,401.737Z" style="fill:rgb(216,15,15);stroke:black;stroke-width:1px;"/>
+        </g>
+        <g transform="matrix(0.348569,0.441108,-0.784601,0.620001,493.954,-6.6571)">
+            <path d="M389.212,401.737L389.212,396.464L475.891,396.464L467,391.568L496.912,399.101L467,406.633L475.891,401.737L389.212,401.737Z" style="stroke:black;stroke-width:1.23px;"/>
+        </g>
+        <g transform="matrix(-0.372319,0.450854,-0.771067,-0.636754,872.4,490.726)">
+            <path d="M389.212,401.737L389.212,396.464L476.7,396.464L468.151,391.568L496.912,399.101L468.151,406.633L476.7,401.737L389.212,401.737Z" style="stroke:black;stroke-width:1.22px;"/>
+        </g>
+        <g transform="matrix(1,0,0,1,-39.5262,11.4345)">
+            <g transform="matrix(48,0,0,48,417.842,374.021)">
+            </g>
+            <text x="397.826px" y="374.021px" style="font-family:'SkolarPE-Semibold', 'Skolar PE';font-weight:600;font-size:48px;">?</text>
+        </g>
+        <g transform="matrix(1,0,0,1,-0.0147561,-34.0335)">
+            <circle cx="366.312" cy="509.392" r="18.205" style="fill-opacity:0;stroke:black;stroke-width:1px;"/>
+        </g>
+    </g>
+</svg>
