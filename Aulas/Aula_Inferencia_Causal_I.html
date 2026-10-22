@@ -834,73 +834,83 @@ Qualidade e localização são independentes, mas ambas aumentam a chance de o r
 
 ---
 
-## Usando DAGs para construir modelos
+## AIC e signicância não vão te salvar
 
-Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
 
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+``` r
+set.seed(1); N &lt;- 100
+x &lt;- rnorm(N); y &lt;- rnorm(N); 
+z &lt;- rnorm(N, mean = x + y)
+m1 &lt;- lm(y ~ x); summary(m1)
+```
 
----
+```
 
-## Caminhos abertos e fechados
+Call:
+lm(formula = y ~ x)
 
-- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
-- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-1.8768 -0.6138 -0.1395  0.5394  2.3462 
 
----
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept) -0.03769    0.09699  -0.389    0.698
+x           -0.00106    0.10773  -0.010    0.992
 
-## Identifique todos os caminhos abertos de `\(X\)` a `\(Y\)`
-
-&lt;img src="figures/DAGS/paths_dag.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Critério da porta dos fundos
-
-Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto de variáveis de controle que não contenha descendentes de `\(X\)` e bloqueie todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)`.
-
----
-
-## Nem todas as estimativas são causais
-
-&lt;img src="figures/table_2.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
-
-- Westreich et al. (2013).
+Residual standard error: 0.9628 on 98 degrees of freedom
+Multiple R-squared:  9.887e-07,	Adjusted R-squared:  -0.0102 
+F-statistic: 9.689e-05 on 1 and 98 DF,  p-value: 0.9922
+```
 
 ---
 
-## Falácia da tabela 2
+## AIC e signicância não vão te salvar
 
 .pull-left[
-Tabela 1: resumo da amostra
-&lt;img src="figures/table_1ex.jpeg" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+``` r
+m2 &lt;- lm(y ~ x + z)
+summary(m2)
+```
+
+```
+
+Call:
+lm(formula = y ~ x + z)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.42104 -0.49828  0.07147  0.52095  1.67434 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) -0.03295    0.07326  -0.450    0.654    
+x           -0.47012    0.09780  -4.807 5.60e-06 ***
+z            0.45981    0.05318   8.646 1.12e-13 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.7272 on 97 degrees of freedom
+Multiple R-squared:  0.4352,	Adjusted R-squared:  0.4236 
+F-statistic: 37.38 on 2 and 97 DF,  p-value: 9.244e-13
+```
 ]
+
+--
+
 .pull-right[
-Tabela 2: ajuste do modelo
-&lt;img src="figures/table_2ex.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
-Nem todos os coeficientes são estimativas de efeitos causais. 
+
+``` r
+bbmle::AICtab(m1, m2)
+```
+
+```
+   dAIC df
+m2  0.0 4 
+m1 55.1 3 
+```
 ]
-
-## HIV e acidente vascular cerebral
-
-&lt;img src="figures/DAGS/hiv_stroke.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Bons controles
-
-- Bloqueiam caminhos não causais.
-- Melhoram a precisão.
-- Permitem inferências causais.
-
----
-
-## Maus controles
-
-- Bloqueiam caminhos causais (bloqueando caminhos).
-- Abrem caminhos não causais (abrindo colisores).
-- Reduzem a precisão.
-- Impedem inferências causais.
 
 ---
 

@@ -1281,83 +1281,33 @@ ggplot2::ggplot(rest, ggplot2::aes(L, Q, color = existe)) +
 
 ---
 
-## Usando DAGs para construir modelos
+## AIC e signicância não vão te salvar
 
-Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
-
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
-
----
-
-## Caminhos abertos e fechados
-
-- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
-- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
-
----
-
-## Identifique todos os caminhos abertos de $X$ a $Y$
-
-```{r figura-caminhos-dag, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("figures/DAGS/paths_dag.png")
+```{r collider-significance_1, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+set.seed(1); N <- 100
+x <- rnorm(N); y <- rnorm(N); 
+z <- rnorm(N, mean = x + y)
+m1 <- lm(y ~ x); summary(m1)
 ```
 
 ---
 
-## Critério da porta dos fundos
-
-Para estimar o efeito causal de $X$ sobre $Y$, identifique um conjunto de variáveis de controle que não contenha descendentes de $X$ e bloqueie todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$.
-
----
-
-## Nem todas as estimativas são causais
-
-```{r figura-tabela-2, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
-knitr::include_graphics("figures/table_2.png")
-```
-
-- Westreich et al. (2013).
-
----
-
-## Falácia da tabela 2
+## AIC e signicância não vão te salvar
 
 .pull-left[
-Tabela 1: resumo da amostra
-```{r figura-tabela_1, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center"}
-knitr::include_graphics("figures/table_1ex.jpeg")
+```{r collider-significance_2, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+m2 <- lm(y ~ x + z)
+summary(m2)
 ```
 ]
+
+--
+
 .pull-right[
-Tabela 2: ajuste do modelo
-```{r figura-tabela_2, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center"}
-knitr::include_graphics("figures/table_2ex.png")
+```{r collider-aic, echo=TRUE, eval=TRUE}
+bbmle::AICtab(m1, m2)
 ```
-Nem todos os coeficientes são estimativas de efeitos causais. 
 ]
-
-## HIV e acidente vascular cerebral
-
-```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, out.width="40%", fig.align="center"}
-knitr::include_graphics("figures/DAGS/hiv_stroke.svg")
-```
-
----
-
-## Bons controles
-
-- Bloqueiam caminhos não causais.
-- Melhoram a precisão.
-- Permitem inferências causais.
-
----
-
-## Maus controles
-
-- Bloqueiam caminhos causais (bloqueando caminhos).
-- Abrem caminhos não causais (abrindo colisores).
-- Reduzem a precisão.
-- Impedem inferências causais.
 
 ---
 
