@@ -376,7 +376,7 @@ $$f(x) = \frac{n!}{x!(n-x)!} p^x (1 - p)^{n - x}, \qquad x=0, 1,2,\ldots,n$$
 gênero masculino ao nascer (Geissler 1889, *apud* Lindsey (2004)):
 
 .center[
-```{r saxonia, out.width = "75%"}
+```{r saxonia, out.width = "70%"}
 ## Exemplo Lindsey p. 171: filhos de gênero masculino em 6115 famílias de 12 filhos
 x <- 0:12
 y <- c(3, 24, 104, 286, 670, 1033, 1343, 1112, 829, 478, 181, 45, 7)
@@ -1265,7 +1265,7 @@ O efeito de $x$ depende do próprio valor de $x$: é como se $x$
 
 .pull-right[
 
-```{r tangentes-pois, echo=FALSE, fig.width=5, fig.asp=1, out.width="100%"}
+```{r tangentes-pois, echo=FALSE, fig.width=5, fig.asp=1, out.width="90%"}
 plot(ncap ~ lareac, data = aves, col = "grey50",
      xlab = "Ln área do fragmento centrado (ha)",
      ylab = "N de capturas") 
@@ -1303,7 +1303,7 @@ $$\frac{d \ln \lambda}{dx} = \beta_1$$
 
 .pull-right[
 
-```{r ligacao-pois, echo=FALSE, fig.width=5, fig.asp=1, out.width="100%"}
+```{r ligacao-pois, echo=FALSE, fig.width=5, fig.asp=1, out.width="90%"}
 eta.grid <- mean(post.p$b0) + mean(post.p$b1) * x.grid
 eta.x0   <- mean(post.p$b0) + mean(post.p$b1) * x0
 plot(log(ncap) ~ lareac, data = subset(aves, ncap > 0), col = "grey50",
@@ -1395,7 +1395,7 @@ os efeitos é calcular os previstos na escala da resposta e compará-los.
 
 ---
 
-## Com duas preditoras: interação embutida
+## Com duas preditoras: interação implícita
 
 ```{r duas-preditoras, include=FALSE}
 ## Ilustração: segunda preditora binária hipotética, com efeito beta2 = 0,8
@@ -1422,7 +1422,7 @@ $$\frac{\partial \lambda}{\partial x_1} = \beta_1 \, e^{\beta_0 + \beta_1 x_1 + 
 
 .pull-right[
 
-```{r grafico-duas-preditoras, echo=FALSE, fig.width=5, fig.asp=1, out.width="100%"}
+```{r grafico-duas-preditoras, echo=FALSE, fig.width=5, fig.asp=1, out.width="90%"}
 curve(lam2(x, 1), from = min(aves$lareac), to = max(aves$lareac),
       lwd = 2, col = cores.tg[2], ylim=c(0,12),
       xlab = expression(x[1]), ylab = expression(lambda))
