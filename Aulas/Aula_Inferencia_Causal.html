@@ -45,6 +45,7 @@ class: center, middle, inverse, title-slide
 # Para que servem os modelos?
 
 - Previsões: 
+  
   - O que vai acontecer?
   - Qual a probabilidade de um evento dado um conjunto de condições? 
 
@@ -61,7 +62,7 @@ class: center, middle, inverse, title-slide
 
 ---
 
-## Causação e correlação
+## Causas e correlações
 
 .center[
 **Por que correlação não implica causalidade?**
@@ -71,14 +72,17 @@ class: center, middle, inverse, title-slide
 
 ## Representação gráfica de modelos
 
-Podemos representar nosso modelo causal proposto por  meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+- Podemos representar nosso modelo causal proposto por  meio de grafos. Uma seta entre variáveis representa um possível efeito causal.
+
+- Directed acyclic graphs (DAGs) são grafos direcionados e acíclicos, ou seja, não possuem ciclos (uma cadeia de setas que retorna ao mesmo nó).
+
+- Um grafo causal deve ser acíclico pois causas precedem e influenciam efeitos, mas não o contrário.
 
 &lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-1.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
 
 As variáveis `\(u_x\)` e `\(u_y\)` representam fatores não observados que afetam `\(x\)` e `\(y\)`, respectivamente. 
-Essas variáveis normalmente são implicitas nos DAGs e omitidas nas representações gráficas.
+Todas essas variáveis que afetam apenas um nó são independentes entre si por hipótese. 
 
-Todas essas variáveis que afetam apenas um nó são independentes entre si por hipotese. 
 
 ---
 
@@ -88,9 +92,69 @@ Todas essas variáveis que afetam apenas um nó são independentes entre si por 
 
 ---
 
-# Caminhos, bifurcações e colisores
+## Grafos e relações funcionais
 
-## Tríades elementares
+.pull-left[
+- Um grafo causal representa relações funcionais entre variáveis. Por exemplo, o DAG ao lado representa a seguinte relação funcional:
+
+$$
+`\begin{aligned}
+x_1 &amp;= \mathcal{f}(u_1) \\
+x_2 &amp;= \mathcal{f}(x_1, u_2) \\
+x_3 &amp;= \mathcal{f}(x_1, u_3) \\
+x_4 &amp;= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &amp;= \mathcal{f}(x_4, u_5)
+\end{aligned}`
+$$
+
+- Essas relações são conhecidas como equações estruturais.
+- De forma geral, todas as setas que entram em um nó são os **pais** desse nó, e podemos escrever esse modelos como `\(x_i = \mathcal{f}({pa}_i, u_i)\)`, onde `\({pa}_i\)` são os pais de `\(x_i\)`.
+
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado_1-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## Consequências das relações causais
+
+.pull-left[
+- Relações causais representadas num DAG implicam relações de independência condicional entre as variáveis.
+
+- Hipótese de independência:
+
+  - Todas as variáveis que afetam apenas uma variável são independentes entre si.
+
+  - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+## Consequências das relações causais
+
+.pull-left[
+- Relações causais representadas num DAG implicam relações de independência condicional entre as variáveis.
+
+- Hipótese de independência:
+
+  - Todas as variáveis que afetam apenas uma variável são independentes entre si. (normalmente omitidas nos DAGs)
+
+  - Se condicionarmos em todos os pais de uma variável, então essa variável é independente de todas as outras variáveis que não são descendentes dela.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-xy-condicionado-nou-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Tríades elementares
+
+Todo grafo de relações causais pode ser decomposto em três tipos de relações elementares: pipes, forks e colliders.
 
 .center[
 **Pipe**
@@ -134,137 +198,256 @@ $$
 
 ---
 
+
+
+## Fork: dados simulados
+
+Aqui o fator de confusão `\(z\)` é uma variável **discreta** (binária):
+
+
+``` r
+set.seed(2)
+N &lt;- 200
+z &lt;- rbinom(N, 1, 0.5)          # z ~ Bernoulli(0.5)
+x &lt;- rnorm(N, 1 + z)            # x ~ Normal(1 + z, 1)
+y &lt;- rnorm(N, 1 + 0.5*x + 2*z)  # y ~ Normal(1 + 0.5x + 2z, 1)
+```
+
+O efeito verdadeiro de `\(x\)` sobre `\(y\)` é `\(\beta_{yx} = 0{,}5\)`.
+
+---
+
 ## Modelo sem o fator de confusão
 
-&lt;img src="../../figures/DAGS/x-y_fork.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+.pull-left[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-sem-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
 
 Modelo estatístico sem o fator de confusão:
 
 $$
 `\begin{aligned}
 y &amp;\sim \mathrm{Normal}(\mu, \sigma) \\
-\mu &amp;= a + bx \\
-a &amp;\sim \mathrm{Normal}(0, 0.3) \\
-b &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\mu &amp;= \alpha + \beta_{x}x \\
+\alpha &amp;\sim \mathrm{Normal}(0, 5) \\
+\beta_{x} &amp;\sim \mathrm{Normal}(0, 0.3) \\
 \sigma &amp;\sim \mathrm{Exponential}(1)
 \end{aligned}`
 $$
-
----
-
-## Modelo `ulam` sem o fator de confusão
-
-&lt;img src="../../figures/DAGS/x-y_fork.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
-
+]
+.pull-right[
 
 ``` r
-N &lt;- 100
-z &lt;- rnorm(N)             # z ~ Normal(0, 1)
-x &lt;- rnorm(N, 1 + z)      # x ~ Normal(1 + z, 1)
-y &lt;- rnorm(N, 1 + x + z)  # y ~ Normal(1 + x + z, 1)
-
-m1 &lt;- ulam(
+m1 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
   ),
   data = list(y = y, x = x)
 )
+precis(m1) |&gt; round(2)
 ```
+
+```
+      mean   sd 5.5% 94.5%
+a     1.49 0.16 1.24  1.74
+bx    0.83 0.08 0.70  0.96
+sigma 1.33 0.07 1.23  1.44
+```
+]
 
 ---
 
-## Estimativas do modelo sem o fator de confusão
+## Fork: estimativa de `\(\beta_{yx}\)` sem controlar por `\(z\)`
 
-```text
-&gt; precis(m1)
-      mean   sd 5.5% 94.5% n_eff Rhat4
-a     0.54 0.14 0.32  0.77  1274     1
-bx    1.47 0.08 1.34  1.60  1432     1  # Estimativa do efeito de x sobre y
-sigma 1.33 0.10 1.19  1.49  1418     1
-```
+O ponto azul indica o valor verdadeiro (`\(0.5\)`).
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-coef-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-## `\(P(\beta_{yx} \mid x, y)\)` sem o fator de confusão
+## Fork: dados e reta ajustada sem controlar por `\(z\)`
 
-&lt;img src="../../figures/x-y_fork_non_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-dados-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Incluindo o fator de confusão
 
+.pull-left[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-com-confusao-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+
+$$
+`\begin{aligned}
+y &amp;\sim \mathrm{Normal}(\mu, \sigma) \\
+\mu &amp;= a + \beta_{x}x + \beta_{z}z \\
+\alpha &amp;\sim \mathrm{Normal}(0, 5) \\
+\beta_{x} &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{z} &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\sigma &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}`
+$$
+]
+.pull-right[
 
 ``` r
-m2 &lt;- ulam(
+m2 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Novo parâmetro para o fator de confusão
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 0.3),
+    bz ~ dnorm(0,0.3),
+    sigma ~ dexp(1)
   ),
   data = list(y = y, x = x, z = z)
 )
+precis(m2) |&gt; round(2)
 ```
 
-```text
-&gt; precis(m2)
-       mean   sd 5.5% 94.5% n_eff Rhat4
-a      0.95 0.14 0.72  1.17   942     1
-bx     1.06 0.10 0.91  1.22   837     1
-bz     0.82 0.12 0.62  1.02   889     1
-sigma  1.09 0.08 0.97  1.22  1200     1
 ```
+      mean   sd 5.5% 94.5%
+a     1.16 0.12 0.97  1.35
+bx    0.56 0.07 0.45  0.66
+bz    1.62 0.14 1.40  1.85
+sigma 0.99 0.05 0.91  1.07
+```
+]
 
 ---
 
-## `\(P(\beta_{yx} \mid x, y)\)` com o fator de confusão
+## Fork: estimativa de `\(\beta_{yx}\)` controlando por `\(z\)`
 
-&lt;img src="../../figures/x-y_fork_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-coef-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-## Exemplos de bifurcações ou fatores de confusão
+## Fork: dados e retas ajustadas controlando por `\(z\)`
+
+Cinza: reta sem `\(z\)`. Preta e vermelha: retas para `\(z = 0\)` e `\(z = 1\)`.
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-dados-com-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Fork: ausência de efeito de `\(x\)` sobre `\(y\)`
+
+Agora `\(x\)` **não** afeta `\(y\)`: ambos dependem apenas de `\(z\)`.
+
+.pull-left[
+
+``` r
+set.seed(8)
+z &lt;- rbinom(N, 1, 0.5)  
+x &lt;- rnorm(N, 1 + 2*z)
+y &lt;- rnorm(N, 2*z)      
+m1 &lt;- quap(
+  alist(
+    y ~ dnorm(a + bx * x, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x))
+m2 &lt;- quap(
+  alist(
+    y ~ dnorm(a + bx * x + bz * z, sigma),
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1),
+    bz ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x, z = z))
+```
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-sem-efeito-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+]
+
+Sem controlar por `\(z\)` (cinza) aparece uma associação espúria; controlando por `\(z\)` a inclinação é ~0.
+
+---
+
+## Fork: efeito de `\(x\)` com sinal oposto ao da correlação
+
+Sem `\(z\)` (cinza) a inclinação tem o sinal errado (paradoxo de Simpson); com `\(z\)`, as retas recuperam o efeito negativo.
+
+.pull-left[
+
+``` r
+set.seed(1)
+z &lt;- rbinom(N, 1, 0.5) 
+x &lt;- rnorm(N, -1 - 2*z)  
+y &lt;- rnorm(N, -1*x - 5*z) 
+m1 &lt;- quap(
+  alist(
+    y ~ dnorm(a + bx * x, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x))
+m2 &lt;- quap(
+  alist(
+    y ~ dnorm(a + bx * x + bz * z, sigma), 
+    a ~ dnorm(0, 5), 
+    bx ~ dnorm(0, 1),
+    bz ~ dnorm(0, 1), 
+    sigma ~ dexp(1)),
+  data = list(y = y, x = x, z = z))
+```
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-fork-efeito-oposto-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+## Exemplos de forks ou fatores de confusão
 
 - Esta é a variável de controle por excelência.
+- É o que todo mundo gostaria de estar fazendo ao incluir preditores.
 - Muitas variáveis são incluídas no modelo sob a suposição de que são fatores de confusão cujos efeitos precisam ser considerados.
 
-&lt;img src="../../figures/DAGS/x-y_fork.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-exemplos-1.png" alt="" width="50%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Tabagismo e câncer
 
-R. A. Fisher, famoso, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
+R. A. Fisher, o cara do ML e da teoria evolutiva, não estava convencido de que fumar causava câncer e propôs que uma predisposição não observada causava tanto o câncer quanto o tabagismo.
 
-&lt;img src="../../figures/smoking_cancer.png" alt="" width="50%" style="display: block; margin: auto;" /&gt;
-
----
-
-## Viés por variável omitida
-
-&lt;img src="../../figures/omitted.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
-
-- Carlos Cinelli e Chad Hazlett (2020).
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-tabagismo-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Distribuições de espécies
 
-Podemos querer avaliar o efeito de um predador sobre a distribuição de uma presa. Porém, a distribuição espacial de ambos pode ser afetada por algum fator abiótico:
+Em Yellowstone, podemos perguntar se o risco de predação por lobos altera onde os alces usam o habitat. Mas relevo e cobertura vegetal também podem afetar a distribuição de ambas as espécies; por isso, a associação espacial entre lobos e alces, sozinha, não identifica o efeito causal (exemplo inspirado em Ripple e Beschta, 2004).
 
-&lt;img src="../../figures/species_predator.png" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-distribuicao-especies-1.png" alt="" width="65%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-# Caminho
+## Viés por variável omitida
 
-## Todo o efeito de `\(x\)` sobre `\(y\)` é mediado por `\(z\)`
+.pull-left[
+&lt;img src="../../figures/omitted.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
-&lt;img src="../../figures/DAGS/x-y_pipe2.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+- Carlos Cinelli e Chad Hazlett (2020).
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-u-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## Pipe
+
+- Todo o efeito de `\(x\)` sobre `\(y\)` é mediado por `\(z\)`
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-efeito-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -272,90 +455,144 @@ Podemos querer avaliar o efeito de um predador sobre a distribuição de uma pre
 
 $$
 `\begin{aligned}
-y &amp;\sim \mathrm{Normal}(\alpha_y + \beta_{yz}z, \sigma_y) \\
-z &amp;\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x, \sigma_z) \\
-x &amp;\sim \mathrm{Normal}(\alpha_x, \sigma_x)
+y &amp;= \mathcal{f}(z, u_y) \\
+z &amp;= \mathcal{f}(x, u_z) \\
+x &amp;= \mathcal{f}(u_x)
 \end{aligned}`
 $$
+
+--
+
+### Dados simulados
+
+O mediador `\(z\)` também é binário:
+
+
+``` r
+set.seed(2)
+N &lt;- 200
+x &lt;- rnorm(N)                    # x ~ Normal(0, 1)
+z &lt;- rbinom(N, 1, inv_logit(x))  # z ~ Bernoulli(invlogit(x))
+y &lt;- rnorm(N, 1 + 2*z)           # y ~ Normal(1 + 2z, 1)
+```
 
 ---
 
 ## Modelo sem o mediador
 
-&lt;img src="../../figures/DAGS/x-y_pipe2.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
+.pull-left[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-sem-mediador-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 
 
 ``` r
-set.seed(1)
-N &lt;- 100
-x &lt;- rnorm(N)        # x ~ Normal(0, 1)
-z &lt;- rnorm(N, 1 + x) # z ~ Normal(1 + x, 1)
-y &lt;- rnorm(N, 1 + z) # y ~ Normal(1 + z, 1)
-
-m1 &lt;- ulam(
+m1 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x)
 )
+precis(m1) |&gt; round(2)
 ```
+
+```
+      mean   sd 5.5% 94.5%
+a     2.10 0.10 1.95  2.26
+bx    0.39 0.09 0.24  0.53
+sigma 1.35 0.07 1.24  1.45
+```
+]
+
+--
+
+.pull-right[
+### Estimativa do efeito de `\(x\)` sem controlar por `\(z\)`
+
+O ponto azul é o efeito total de `\(x\)` sobre `\(y\)` (aprox. `\(2\,E[p(1-p)]\)`, com `\(p = \mathrm{invlogit}(x)\)`).
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-coef-sem-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
-## `\(P(\beta_{yx} \mid x, y)\)` sem o mediador
+## Pipe: dados e reta ajustada sem controlar por `\(z\)`
 
-
-``` r
-m1 &lt;- ulam(
-  alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
-  ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
-)
-```
-
-&lt;img src="../../figures/x-y_pipe_non_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-sem-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Incluindo o mediador
 
+.pull-left[
 
 ``` r
-m2 &lt;- ulam(
+m2 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Mediador
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    bz ~ dnorm(0, 5),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x, z = z),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x, z = z)
 )
+precis(m2) |&gt; round(2)
 ```
 
-&lt;img src="../../figures/x-y_pipe_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+```
+       mean   sd  5.5% 94.5%
+a      1.04 0.10  0.87  1.21
+bx    -0.04 0.07 -0.16  0.07
+bz     2.09 0.15  1.84  2.33
+sigma  0.97 0.05  0.89  1.05
+```
+]
+
+--
+
+.pull-right[
+### Estimativa do efeito de `\(x\)` controlando por `\(z\)`
+
+O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pelo mediador bloqueia o caminho.
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-coef-com-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
-## Caminho versus bifurcação
+## Pipe: dados e retas ajustadas controlando por `\(z\)`
 
-&lt;img src="../../figures/pipe_vs_fork.svg" alt="" width="50%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-pipe-com-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Z é um Pipe vs. Z é um Fork
+
+.pull-left[
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-pipe-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+- Incluir o mediador `\(z\)` no modelo bloqueia o **caminho causal** de `\(x\)` para `\(y\)`, mascarando o efeito total de `\(x\)` sobre `\(y\)`.
+
+]
+.pull-right[
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-fork-comp-1.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+- Incluir o fator de confusão `\(z\)` no modelo bloqueia o **caminho espúrio** de `\(x\)` para `\(y\)`, recuperando o efeito causal de `\(x\)` sobre `\(y\)`.
+
+]
 
 ---
 
 ## Exemplos de caminhos ou mediadores
 
-Incluir um mediador em nossos modelos pode ter consequências graves. Um erro comum é incluir variáveis medidas após o tratamento.
+- Incluir um mediador em nossos modelos pode ter consequências graves. 
+
+- Um erro comum é incluir variáveis medidas após o tratamento.
 
 &lt;img src="../../figures/DAGS/x-y_pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
@@ -363,9 +600,68 @@ Incluir um mediador em nossos modelos pode ter consequências graves. Um erro co
 
 ## Variáveis pós-tratamento
 
-Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento pode ser mediada pela presença do fungo. Portanto, incluir a presença do fungo no modelo mascararia o efeito do tratamento.
+Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento sobre o peso final pode ser mediada pela presença do fungo. Como o fungo é medido após o tratamento, incluí-lo como controle pode mascarar o efeito total da intervenção.
 
-&lt;img src="../../figures/fungal_treatment.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-tratamento-fungico-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Exemplo: intervenção, educação e qualidade parental
+
+Intervenção de apoio familiar (`\(T\)`), qualidade parental pós-tratamento (`\(Q\)`) e nota na prova (`\(Y\)`). Educação dos pais (`\(X\)`) é pré-tratamento.
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-dag-intervencao-educacao-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+Intervenção **randomizada**; fixamos uma categoria de educação parental (`\(X\)`). A tabela mostra perfis potenciais de `\(Q\)` e notas sem/com intervenção.
+
+| Perfil potencial | Proporção | Qualidade parental sem `\(T\)` `\(\to\)` com `\(T\)` | Nota na prova sem `\(T\)` `\(\to\)` com `\(T\)` |
+|:--|--:|:--:|:--:|
+| Qualidade baixa de qualquer forma | 10% | Baixa `\(\to\)` Baixa | 60 `\(\to\)` 70 |
+| Qualidade melhora com a intervenção | 70% | Baixa `\(\to\)` Alta | 65 `\(\to\)` 80 |
+| Qualidade alta de qualquer forma | 20% | Alta `\(\to\)` Alta | 90 `\(\to\)` 100 |
+
+
+``` r
+media_controle   &lt;- 0.1 * 60 + 0.7 * 65 + 0.2 * 90
+media_tratamento &lt;- 0.1 * 70 + 0.7 * 80 + 0.2 * 100
+media_tratamento-media_controle
+```
+
+```
+[1] 13.5
+```
+
+---
+
+## Condicionar em `\(Q\)` 
+
+Condicionar em `\(Q\)` mistura perfis potenciais diferentes:
+
+| Qualidade observada | Controle | Tratamento | Efeito (errado) |
+|:--|:--|:--|--:|
+| Baixa | Baixa de qualquer forma + melhora com tratamento; nota média **64,4** | Só baixa de qualquer forma; nota média **70,0** | **+5,6** |
+| Alta | Só alta de qualquer forma; nota média **90,0** | Melhora com tratamento + alta de qualquer forma; nota média **84,4** | **−5,6** |
+
+
+``` r
+c(Q_baixa = 70 - (0.1 * 60 + 0.7 * 65) / 0.8,
+  Q_alta = (0.7 * 80 + 0.2 * 100) / 0.9 - 90)
+```
+
+```
+  Q_baixa    Q_alta 
+ 5.625000 -5.555556 
+```
+
+Em `\(Q\)` baixa, o controle também inclui quem melhoraria com a intervenção; em `\(Q\)` alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamentocomparam grupos distintos.
+
+---
+
+## Nota na prova: sem e com condicionamento em `\(Q\)`
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-simulacao-pos-tratamento-1.png" alt="" width="95%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -389,11 +685,26 @@ Montgomery et al. (2018).
 
 $$
 `\begin{aligned}
-y &amp;\sim \mathrm{Normal}(\alpha_y, \sigma_y) \\
-x &amp;\sim \mathrm{Normal}(\alpha_x, \sigma_x) \\
-z &amp;\sim \mathrm{Normal}(\alpha_z + \beta_{zx}x + \beta_{zy}y, \sigma_z)
+y &amp;\sim \mathrm{Normal}(0, 1) \\
+x &amp;\sim \mathrm{Normal}(0, 1) \\
+z &amp;\sim \mathrm{Bernoulli}\big(\mathrm{invlogit}(-2 + 2x + 2y)\big)
 \end{aligned}`
 $$
+
+--
+
+### Dados simulados
+
+O colisor `\(z\)` também é binário:
+
+
+``` r
+set.seed(1)
+N &lt;- 200
+x &lt;- rnorm(N)                                # x ~ Normal(0, 1)
+y &lt;- rnorm(N)                                # y ~ Normal(0, 1)
+z &lt;- rbinom(N, 1, inv_logit(2*x + 2*y - 2))  # z ~ Bernoulli(invlogit(2x + 2y - 2))
+```
 
 ---
 
@@ -403,64 +714,81 @@ $$
 
 
 ``` r
-set.seed(1)
-N &lt;- 100
-x &lt;- rnorm(N)            # x ~ Normal(0, 1)
-y &lt;- rnorm(N)            # y ~ Normal(0, 1)
-z &lt;- rnorm(N, 1 + x + y) # z ~ Normal(1 + x + y, 1): colisor
-
-m1 &lt;- ulam(
+m1 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x)
 )
+(pm1 &lt;- precis(m1))
+```
+
+```
+             mean         sd       5.5%      94.5%
+a      0.04147604 0.07114080 -0.0722207 0.15517277
+bx    -0.02303034 0.07665704 -0.1455431 0.09948242
+sigma  1.00544676 0.05008532  0.9254007 1.08549278
 ```
 
 ---
 
-## `\(P(\beta_{yx} \mid x, y)\)` sem condicionar no colisor
+## Colisor: estimativa do efeito de `\(x\)` sem condicionar em `\(z\)`
 
+O ponto azul indica o valor verdadeiro (`\(0\)`).
 
-``` r
-m1 &lt;- ulam(
-  alist(
-    y ~ normal(a + bx * x, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    sigma ~ exponential(1)
-  ),
-  data = list(y = y, x = x),
-  iter = 1000, chains = 4, cores = 4
-)
-```
-
-&lt;img src="../../figures/x-y_colider_non_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-coef-sem-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-## `\(P(\beta_{yx} \mid x, y)\)` condicionando no colisor
+## Colisor: dados e reta ajustada sem condicionar em `\(z\)`
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-sem-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Condicionando no colisor
 
 
 ``` r
-m2 &lt;- ulam(
+m2 &lt;- quap(
   alist(
-    y ~ normal(a + bx * x + bz * z, sigma),
-    a ~ normal(0, 0.3),
-    bx ~ normal(0, 0.3),
-    bz ~ normal(0, 0.3),  # Colisor
-    sigma ~ exponential(1)
+    y ~ dnorm(mu, sigma),
+    mu &lt;- a + bx * x + bz * z,
+    a ~ dnorm(0, 5),
+    bx ~ dnorm(0, 2),
+    bz ~ dnorm(0, 5),
+    sigma ~ dexp(1)
   ),
-  data = list(y = y, x = x, z = z),
-  iter = 1000, chains = 4, cores = 4
+  data = list(y = y, x = x, z = z)
 )
+(pm2 &lt;- precis(m2))
 ```
 
-&lt;img src="../../figures/x-y_colider_corrected.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+```
+            mean         sd       5.5%      94.5%
+a     -0.2908435 0.07595448 -0.4122334 -0.1694536
+bx    -0.2334007 0.07269823 -0.3495865 -0.1172149
+bz     1.1327623 0.14704750  0.8977520  1.3677726
+sigma  0.8835346 0.04402900  0.8131677  0.9539014
+```
+
+---
+
+## Colisor: estimativa do efeito de `\(x\)` condicionando em `\(z\)`
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-coef-com-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Colisor: dados e retas ajustadas condicionando em `\(z\)`
+
+Condicionar no colisor cria uma associação espúria entre `\(x\)` e `\(y\)` dentro de cada grupo de `\(z\)`.
+
+&lt;img src="Aula_Inferencia_Causal_files/figure-html/figura-colisor-com-condicionamento-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -546,6 +874,7 @@ Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto d
 
 - Cinelli e Hazlett (2020).
 - Montgomery et al. (2018).
+- Ripple, W. J. e Beschta, R. L. (2004). “Wolves and the ecology of fear: Can predation risk structure ecosystems?” *BioScience*, 54(8), 755–766.
 - Westreich et al. (2013).
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
