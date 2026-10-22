@@ -1,0 +1,703 @@
+---
+title: "Comparação de modelos"
+description: |
+author: 
+  - "Diogo Melo"
+  - "Paulo Inácio Prado"
+date: '2026-10-23'
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, message = FALSE, warning = FALSE, echo = TRUE)
+# clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+  )
+```
+
+# Validação cruzada e complexidade do modelo
+
+Neste tutorial, vamos explorar alguns aspectos dos modelos Bayesianos,
+com foco em diferentes métodos de comparação de modelos.
+
+Para nossos exemplos, vamos usar uma classe de modelos lineares chamada de
+modelos polinomiais[^1]. A ideia é usar diferentes potências das variáveis
+preditoras como preditores, o que resulta em relações não lineares
+entre as preditoras e a resposta. A verossimilhança do modelo é
+definida como:
+
+$$
+\begin{aligned}
+y_i &\sim Normal(\mu_i, \sigma) \\
+\mu_i &= \beta_0 + \sum_{j=1}^p \beta_j x_i^j
+\end{aligned}
+$$
+
+em que $p$ é o grau do modelo polinomial.
+
+## Dados
+
+Vamos usar um conjunto de dados do livro *Statistical Rethinking*, que
+relaciona o volume do cérebro e a massa corporal de diferentes
+hominídeos.
+
+```{r dados}
+sppnames <- c( "afarensis","africanus","habilis","boisei",
+"rudolfensis","ergaster","sapiens")
+brainvolcc <- c( 438 , 452 , 612, 521, 752, 871, 1350 )
+masskg <- c( 37.0 , 35.5 , 34.5 , 41.5 , 55.5 , 61.0 , 53.5 )
+d <- data.frame( species=sppnames , brain=brainvolcc , mass=masskg )
+
+library(tidyverse)
+library(ggrepel)
+ggplot(d, aes(x=mass, y=brain)) +
+  geom_point() +
+  geom_text_repel(aes(label=species)) +
+  labs(x=expression("massa corporal (kg)"),
+       y=expression("volume do cérebro (cm"^3*")")) +
+  theme_classic()
+```
+
+## Modelo linear
+
+Vamos começar reescalonando as variáveis e ajustando um modelo linear
+aos dados. Você consegue explicar o que as distribuições a priori que
+estamos usando dizem sobre os dados?  Por exemplo: a distribuição a
+priori do intercepto ($\beta_0$) está centrada no volume médio do cérebro
+(reescalonado) nos dados. Assim, ela diz que uma espécie com massa
+corporal média tem um volume de cérebro com intervalo de credibilidade
+de 89% entre cerca de −1 e 2.
+
+
+```{r linear_model}
+d$mass_s <- as.numeric(scale(d$mass))
+d$brain_s <- d$brain/max(d$brain)
+
+suppressPackageStartupMessages(library(rethinking))
+
+m1 = alist(
+  brain_s ~ dnorm( mu , exp(log_sigma) ),
+  mu <- b0 + b1*mass_s,
+  b0 ~ dnorm( 0.5 , 1 ),
+  b1 ~ dnorm( 0 , 10 ),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m1 = quap(m1, data = d)
+
+ggplot(d, aes(x=mass_s, y=brain_s)) +
+  geom_point() +
+  geom_abline(intercept = coef(fit_m1)["b0"], slope = coef(fit_m1)["b1"]) +
+  geom_text_repel(aes(label=species)) +
+  labs(x=expression("massa corporal (escore z)"),
+       y=expression("volume do cérebro (proporção do máximo)")) +
+  theme_classic()
+```
+
+Uma opção comum para avaliar o ajuste de um modelo é usar o erro
+quadrático médio de previsão, uma medida de quão diferentes as
+previsões são dos valores observados. Podemos calcular essa quantidade
+para este modelo definindo uma função que calcula os quadrados dos
+resíduos e, em seguida, a média deles.
+
+```{r sum_residuals}
+calc_mean_sq_error = function(fit){
+  s <- link( fit ) # a função link calcula a média prevista (mu) para cada amostra da posterior
+  r <- apply(s,2,mean) - d$brain_s
+  return(mean(r^2))
+}
+calc_mean_sq_error(fit_m1)
+```
+
+Raramente essa é uma boa ideia, porque a soma dos quadrados dos
+resíduos tende a diminuir à medida que a complexidade do modelo
+aumenta. Isso acontece porque o modelo tem mais parâmetros para se
+ajustar aos dados. Podemos verificar isso ajustando um modelo polinomial de
+grau 2 (e maiores).
+
+## Modelos polinomiais
+
+Os comandos abaixo ajustam modelos polinomiais de grau dois a cinco, e
+faz um gráfico das médias posteriores dos preditores
+
+```{r polynomial_model}
+mass_grid = seq(min(d$mass_s), max(d$mass_s), by = 0.1)
+
+m2 = alist(
+  brain_s ~ dnorm( mu , exp(log_sigma) ),
+  mu <- b0 + b1*mass_s + b2*mass_s^2,
+  b0 ~ dnorm( 0.5 , 1 ),
+  c(b1, b2) ~ dnorm( 0 , 10 ),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m2 = quap(m2, data=d)
+
+expected_line_m2 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m2)["b0"] +
+           coef(fit_m2)["b1"]*mass_s +
+           coef(fit_m2)["b2"]*mass_s^2)
+
+m3 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- b0 + b1 * mass_s + b2 * mass_s^2 + b3 * mass_s^3,
+  b0 ~ dnorm( 0.5 , 1 ),
+  c(b1, b2, b3) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 )
+)
+
+fit_m3 = quap(m3, data = d)
+expected_line_m3 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m3)["b0"] +
+           coef(fit_m3)["b1"]*mass_s +
+           coef(fit_m3)["b2"]*mass_s^2 +
+           coef(fit_m3)["b3"]*mass_s^3)
+
+m4 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- b0 + b1 * mass_s + b2 * mass_s^2 + b3 * mass_s^3 + b4 * mass_s^4,
+  b0 ~ dnorm( 0.5 , 1 ),
+  c(b1, b2, b3, b4) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 ))
+
+fit_m4 = quap(m4, data = d)
+
+expected_line_m4 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m4)["b0"] +
+           coef(fit_m4)["b1"]*mass_s +
+           coef(fit_m4)["b2"]*mass_s^2 +
+           coef(fit_m4)["b3"]*mass_s^3 +
+           coef(fit_m4)["b4"]*mass_s^4)
+
+m5 = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- b0 + b1 * mass_s + b2 * mass_s^2 + b3 * mass_s^3 + b4 * mass_s^4 +
+    b5 * mass_s^5,
+  b0 ~ dnorm( 0.5 , 1 ),
+  c(b1, b2, b3, b4, b5) ~ dnorm(0, 10),
+  log_sigma ~ dnorm( 0 , 1 ))
+
+fit_m5 = quap(m5, data = d)
+
+expected_line_m5 = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m5)["b0"] +
+           coef(fit_m5)["b1"]*mass_s +
+           coef(fit_m5)["b2"]*mass_s^2 +
+           coef(fit_m5)["b3"]*mass_s^3 +
+           coef(fit_m5)["b4"]*mass_s^4 +
+           coef(fit_m5)["b5"]*mass_s^5)
+
+ggplot(d, aes(x=mass_s, y=brain_s)) +
+  geom_point() +
+  geom_abline(intercept = coef(fit_m1)["b0"], slope = coef(fit_m1)["b1"]) +
+  geom_line(data = expected_line_m2, col = 2) +
+  geom_line(data = expected_line_m3, col = 3) +
+  geom_line(data = expected_line_m4, col = 4) +
+  geom_line(data = expected_line_m5, col = 5) +
+  geom_text_repel(aes(label=species)) +
+  labs(x=expression("massa corporal (escore z)"),
+       y=expression("volume do cérebro (proporção do máximo)")) +
+  theme_classic()
+```
+
+Depois de ajustar todos esses modelos, vamos calcular o erro
+quadrático médio de cada um deles. Repare que o erro quadrático médio
+diminui à medida que a complexidade do modelo aumenta. Isso acontece
+porque o modelo tem mais parâmetros para se ajustar aos dados da
+amostra, e acaba ficando supersensível às variações devidas ao ruído
+amostral. Ou seja, o modelo descreve melhor uma amostra particular do
+que o processo que gera os dados desta e de outras amostras. Chamamos
+este problema de sobreajuste (*overfitting*).
+
+```{r mean_sq_errors}
+fit_models = list(fit_m1, fit_m2, fit_m3, fit_m4, fit_m5)
+mean_sq_errors = sapply(fit_models, calc_mean_sq_error)
+mean_sq_errors
+plot(1:5, mean_sq_errors, xlab = "Grau do polinômio", ylab = "Erro quadrático médio de previsão")
+lines(1:5, mean_sq_errors)
+```
+
+## Validação cruzada
+
+O sobreajuste passa despercebido quando usamos a mesma amostra para
+ajustar o modelo e para avaliar esse ajuste.  Uma comparação justa de **acurácia preditiva** seria
+avaliar o desempenho do modelo para prever dados que não foram usados
+para o ajuste. Mas isso demanda ter várias amostras do mesmo sistema, o
+que raramente acontece. Uma opção é usar a **validação cruzada**
+(*cross-validation*), em que ajustamos o modelo a um subconjunto dos
+dados e então prevemos os dados restantes. Em seguida, calculamos o
+erro quadrático médio da previsão dos dados que não foram usados para
+ajustar o modelo. 
+
+Aqui, vamos usar a validação cruzada do tipo "deixe-um-de-fora"
+(*leave-one-out*), em que ajustamos o modelo a todos os dados menos um
+e então prevemos o dado que ficou de fora. Repetimos então o
+procedimento para cada observação. Como o modelo é ajustado sem o dado
+que estamos tentando prever, é menos provável que ele consiga se
+sobreajustar a esse dado.
+
+```{r loo_cv}
+## Função para a validação cruzada deixe-um-de-fora
+loo_cv = function(m, fit_m){
+  r = numeric(nrow(d))
+  for(i in 1:nrow(d)){
+    d_i = d[-i,]
+    fit = quap(m, data = d_i, start = fit_m@start)
+    s <- link( fit , data = d[i,])  # média prevista para o dado deixado de fora
+    r[i] <- apply(s, 2, mean, na.rm = T) - d$brain_s[i]
+  }
+  mean(r^2)
+}
+
+## Aplica a função a uma lista com todos os modelos
+models = list(m1, m2, m3, m4, m5)
+loo_mean_sq_errors = map2_dbl(models, fit_models, loo_cv, .progress = TRUE)
+
+## Guarda o erro quadrático médio com e sem validação cruzada, para cada modelo
+df = data.frame(model = 1:5,
+                error = mean_sq_errors,
+                cv_error = loo_mean_sq_errors) |>
+                pivot_longer(cols = c(error, cv_error))
+```
+
+Agora temos um *data frame* com o erro quadrático médio de cada modelo,
+calculado com e sem validação cruzada. Compare-os no gráfico a seguir:
+
+```{r loo_cv_grafico}
+ggplot(df, aes(x = model, y = value, group = name, color = name)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Grau do polinômio", y = "Erro quadrático médio") +
+  theme_classic()
+```
+
+Repare que o erro quadrático
+médio calculado com a validação cruzada é maior do que o calculado com
+o conjunto de dados inteiro, especialmente para os modelos mais
+complexos. Isso acontece porque os modelos complexos são ruins em
+prever dados que nunca viram, e o aumento do erro captura esse mau
+desempenho fora da amostra usada para ajustar o modelo.
+
+
+### Validação cruzada PSIS-LOO
+
+Rotinas de validação cruzada têm um custo computacional alto, porque
+precisamos ajustar o modelo várias vezes. Uma alternativa é usar a
+validação cruzada deixe-um-de-fora com amostragem por importância
+suavizada por Pareto (*Pareto-smoothed importance sampling
+leave-one-out cross validation*, PSIS-LOO-CV), que é uma forma mais
+eficiente de calcular a validação cruzada deixe-um-de-fora. Para saber
+mais, veja a [vinheta do pacote `loo`](https://cran.r-project.org/web/packages/loo/vignettes/loo2-example.html),
+que implementa este método.
+
+# Comparando modelos com o WAIC
+
+As seções anteriores trataram do risco de usar um modelo complexo demais
+(com muitos parâmetros), o que pode levar ao sobreajuste e a um mau
+desempenho na previsão de novos dados. Em geral, os cientistas tendem a
+preferir modelos mais simples, e com razão, porque eles são mais
+fáceis de interpretar, menos sujeitos ao sobreajuste e mais fáceis de
+usar. Às vezes, isso é resumido como a "navalha de Occam", segundo a
+qual a explicação mais simples costuma ser a melhor, ou, no nosso
+contexto, modelos com menos suposições devem ser preferidos. Mas
+precisamos equilibrar a simplicidade do modelo com a sua capacidade de
+descrever o processo que gera os dados. Apenas dizer que o modelo mais
+simples é o preferido não nos orienta sobre como lidar com esse
+balanço entre simplicidade e acurácia. É aqui que entram os métodos
+baseados em teoria da informação.
+
+Um erro comum na seleção de modelos é a chamada "caça às estrelinhas"
+(*stargazing*), em que adicionamos várias variáveis ao modelo e
+mantemos só as significativas (as que têm algum asterisco ao lado na
+saída do `summary()` de um modelo `lm()`). O modelo só com variáveis
+significativas seria o melhor, imagina-se, e só deveríamos ter
+variáveis significativas nos nossos modelos. Mas não é assim: os
+valores-p não ajudam a lidar com o subajuste e o
+sobreajuste. Variáveis que melhoram a previsão não são necessariamente
+significativas, e algumas variáveis significativas podem ser inúteis
+para a previsão. Uma abordagem com mais fundamento usa a teoria da informação. Esses
+métodos usam a probabilidade atribuída a cada observação da variável
+resposta (dada pela verossimilhança) e uma medida da complexidade do
+modelo (por exemplo, o número de parâmetros) para estimar qual modelo
+tem melhor desempenho preditivo fora da amostra. Para uma explicação detalhada, veja o capítulo 7 de McElreath (2020) e o capítulo 2 de Burnham & Anderson (2002). Aqui, faremos apenas uma
+breve introdução. 
+
+Um resumo relâmpago: esses métodos se baseiam na
+ideia de que podemos usar a entropia relativa entre dois ou mais
+modelos para estimar qual deles está mais próximo da distribuição de
+probabilidade verdadeira, e desconhecida, que descreve os nossos
+dados. Esse resultado um tanto milagroso foi obtido por Hirotugu
+Akaike (赤池弘次, 1927–2009), um estatístico japonês que trabalhou nas
+décadas de 1970 e 1980. O Critério de Informação de Akaike (AIC) é um
+estimador do erro de previsão de um modelo estatístico para um dado
+conjunto de dados. O AIC é definido como:
+
+\[
+AIC = -2 \sum_i \log \left [ p(y_i | \theta) \right ] + 2k
+\]
+
+Vamos pensar no que estamos tentando alcançar: um equilíbrio entre
+acurácia e complexidade. O primeiro termo do AIC é chamado de **desvio**
+(*deviance*), uma medida de quão bem o modelo se ajusta aos dados. Se
+o modelo atribui uma probabilidade alta aos nossos dados, $\sum_i \log[ p(y_i | \theta) ]$ será grande, e o desvio será pequeno. O segundo
+termo é uma penalidade pelo número de parâmetros do modelo, que é uma
+medida da sua complexidade. Valores menores de AIC indicam que o nosso
+modelo deve ser melhor em prever novos dados.  O AIC não é um
+procedimento Bayesiano e é calculado com as estimativas de máxima
+verossimilhança dos parâmetros.
+
+Se quisermos incorporar a incerteza nas nossas comparações de modelos,
+devemos usar uma versão Bayesiana desse critério de informação, que
+usa a distribuição posterior completa dos parâmetros. Esse é o
+Critério de Informação Amplamente Aplicável (*Widely Applicable
+Information Criterion*, WAIC). Como o WAIC foi proposto por outro
+estatístico japonês, Sumio Watanabe (渡辺澄夫), ele às vezes é chamado
+de Critério de Informação de Watanabe-Akaike, que convenientemente tem
+a mesma sigla. O WAIC é definido usando a densidade preditiva pontual
+em escala log (*log pointwise predictive density*, lppd). Para cada
+observação, a lppd é o logaritmo da verossimilhança média sobre as
+amostras da posterior. Essas médias são então somadas sobre todas
+as observações:
+
+\[
+  \text{lppd} = \sum_i \log \left [ \frac{1}{S} \sum_s p(y_i | \theta_s) \right ]
+\]
+
+Isso é análogo à verossimilhança na fórmula do AIC, mas agora
+calculamos a média sobre as amostras da posterior dos parâmetros, em
+vez de usar uma única estimativa pontual. Isso incorpora corretamente
+a incerteza na estimativa da lppd.
+
+Por fim, o WAIC é definido como:
+
+\[
+  \text{WAIC} = -2 \left [ \text{lppd} - \sum_i \text{var}_{\theta} \log p(y_i|\theta) \right ]
+\]
+
+O termo de penalidade que aparece no lugar do número de parâmetros da
+fórmula do AIC é a variância da log-verossimilhança, e significa:
+"calcule a variância das log-probabilidades de cada observação $i$ e
+depois some essas variâncias para obter a penalidade total". Cada
+observação contribui de forma independente para essa quantidade, e as
+observações cuja log-verossimilhança varia mais ao longo da posterior
+são mais importantes. Esse termo costuma ser chamado de $p_{waic}$ e é
+uma medida do número efetivo de parâmetros do modelo. Ele tem uma
+relação aproximada com o número real de parâmetros, mas depende mais
+da estrutura do modelo. Acrescentar parâmetros pode, na verdade,
+reduzir o número efetivo de parâmetros, algo bastante comum em modelos
+mistos e hierárquicos.
+
+## Exemplo com uma regressão múltipla
+
+Vamos usar o WAIC para comparar modelos lineares com um número
+crescente de preditoras. Primeiro, vamos simular dados com o seguinte
+modelo:
+
+\[
+\begin{aligned}
+y_i &\sim Normal(\mu_i, 1) \\
+\mu_i &= 0.15 x_{1i} + (-0.4) x_{2i}
+\end{aligned}
+\]
+
+```{r sim_data}
+set.seed(1)
+n = 100
+x1 = rnorm(n)
+x2 = rnorm(n)
+y = rnorm(n, 0.15 * x1 - 0.4 * x2, 1)
+
+# Vamos também acrescentar algumas variáveis sem relação com y
+z1 = rnorm(n)
+z2 = rnorm(n)
+z3 = rnorm(n)
+
+## Guardamos os dados simulados em d2, para não sobrescrever os dados dos hominídeos
+d2 = data.frame(y = y, x1 = x1, x2 = x2, z1 = z1, z2 = z2, z3 = z3)
+```
+
+Primeiro, vamos calcular o WAIC "à mão" para uma regressão com uma única preditora:
+
+```{r single_predictor}
+m = quap(alist(
+  y ~ dnorm(mu, sigma),
+  mu <- b0 + b1*x1,
+  b0 ~ dnorm(0, 1),
+  b1 ~ dnorm(0, 1),
+  sigma ~ dexp(1)
+), data = d2)
+
+# Extrai as amostras da posterior
+post <- extract.samples(m, n=1000)
+
+# log-verossimilhança de cada observação i em cada amostra s da posterior:
+n_samples <- 1000
+logprob <- sapply( 1:n_samples ,
+    function(s) {
+    mu <- post$b0[s] + post$b1[s]*d2$x1
+    dnorm( d2$y , mu , post$sigma[s] , log=TRUE ) # log-verossimilhança dos dados calculada para cada amostra da posterior
+    } )
+
+# densidade preditiva pontual média sobre a posterior,
+# calculada na escala log
+lppd <- sapply( 1:n , function(i) log_sum_exp(logprob[i,]) - log(n_samples) )
+
+# p_waic_i, o termo de penalidade de cada observação
+pWAIC_i <- sapply( 1:n , function(i) var(logprob[i,]) )
+
+# p_waic, o número efetivo de parâmetros
+pWAIC = sum(pWAIC_i)
+
+# Por fim, o WAIC
+-2*( sum(lppd) - pWAIC )
+
+# também podemos usar a função pronta
+# (o valor é próximo, mas não idêntico, porque usa outras amostras da posterior):
+WAIC(m)
+```
+
+Agora, vamos definir uma série de modelos com um número crescente de preditoras e calcular o WAIC de cada um deles.
+
+```{r multiple_predictors}
+models_reg = list(
+  m1 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- b0 + b1*x1,
+    b0 ~ dnorm(0, 1),
+    b1 ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m2 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- b0 + b1*x1 + b2*x2,
+    b0 ~ dnorm(0, 1),
+    c(b1, b2) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m3 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- b0 + b1*x1 + b2*x2 + b3*z1,
+    b0 ~ dnorm(0, 1),
+    c(b1, b2, b3) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m4 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- b0 + b1*x1 + b2*x2 + b3*z1 + b4*z2,
+    b0 ~ dnorm(0, 1),
+    c(b1, b2, b3, b4) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  m5 = alist(
+    y ~ dnorm(mu, sigma),
+    mu <- b0 + b1*x1 + b2*x2 + b3*z1 + b4*z2 + b5*z3,
+    b0 ~ dnorm(0, 1),
+    c(b1, b2, b3, b4, b5) ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  )
+)
+fit_reg1 = quap(models_reg$m1, data = d2)
+fit_reg2 = quap(models_reg$m2, data = d2)
+fit_reg3 = quap(models_reg$m3, data = d2)
+fit_reg4 = quap(models_reg$m4, data = d2)
+fit_reg5 = quap(models_reg$m5, data = d2)
+
+## Uma coluna por modelo; linhas: WAIC, lppd, penalty (p_waic) e std_err
+waics = sapply(list(m1 = fit_reg1, m2 = fit_reg2, m3 = fit_reg3, m4 = fit_reg4, m5 = fit_reg5),
+               function(fit) unlist(WAIC(fit)))
+```
+
+Veja como a lppd aumenta com a complexidade do modelo (os modelos mais
+complexos se ajustam melhor aos dados da amostra), mas isso é
+compensado pelo termo de penalidade:
+
+```{r multiple_predictors_waic}
+waics 
+
+plot(1:5, waics["WAIC", ], xlab = "Número de preditoras", ylab = "WAIC")
+lines(1:5, waics["WAIC", ])
+```
+
+O pacote *rethinking* já tem a função `compare()`, que faz esses cálculos e exibe uma tabela de comparação de modelos:
+
+```{r multiple_predictors_compare}
+compare(fit_reg1, fit_reg2, fit_reg3, fit_reg4, fit_reg5, func = WAIC)
+```
+
+# Distribuições a priori regularizadoras
+
+Uma forma de reduzir o sobreajuste de modelos com muitos coeficientes
+é assumir a priori que os coeficientes são próximos de
+zero. Para isso usamos distribuições a priori mais céticas
+para os coeficientes das preditoras. Isso faz com que o modelo tenha
+menos capacidade de usar valores grandes dos parâmetros e de se
+sobreajustar aos dados.
+
+Isso se aplica a
+qualquer tipo de modelo, não só aos modelos polinomiais, e é uma
+vantagem importante dos modelos Bayesianos. Por exemplo, distribuições
+a priori céticas, muitas vezes chamadas de **distribuições a priori
+regularizadoras**, são usadas rotineiramente para evitar o sobreajuste
+em redes neurais e outros modelos complexos. 
+
+Paradoxalmente, quando bem calibradas, essas distribuições a priori
+podem melhorar nossos modelos ao piorar o seu ajuste aos dados! No
+entanto, se as distribuições a priori forem céticas demais,
+informativas demais, o modelo não consegue aprender nada com os
+dados. 
+
+Vamos ajustar o modelo de terceiro grau com uma distribuição a priori
+cética e ver a diferença. No código abaixo, usamos Gaussianas de média
+zero e desvio-padrão bem pequeno como distribuições a priori para
+os coeficientes $\beta_1$ a $\beta_3$.
+
+```{r skeptical_prior}
+m3_skeptical = alist(
+  brain_s ~ dnorm(mu, exp(log_sigma)),
+  mu <- b0 + b1 * mass_s + b2 * mass_s^2 + b3 * mass_s^3,
+  b0 ~ dnorm( 0.5 , 1 ),
+  c(b1, b2, b3) ~ dnorm(0, 0.3), # uma distribuição a priori mais cética, que não
+                              # permite valores grandes para os coeficientes
+  log_sigma ~ dnorm( 0 , 1 )
+)
+## Ajusta o modelo
+fit_m3_skeptical = quap(m3_skeptical, data = d)
+
+## Calcula a curva esperada pelo modelo
+expected_line_m3_skeptical = data.frame(mass_s = mass_grid) |>
+  dplyr::mutate(brain_s = coef(fit_m3_skeptical)["b0"] +
+           coef(fit_m3_skeptical)["b1"]*mass_s +
+           coef(fit_m3_skeptical)["b2"]*mass_s^2 +
+           coef(fit_m3_skeptical)["b3"]*mass_s^3)
+
+```
+
+Compare o erro de validação cruzada para os dois modelos:
+
+```{r skeptical_prior_loo}
+# Erro da validação cruzada para as duas versões do modelo
+loo_cv(m3_skeptical, fit_m3_skeptical)
+loo_cv(m3, fit_m3)
+```
+
+Agora compare as curvas do modelo linear (linha cinza) e dos dois modelos
+polinomiais de grau três, sem e com distribuições a priori
+regularizadoras (linhas preta e vermelha, respectivamente). Qual foi o impacto da
+distribuição regularizadora?
+
+```{r skeptical_prior_grafico}
+ggplot(d, aes(x=mass_s, y=brain_s)) +
+  geom_point() +
+  geom_abline(intercept = coef(fit_m1)["b0"], slope = coef(fit_m1)["b1"],
+              col = "grey60") +
+  geom_line(data = expected_line_m3, col = 1) +
+  geom_line(data = expected_line_m3_skeptical, col = 2) +
+  geom_text_repel(aes(label=species)) +
+  labs(x=expression("massa corporal (escore z)"),
+       y=expression("volume do cérebro (proporção do máximo)")) +
+  theme_classic()
+```
+
+## Distribuições a priori fortemente regularizadoras
+
+Estas distribuições formam uma classe de distribuições a priori de encolhimento que tenta
+descobrir quais variáveis são importantes para a previsão e quais não
+são. A ideia é usar uma distribuição a priori muito cética sobre a
+importância das variáveis e deixar que os dados nos digam quais
+variáveis são importantes. Essa é uma forma de *seleção automática de
+variáveis* e é uma ferramenta muito poderosa. As variáveis importantes
+devem ter estimativas diferentes de zero, enquanto as outras devem ter
+estimativas próximas de zero. Essa é uma forma extrema de
+*encolhimento* (*shrinkage*), em que as estimativas são puxadas em
+direção a zero.
+
+Há vários métodos relacionados a essa ideia, como o LASSO, a regressão
+*ridge* e a *elastic net*. A regressão *ridge* encolhe os
+coeficientes, mas nunca os torna exatamente zero, e por isso não faz
+seleção de variáveis; o LASSO e a *elastic net* podem zerar
+coeficientes. Aqui, vamos usar uma versão Bayesiana, chamada de
+*distribuição a priori ferradura* (*horseshoe prior*). Para um
+conjunto (potencialmente grande) de $p$ preditoras $\{x_1, x_2,
+\cdots, x_p\}$, essa distribuição a priori é definida como:
+
+\[
+  \begin{aligned}
+  y &\sim \text{Normal}(\mu, \sigma) \\
+  \mu &= \beta_0 + \sum_{j=1}^p \beta_j x_j \\
+  \beta_0 &\sim \text{Normal}(0, 1) \\
+  \beta_j &\sim \text{Normal}(0, \lambda_j \tau) \\
+  \lambda_j &\sim \text{Cauchy}^+(0, 1) \\
+  \tau &\sim \text{Cauchy}^+(0, \tau_0)
+  \end{aligned}
+\]
+
+Os parâmetros $\lambda_j$ são os *parâmetros de encolhimento local* e
+controlam o quanto cada $\beta_j$ **individual** é puxado em direção a
+zero. O parâmetro $\tau$ é o *parâmetro de encolhimento global* e
+controla o quanto o **conjunto** dos parâmetros $\beta_j$ é puxado em
+direção a zero. A distribuição de Cauchy tem caudas pesadas, ou seja,
+permite valores muito grandes de $\lambda_j$, o que por sua vez
+permite valores muito grandes de $\beta_j$. Essa é uma distribuição a
+priori muito flexível, capaz de capturar uma grande variedade de
+relações possíveis entre as preditoras e a resposta.
+
+Vamos ajustar um modelo com a distribuição a priori ferradura aos dados que simulamos antes.
+Implementar esse modelo diretamente no *rethinking* ou no Stan exige algumas técnicas especiais para garantir que o modelo explore adequadamente a distribuição posterior; veja  Piironen & Vehtari (2017) ou Betancourt (2018) para detalhes. Aqui, usamos a implementação do pacote *rstanarm*.
+
+```{r horseshoe_prior}
+library(rstanarm)
+library(bayesplot)
+library(ggplot2)
+m_horseshoe = stan_glm(y ~ x1 + x2 + z1 + z2 + z3, data = d2,
+          prior = hs(global_scale = (2/3)/10),
+          prior_intercept = normal(0, 1),
+          chains = 4, cores = 4, iter = 2000)
+```
+
+Compare as médias das posteriores dos parâmetros e seus intervalos com
+os valores verdadeiros, usados para simular os dados (pontos vermelhos):
+
+```{r horseshoe_prior_plot}
+## Valores verdadeiros dos coeficientes usados na simulação
+verdadeiros = data.frame(parameter = c("x1", "x2", "z1", "z2", "z3"),
+                         valor = c(0.15, -0.4, 0, 0, 0))
+mcmc_intervals(m_horseshoe, pars = verdadeiros$parameter) +
+  geom_point(data = verdadeiros, aes(x = valor, y = parameter), col = "red")
+```
+
+O coeficiente menor, de x1, é subestimado (mas ainda fica dentro do
+intervalo de credibilidade), enquanto o coeficiente maior, de x2, é
+estimado corretamente. Isso acontece porque a distribuição a priori
+ferradura é muito cética quanto à importância das variáveis e, por
+isso, puxa as estimativas em direção a zero. Todos os outros
+coeficientes têm estimativas próximas de zero, com intervalos que
+incluem o zero.
+
+
+# Referências
+
+* Betancourt, M. (2021). *Sparsity blues*. <https://betanalpha.github.io/assets/case_studies/modeling_sparsity.html>
+
+* Burnham, K.P. & Anderson, D.R. (2002). Information and likelihood theory: a basis for model selection and inference. Capítulo 2 em *Model Selection and Multimodel Inference*, 2ª ed. Springer, New York. <https://doi.org/10.1007/978-0-387-22456-5_2>
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with Examples in R and Stan*. 2ª ed. Boca Raton, FL: CRC Press.
+
+* Piironen, J., & Vehtari, A. (2017). Sparsity information and regularization in the horseshoe and other shrinkage priors. Electronic Journal of Statistics, 11: 5018-5051. https://projecteuclid.org/euclid.ejs/1513306866
+
+
+
+[^1]: Modelos polinomiais são em geral péssimas escolhas na vida real,
+    mas ótimos para aprender os conceitos que vamos estudar neste
+    tutorial (como o sobreajuste e o subajuste).
