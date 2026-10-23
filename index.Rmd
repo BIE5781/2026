@@ -60,8 +60,8 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 | 23/10 | **8. Seleção e comparação de modelos** | Generalização, previsão fora da amostra, validação cruzada e critérios de informação | [Comparação de modelos](Tutoriais/08_comparacao_modelos.html) | Paulo Inácio | Sala 5 Centro Didático e online|
 | 28/10 | **9. Modelos hierárquicos I** | Dependência, *shrinkage*, prioris hierárquicas, penalização e *partial pooling* | Modelos espécies x área | Diogo | Sala 5 Centro Didático|
 | 04/11 | **10. Modelos hierárquicos II** | Estudo de caso com um GLM hierárquico |Chimpazés prosociais  | Paulo Inácio | Sala 5 Centro Didático|
-| 06/11 | **11. Pensamento causal I** | Variáveis de confusão e o critério *backdoor* | Exercícios sobre controles adequados e inadequados | Diogo | Sala 5 Centro Didático|
-| 11/11 | **12. Pensamento causal II** | DAGs, exemplos e independências condicionais | Discussão e exercícios com modelos lineares e DAGs | Paulo Inácio | Sala 5 Centro Didático|
+| 06/11 | **11. Pensamento causal I** | PRevisão vs Causalidade, DAGs, Triade de Relações | Exercícios sobre controles adequados e inadequados | Diogo | Sala 5 Centro Didático|
+| 11/11 | **12. Pensamento causal II** | Estimando efeitos causais e o critério *backdoor* | Discussão e exercícios com modelos lineares e DAGs | Diogo | Sala 5 Centro Didático|
 | 13/11 | **13. Discussão de projetos** | Primeira discussão dos projetos |  |  | Sala 5 Centro Didático|
 | 18/11 | **14. Modelos mistos contínuos** | Modelos animais, filogenéticos e espaciais | [Modelo animal univariado](Tutoriais/modelo_animal_uni.html); [bivariado](Tutoriais/modelo_animal_multi.html) | Diogo | Multimída 2 Centro Didático|
 | 25/11 | **15. Modelos avançados** | Processos geradores explícitos e processos Gaussianos | Equações diferenciais, captura-marcação-recaptura, movimento ou processos Gaussianos | Diogo e Paulo Inácio | Sala 5 Centro Didático|
