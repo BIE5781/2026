@@ -1,5 +1,5 @@
 ---
-title: "Inferência causal"
+title: "Inferência causal I"
 subtitle: "Conectando modelos científicos e estatísticos"
 author: "Diogo Melo"
 date: "19 de outubro de 2026"
@@ -43,6 +43,12 @@ xaringanExtra::use_share_again()
 xaringanExtra::use_fit_screen()
 xaringanExtra::use_tachyons()
 xaringanExtra::use_tile_view()
+```
+
+```{css, echo=FALSE, eval=TRUE}
+.pull-left-70  { float: left;  width: 64%; }
+.pull-right-30 { float: right; width: 32%; }
+.pull-left-70 > :first-child, .pull-right-30 > :first-child { margin-top: 0; }
 ```
 
 ```{r funcao-plot-dag, include=FALSE, eval=TRUE}
@@ -242,7 +248,7 @@ Todas essas variáveis que afetam apenas um nó são independentes entre si por 
 ## Introdução à inferência causal
 
 ```{r figura-introducao-causal, echo=FALSE, eval=TRUE, out.width="30%", fig.align="center"}
-knitr::include_graphics("../../figures/primer.jpeg")
+knitr::include_graphics("figures/primer.jpeg")
 ```
 
 ---
@@ -376,19 +382,19 @@ Todo grafo de relações causais pode ser decomposto em três tipos de relaçõe
 **Pipe**
 
 ```{r figura-caminho, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/pipe.svg")
+knitr::include_graphics("figures/DAGS/pipe.svg")
 ```
 
 **Fork**
 
 ```{r figura-bifurcacao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/fork.svg")
+knitr::include_graphics("figures/DAGS/fork.svg")
 ```
 
 **Collider**
 
 ```{r figura-colisor, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/colider.svg")
+knitr::include_graphics("figures/DAGS/colider.svg")
 ```
 ]
 
@@ -399,7 +405,7 @@ knitr::include_graphics("../../figures/DAGS/colider.svg")
 Como um fator de confusão afeta nossa estimativa do efeito de $x$ sobre $y$?
 
 ```{r figura-dag-confundimento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_all.svg")
+knitr::include_graphics("figures/DAGS/x-y_all.svg")
 ```
 
 ---
@@ -713,7 +719,7 @@ plot_dag("dag {
 
 .pull-left[
 ```{r figura-variavel-omitida, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center"}
-knitr::include_graphics("../../figures/omitted.png")
+knitr::include_graphics("figures/omitted.png")
 ```
 
 - Carlos Cinelli e Chad Hazlett (2020).
@@ -911,7 +917,7 @@ plot_dag("dag {
 - Um erro comum é incluir variáveis medidas após o tratamento.
 
 ```{r figura-dag-pipe-exemplos, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_pipe.svg")
+knitr::include_graphics("figures/DAGS/x-y_pipe.svg")
 ```
 
 ---
@@ -954,6 +960,8 @@ plot_dag("dag {
 ```
 
 ---
+
+## Calculando o efeito causal médio da intervenção
 
 Intervenção **randomizada**; fixamos uma categoria de educação parental ($X$). A tabela mostra perfis potenciais de $Q$ e notas sem/com intervenção.
 
@@ -1031,7 +1039,7 @@ pred_condicional$qualidade <- factor(
 )
 pred_condicional$painel <- "Condicionando em Q"
 pred_condicional$nota <- predict(modelo_condicional, newdata = pred_condicional)
-
+pred_condicional$painel <- factor(pred_condicional$painel, levels = c("Condicionando em Q", "Sem condicionar em Q"))
 ggplot2::ggplot(
   dados_plot,
   ggplot2::aes(x = tratamento, y = nota, color = qualidade)
@@ -1071,20 +1079,36 @@ ggplot2::ggplot(
 
 ## Condicionamento em variáveis pós-tratamento
 
-```{r figura-variaveis-pos-tratamento, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/post_treatment_paper.png")
+.pull-left-70[
+```{r figura-variaveis-pos-tratamento, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
+knitr::include_graphics("figures/post_treatment_paper.png")
 ```
 
 Montgomery et al. (2018).
+]
+
+--
+
+
+- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito de uma droga numa população de macacos. A pergunta é  se a droga afeta a pressão arterial. Ela mediu a quantidade de droga no sangue e a pressão arterial. A dúvida é se ela deveria incluir a quantidade de droga no sangue como covariável no modelo. 
+
+O que você responde?
+
 
 ---
 
-# Colisor
+# Collider
 
 ## $x$ não afeta $y$, mas ambos afetam $z$
 
-```{r figura-dag-colisor-introducao, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
+```{r figura-dag-colisor-introducao, echo=FALSE, eval=TRUE, fig.width=8, fig.height=3, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+  plot_dag("dag {
+  x [pos=\"0,1\"]
+  y [pos=\"2,1\"]
+  z [pos=\"1,0\"]
+  x -> z
+  y -> z
+}")
 ```
 
 ---
@@ -1093,9 +1117,9 @@ knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
 
 $$
 \begin{aligned}
-y &\sim \mathrm{Normal}(0, 1) \\
-x &\sim \mathrm{Normal}(0, 1) \\
-z &\sim \mathrm{Bernoulli}\big(\mathrm{invlogit}(-2 + 2x + 2y)\big)
+y &\sim \mathcal{f}(u_y) \\
+x &\sim \mathcal{f}(u_x) \\
+z &\sim \mathcal{f}(x, y, u_z)
 \end{aligned}
 $$
 
@@ -1117,8 +1141,15 @@ z <- rbinom(N, 1, inv_logit(2*x + 2*y - 2))  # z ~ Bernoulli(invlogit(2x + 2y - 
 
 ## Modelo sem o colisor
 
-```{r figura-dag-colisor-modelo, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/x-y_colider2.svg")
+.pull-left[
+```{r figura-dag-colisor-linear, echo=FALSE, eval=TRUE, fig.width=10, fig.height=2, out.width="90%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+  plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"1,0\"]
+  x -> z
+  y -> z
+}")
 ```
 
 ```{r modelo-colisor-sem-condicionamento, eval=TRUE, echo=TRUE}
@@ -1132,24 +1163,23 @@ m1 <- quap(
   ),
   data = list(y = y, x = x)
 )
-(pm1 <- precis(m1))
+precis(m1) |> round(2)
 ```
+]
+.pull-right[
+- Estimativa do efeito de $x$ sem condicionar em $z$
+- O ponto azul indica o valor verdadeiro ($0$).
 
----
-
-## Colisor: estimativa do efeito de $x$ sem condicionar em $z$
-
-O ponto azul indica o valor verdadeiro ($0$).
-
-```{r figura-colisor-coef-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+```{r figura-colisor-coef-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="90%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 plot_coef(precis(m1, pars = "bx"), xlim = c(-0.5, 2.5), verdadeiro = 0, linha = 1)
 ```
+]
 
 ---
 
-## Colisor: dados e reta ajustada sem condicionar em $z$
+## Collider: dados e reta sem condicionar em $z$
 
-```{r figura-colisor-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+```{r figura-colisor-sem-condicionamento, echo=FALSE, eval=TRUE, fig.width=7, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 plot_xy(x, y, z)
 abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 ```
@@ -1158,6 +1188,7 @@ abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 
 ## Condicionando no colisor
 
+.pull-left[
 ```{r modelo-colisor-com-condicionamento, eval=TRUE, echo=TRUE}
 m2 <- quap(
   alist(
@@ -1170,121 +1201,113 @@ m2 <- quap(
   ),
   data = list(y = y, x = x, z = z)
 )
-(pm2 <- precis(m2))
+precis(m2) |> round(2)
 ```
+]
 
----
+--
 
-## Colisor: estimativa do efeito de $x$ condicionando em $z$
+.pull-right[
+- Estimativa do efeito de $x$ condicionando em $z$
+- O ponto azul indica o valor verdadeiro ($0$). 
 
-```{r figura-colisor-coef-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
-plot_coef(precis(m2, pars = c("bx", "bz")), verdadeiro = 0, linha = 2)
-```
-
----
-
-## Colisor: dados e retas ajustadas condicionando em $z$
-
-Condicionar no colisor cria uma associação espúria entre $x$ e $y$ dentro de cada grupo de $z$.
-
-```{r figura-colisor-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
-plot_xy(x, y, z)
-abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
-abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
-```
-
----
-
-## Colisores podem enviesar nossas amostras
-
-.center[
-```{r figuras-exemplos-colisor, echo=FALSE, eval=TRUE, out.width=c("40%", "50%"), fig.show="hold", fig.align="center"}
-knitr::include_graphics(c(
-  "../../figures/restaurant_colider.svg",
-  "../../figures/research_colider.svg"
-))
+```{r figura-colisor-coef-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="90%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+plot_coef(precis(m2, pars = c("bx", "bz")), verdadeiro = 0, linha = 2, xlim = c(-0.5, 2.5))
 ```
 ]
 
 ---
 
-## Usando DAGs para construir modelos
+## Collider: dados e reta condicionando em $z$
 
-Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
-
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+.pull-left-70[
+```{r figura-colisor-com-condicionamento, echo=FALSE, eval=TRUE, fig.width=7, fig.height=4.6, out.width="100%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+par(mar = c(4.5, 4.5, 0.5, 0.5))
+plot_xy(x, y, z)
+abline(coef(m2)["a"], coef(m2)["bx"], lwd = 5, col = 1)
+abline(coef(m2)["a"] + coef(m2)["bz"], coef(m2)["bx"], lwd = 5, col = 2)
+```
+]
+.pull-right-30[
+- Condicionar pelo colisor cria uma associação espúria entre $x$ e $y$ dentro de cada grupo de $z$.
+- Essa associação é significativa e ajuda na previsão de $y$ a partir de $x$, mas não é causal.
+]
 
 ---
 
-## Caminhos abertos e fechados
+## Collideres podem enviesar nossas amostras
 
-- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
-- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
-
----
-
-## Identifique todos os caminhos abertos de $X$ a $Y$
-
-```{r figura-caminhos-dag, echo=FALSE, eval=TRUE, out.width="55%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/paths_dag.png")
+```{r figura-dag-colisor-restaurantes, echo=FALSE, eval=TRUE, fig.width=15, fig.height=7, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+  plot_dag("dag {
+  Q [pos=\"0,1\"]
+  L [pos=\"2,1\"]
+  E [pos=\"1,0\"]
+  Q -> E
+  L -> E
+}", side_labels = c(Q = "Qualidade do restaurante", L = "Localização do restaurante", E = "Existência do restaurante"))
 ```
 
 ---
 
-## Critério da porta dos fundos
+## Colisor: restaurantes que existem
 
-Para estimar o efeito causal de $X$ sobre $Y$, identifique um conjunto de variáveis de controle que não contenha descendentes de $X$ e bloqueie todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$.
+Qualidade e localização são independentes, mas ambas aumentam a chance de o restaurante existir.
 
----
+```{r figura-simulacao-restaurantes, echo=FALSE, eval=TRUE, fig.width=9, fig.height=5.5, out.width="75%", fig.align="center", dpi=250, dev="png", dev.args=list(bg="transparent")}
+set.seed(11)
+n <- 500
+rest <- data.frame(Q = rnorm(n), L = rnorm(n))
+rest$E <- rbinom(n, 1, inv_logit(3 * rest$Q + 3 * rest$L - 2))
+rest$existe <- factor(rest$E, levels = 0:1, labels = c("Fechou", "Existe"))
 
-## Nem todas as estimativas são causais
-
-```{r figura-tabela-2, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
-knitr::include_graphics("../../figures/table_2.png")
+ggplot2::ggplot(rest, ggplot2::aes(L, Q, color = existe)) +
+  ggplot2::geom_point(alpha = 0.6, size = 1.8) +
+  ggplot2::geom_smooth(
+    data = subset(rest, E == 1), method = "lm", formula = y ~ x,
+    se = FALSE, linewidth = 1.8
+  ) +
+  ggplot2::scale_color_manual(
+    values = c("Fechou" = "#b8b8b8", "Existe" = "#d95f02"), name = NULL
+  ) +
+  ggplot2::labs(x = "Qualidade da Localização", y = "Qualidade da Comida") +
+  ggplot2::theme_minimal(base_size = 15) +
+  ggplot2::theme(
+    legend.position = "bottom",
+    plot.background = ggplot2::element_rect(fill = "transparent", color = NA),
+    panel.background = ggplot2::element_rect(fill = "transparent", color = NA)
+  )
 ```
 
-- Westreich et al. (2013).
 
 ---
 
-# Tabela 1
+## AIC e signicância não vão te salvar
 
-```{r figura-tabela-1-exemplo, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
-knitr::include_graphics("../../figures/table_1ex.png")
+```{r collider-significance_1, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+set.seed(1); N <- 100
+x <- rnorm(N); y <- rnorm(N); 
+z <- rnorm(N, mean = x + y)
+m1 <- lm(y ~ x); summary(m1)
 ```
 
 ---
 
-# Tabela 2
+## AIC e signicância não vão te salvar
 
-```{r figura-tabela-2-exemplo, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
-knitr::include_graphics("../../figures/table_2ex.png")
+.pull-left[
+```{r collider-significance_2, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+m2 <- lm(y ~ x + z)
+summary(m2)
 ```
+]
 
----
+--
 
-## HIV e acidente vascular cerebral
-
-```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, out.width="40%", fig.align="center"}
-knitr::include_graphics("../../figures/DAGS/hiv_stroke.svg")
+.pull-right[
+```{r collider-aic, echo=TRUE, eval=TRUE}
+bbmle::AICtab(m1, m2)
 ```
-
----
-
-## Bons controles
-
-- Bloqueiam caminhos não causais.
-- Melhoram a precisão.
-- Permitem inferências causais.
-
----
-
-## Maus controles
-
-- Bloqueiam caminhos causais (bloqueando caminhos).
-- Abrem caminhos não causais (abrindo colisores).
-- Reduzem a precisão.
-- Impedem inferências causais.
+]
 
 ---
 
