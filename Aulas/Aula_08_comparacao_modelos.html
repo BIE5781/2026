@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Comparação de modelos</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI (Paulo Inácio Prado)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Comparação de modelos
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI (Paulo Inácio Prado)
+]
+.date[
+### 23 de outubro de 2026
+]
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.destaque[MUITO IMPORTANTE]
+
+.pull-left[
+
+Toda esta aula é sobre comparar modelos quanto ao seu **poder
+preditivo** ou seja 
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**A capacidade do modelo de aproximar o processo
+probabilístico que gera os dados**]
+
+&lt;br&gt;
+
+Não estamos comparando modelos quanto à sua capacidade de revelar
+relações de causa e efeito.
+
+&lt;br&gt;
+
+Exemplo de modelo mecânico e determinístico: a máquina de Kelvin
+(1872) prevê as marés muito
+bem, sem representar o mecanismo físico que produz as marés.  ]
+
+.pull-right[
+.center[
+&lt;video width="50%" autoplay loop muted playsinline&gt;
+  &lt;source src="kelvin.mp4" type="video/mp4"&gt;
+&lt;/video&gt;
+]
+.right[.f6[Simulação: [National Oceanography Centre / Tide and Time](https://tide-and-time.uk/tide-predicting-machines-simulation-kelvin-machine)]]
+]
+
+---
+
+## Um processo gerador
+
+.pull-left[
+
+&lt;br&gt;
+
+`$$\begin{aligned}
+Y &amp;\sim \text{Normal}(\mu, \, \sigma) \\[0.5em]
+\mu &amp;= e^{(X - 0{,}3)^2} - 1 \\[0.5em]
+\sigma &amp;= 0{,}1
+\end{aligned}$$`
+
+&lt;br&gt;
+
+A linha mostra o valor esperado `\(\mu\)`, e a faixa, o intervalo que
+contém 95% dos valores de `\(Y\)` para cada valor de `\(X\)`.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-processo-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Dados gerados por este processo
+
+.pull-left[
+
+&lt;br&gt;
+
+`$$\begin{aligned}
+Y &amp;\sim \text{Normal}(\mu, \, \sigma) \\[0.5em]
+\mu &amp;= e^{(X - 0{,}3)^2} - 1 \\[0.5em]
+\sigma &amp;= 0{,}1
+\end{aligned}$$`
+
+&lt;br&gt;
+
+Uma amostra de 30 observações sorteadas deste processo.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-amostra-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Modelos que vamos ajustar: polinômios
+
+.pull-left[
+
+**Expressão geral** de um polinômio de grau `\(p\)`:
+
+`$$\mu = \beta_0 + \sum_{j=1}^{p} \beta_j X^j$$`
+
+**Exemplos**
+
+* Grau 1 (reta): `\(\mu = \beta_0 + \beta_1 X\)`
+
+* Grau 2: `\(\mu = \beta_0 + \beta_1 X + \beta_2 X^2\)`
+
+* Grau 3: `\(\mu = \beta_0 + \beta_1 X + \beta_2 X^2 + \beta_3 X^3\)`
+
+Todos são **preditores lineares**: as potências de `\(X\)` são novas
+variáveis preditoras.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/exemplos-polinomios-1.png" alt="" width="85%" /&gt;
+]
+
+---
+
+## Modelos que vamos ajustar: especificação
+
+.pull-left[
+
+`$$\begin{aligned}
+y_i &amp;\sim \text{Normal}(\mu_i, \, \sigma) \\[0.5em]
+\mu_i &amp;= \beta_0 + \sum_{j=1}^{p} \beta_j \, x_i^j \\[0.5em]
+\beta_0 &amp;\sim \text{Normal}(0, \, 1) \\[0.5em]
+\beta_j &amp;\sim \text{Normal}(0, \, 10) \\[0.5em]
+\sigma &amp;\sim \text{Exponencial}(1)
+\end{aligned}$$`
+]
+
+.pull-right[
+
+* `\(x_i\)` e `\(y_i\)`: valores de `\(X\)` e `\(Y\)` padronizados (escore z).
+
+* `\(p\)`: grau do polinômio. Vamos ajustar modelos de graus 1, 2, 4 e 6.
+
+* Distribuições a priori **pouco informativas** para os coeficientes
+  `\(\beta_j\)`: permitem valores muito grandes.
+
+* Ajuste com a função `quap()` do pacote *rethinking*.
+]
+
+---
+
+## Subajuste (*underfitting*)
+
+.pull-left[
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"Failure to identify features in the data-generating process that are
+strongly replicable."
+
+.right[Burnham &amp; Anderson (2002)]
+]
+
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/subajuste-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Subajuste (*underfitting*)
+
+.pull-left[
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"Failure to identify features in the data-generating process that are
+strongly replicable."
+
+.right[Burnham &amp; Anderson (2002)]
+]
+
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/subajuste-envelopes-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Log-verossimilhança e distância ao processo gerador
+
+.pull-left[
+
+* Um modelo que aproxima bem o processo gerador atribui aos dados
+  probabilidades próximas das que o processo gerador atribui.
+
+{{content}}
+]
+
+.pull-right[
+.center[
+&lt;img src="akaike.jpg" alt="" width="50%" /&gt;
+
+Hirotugu Akaike (1927–2009)
+]
+]
+
+--
+
+* Akaike mostrou que a log-verossimilhança de um modelo expressa a
+  informação sobre o processo gerador contida no modelo.
+
+{{content}}
+
+--
+
+* Mostrou também que a diferença de log-verossimilhança entre dois
+  modelos estima a diferença na informação perdida por cada um deles
+  ao descrever o processo.
+
+{{content}}
+
+--
+
+* Assim, essa diferença é um critério para encontrar o modelo com maior
+  poder preditivo.
+
+---
+
+## Diferenças entre log-verossimilhanças
+
+.pull-left[
+
+**Densidade preditiva pontual em escala log** (*log pointwise
+predictive density*):
+
+`$$\text{lppd}(y, \Theta) = \sum_{i=1}^{n} \log \frac{1}{S} \sum_{s=1}^{S} p(y_i \mid \Theta_s)$$`
+
+* `\(y_i\)`: cada observação.
+
+* `\(\Theta_s\)`: cada uma das `\(S\)` amostras da distribuição posterior dos
+  parâmetros.
+
+* Para cada observação, a média da verossimilhança sobre a posterior;
+  depois, a soma dos logaritmos dessas médias.
+]
+
+.pull-right[
+&lt;br&gt;
+
+
+|Modelo |   lppd|
+|:------|------:|
+|Grau 1 | -28,57|
+|Grau 2 | -22,10|
+|Grau 4 | -19,72|
+|Grau 6 | -18,20|
+]
+
+---
+
+## Ajuste dos modelos aos dados
+
+.center[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/ajustes-graus-2-1.png" alt="" width="80%" /&gt;
+]
+
+.right[Linha: valor esperado. Faixas: intervalos de previsão de 50% e 95%.]
+
+---
+
+## Sobreajuste (*overfitting*)
+
+.pull-left[
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"To make inferences about unique features of the data at hand, as if
+they applied to all (or most all) samples (hence the population)."
+
+.right[Burnham &amp; Anderson (2002)]
+]
+
+&lt;br&gt;
+
+Fazer inferências sobre características únicas dos dados disponíveis,
+como se valessem para todas (ou quase todas) as amostras, ou seja, para
+a população.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/sobreajuste-envelopes-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## O critério de informação de Akaike (AIC)
+
+.pull-left[
+
+* Akaike descobriu que a log-verossimilhança calculada com os mesmos
+  dados usados para ajustar o modelo superestima a informação sobre o
+  processo que gera os dados.
+
+* Esse viés é proporcional ao número de parâmetros do modelo ( `\(k\)` ).
+
+* Com isso, propôs um estimador não enviesado para grandes amostras:
+
+`$$\text{AIC} = -2 \sum_{i} \log p(y_i \mid \hat{\theta}) + \underbrace{2k}_{\text{correção do viés}}$$`
+]
+
+.pull-right[
+.center[
+&lt;img src="akaike.jpg" alt="" width="50%" /&gt;
+
+Hirotugu Akaike (1927–2009)
+]
+]
+
+---
+
+## Critério Bayesiano: WAIC
+
+.pull-left[
+
+&lt;br&gt;
+
+`$$\text{WAIC}(y, \Theta) = -2 ( \text{lppd} - \underbrace{\sum_i \text{var}_{\theta} \log p(y_i \mid \theta)}_{\text{penalização}} )$$`
+
+&lt;br&gt;
+
+* A penalização é a soma das variâncias dos logaritimos das probabilidades de cada observação .
+
+* Assim como o AIC, o WAIC expressa perda de informação ao usar o modelo para aproximar o processo gerador dos dados.
+
+* Portanto, menores valores de WAIC indicam maior poder preditivo.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-waic-1.png" alt="" width="100%" /&gt;
+
+.right[.f6[Barras: WAIC ± 2 erros padrão.]]
+]
+
+---
+
+## Comparando modelos com a função `compare()`
+
+
+``` r
+&gt; compare(m1, m2, m4, m6)
+```
+
+```
+       WAIC       SE     dWAIC      dSE     pWAIC      weight
+m2 52.70442 7.849294  0.000000       NA  4.282476 0.666123342
+m4 54.59396 7.755510  1.889543 5.995369  7.611386 0.258967730
+m6 57.12155 8.846350  4.417125 8.650173 10.385326 0.073179295
+m1 64.61155 6.699011 11.907131 7.007359  3.727444 0.001729634
+```
+
+.pull-left[.f6[
+* **WAIC**, **SE**: WAIC e seu erro padrão.
+* **dWAIC**: diferença para o modelo de menor WAIC.
+* **dSE**: erro padrão dessa diferença.
+* **pWAIC**: penalização; **weight**: peso de Akaike.
+]]
+
+.pull-right[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Para comparar dois modelos, verifique se o intervalo
+**diferença de WAIC ± 2 erros padrão** inclui o zero. Se incluir, os
+modelos não diferem quanto ao poder preditivo.
+]
+
+.f6[Erros padrão das diferenças entre todos os pares: `compare(m1, m2, m4, m6)@dSE`]
+]
+
+---
+
+## Validação cruzada
+
+.pull-left[
+
+* O poder preditivo de um modelo é medido pela sua capacidade de prever
+  **dados novos**, que não foram usados no ajuste.
+
+* **Validação cruzada**: dividimos os dados em uma parte para **ajuste**
+  (treino) e outra para **teste**. Ajustamos o modelo à primeira e
+  calculamos a log-verossimilhança da segunda.
+
+* **Deixando um de fora** (*leave-one-out*, LOO): cada observação é
+  deixada de fora uma vez, e o modelo é ajustado às `\(n - 1\)` restantes.
+
+* Com `\(n =\)` 30 observações, são 30 ajustes de cada modelo.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/ilustra-loo-1.png" alt="" width="90%" /&gt;
+]
+
+---
+
+## lppd por validação cruzada
+
+.pull-left[
+
+`$$\text{lppd}_{\text{CV}} = \sum_{i=1}^{n} \log \frac{1}{S} \sum_{s=1}^{S} p(y_i \mid \Theta_{-i,s})$$`
+
+* `\(\Theta_{-i,s}\)`: amostra `\(s\)` da posterior do modelo ajustado **sem** a
+  observação `\(i\)`.
+
+* Cada observação é prevista por um ajuste que não a usou: a lppd
+  resultante estima o poder preditivo para dados novos.
+
+* Sem penalização: a lppd calculada com os dados do ajuste
+  (círculos vazios) sempre aumenta com o grau; a lppd por validação
+  cruzada, não.
+]
+
+.pull-right[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-loo-1.png" alt="" width="100%" /&gt;
+
+.right[.f6[Pontos cheios: lppd por LOO ± 2 erros padrão. Círculos vazios: lppd com os dados do ajuste.]]
+]
+
+---
+
+## PSIS: validação cruzada sem reajustar o modelo
+
+.pull-left[
+
+* A LOO exige `\(n\)` ajustes de cada modelo. O **PSIS** (*Pareto-smoothed
+  importance sampling*) aproxima a LOO usando apenas a posterior do
+  ajuste com todos os dados.
+
+* Para cada observação `\(i\)`, cada amostra da posterior recebe um **peso**
+  proporcional a `\(1/p(y_i \mid \Theta_s)\)`: amostras em que `\(y_i\)` é pouco
+  provável representam melhor a posterior sem `\(y_i\)`.
+
+* Os maiores pesos são suavizados com uma distribuição de Pareto. O
+  parâmetro `\(k\)` dessa distribuição é um **diagnóstico**: `\(k &gt; 0{,}5\)` indica
+  observações muito influentes, e uma aproximação pouco confiável.
+
+* Em `compare()`, use `func = PSIS` para comparar pelo PSIS.
+]
+
+.pull-right[
+
+``` r
+&gt; PSIS(m2)
+```
+
+```
+Some Pareto k values are high (&gt;0.5). Set pointwise=TRUE to inspect individual points.
+```
+
+```
+      PSIS      lppd  penalty  std_err
+1 54.14054 -27.07027 4.965544 8.363436
+```
+&lt;br&gt;
+
+|Modelo | lppd (PSIS)| lppd (LOO)| k máximo|
+|:------|-----------:|----------:|--------:|
+|Grau 1 |      -32,56|     -31,62|     0,83|
+|Grau 2 |      -27,39|     -25,71|     1,15|
+|Grau 4 |      -28,89|     -26,80|     1,11|
+|Grau 6 |      -31,83|     -28,27|     1,20|
+]
+
+---
+
+## Mensagens para levar para casa
+
+* Modelos estatísticos são aproximações dos processos probabilísticos que geram os dados.
+
+* O poder preditivo de um modelo é sua capacidade de aproximar o processo gerador.
+
+* Se avaliamos o poder preditivo com os mesmos dados usados para ajustar o modelo, o modelo mais complexo sempre terá melhor desempenho.
+
+* Para evitar este risco de *overfitting* temos que estimar o poder do modelo prever observações fora da amostra.
+
+* Podemos obter estas estimativas com critérios de informação (WAIC), e validação cruzada (incluindo sua aproximação PSIS).
+
+---
+
+## Referências
+
+* Burnham, K.P. &amp; Anderson, D.R. (2002). *Model Selection and Multimodel
+  Inference: A Practical Information-Theoretic Approach*. 2ª ed. Springer.
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with
+  Examples in R and Stan*. 2ª ed. CRC Press.
+
+* Vehtari, A., Gelman, A. &amp; Gabry, J. (2017). Practical Bayesian model
+  evaluation using leave-one-out cross-validation and WAIC. *Statistics
+  and Computing*, 27, 1413–1432.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

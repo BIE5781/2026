@@ -1,0 +1,799 @@
+---
+title: "Comparação de modelos"
+subtitle: "Disciplina BIE5781 - IB - USP"
+author:
+  - "PI (Paulo Inácio Prado)"
+date: '23 de outubro de 2026'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%",
+                      ## Figuras: mesma largura em todos os chunks (texto com tamanho consistente),
+                      ## alta resolução, e fundo transparente para herdar a cor dos slides
+                      fig.width = 8, fig.asp = 0.618,
+                      dpi = 300, fig.retina = 1,
+                      dev.args = list(bg = "transparent"))
+library(xaringanthemer)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(knitr)
+library(rethinking)
+```
+
+```{r xaringan-themer, include=FALSE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",# base 3
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3", # base 3
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"), text_font_size = "24px",
+  code_font_size="1rem",
+  extra_css = list(
+      ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0"),
+      ".destaque" = list("color" = "#dc322f", "font-size" = "3em",
+                         "font-weight" = "bold", "text-align" = "center")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+
+## clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+## ggplot theme
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+    (theme_foundation(base_size=base_size, base_family=base_family)
+        + theme(plot.title = element_text(face = "bold",
+                                          size = rel(1.2), hjust = 0.5),
+                text = element_text(colour="#586e75"), # solarized base01
+                panel.background = element_rect(fill = "transparent", colour = NA),
+                plot.background = element_rect(fill = "transparent", colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(1)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text = element_text(colour="#657b83"), # solarized base00
+                axis.line = element_line(colour="#586e75"), # solarized base01
+                axis.ticks = element_line(colour="#586e75"),
+                panel.grid.major = element_line(colour="#eee8d5"), # solarized base2
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(fill = "transparent", colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                legend.spacing = unit(0.2, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#eee8d5",fill="#eee8d5"), # solarized base2
+                strip.text = element_text(face="bold", colour="#586e75")
+                ))
+}
+```
+
+```{r processo-gerador}
+## Processo gerador: Y ~ Normal(mu = exp((X - 0,3)^2) - 1, sigma = 0,1)
+sigma.real <- 0.1
+mu.real <- function(x) exp((x - 0.3)^2) - 1
+## Linha de mu e envelope de 95% do processo gerador
+x.grade <- seq(0, 1, length.out = 200)
+processo <- data.frame(x = x.grade,
+                       mu = mu.real(x.grade),
+                       inf = qnorm(0.025, mu.real(x.grade), sigma.real),
+                       sup = qnorm(0.975, mu.real(x.grade), sigma.real))
+## Uma amostra de 30 observações, com X sorteado de uma uniforme entre 0 e 1
+set.seed(42)
+n <- 30
+x <- runif(n, 0, 1)
+dados <- data.frame(x = x, y = rnorm(n, mean = mu.real(x), sd = sigma.real))
+## Limites comuns do eixo y para todos os gráficos
+lim.y <- range(c(processo$inf, processo$sup, dados$y)) + c(-0.15, 0.15)
+
+## Gráfico do processo gerador
+p.processo <- ggplot(processo, aes(x)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup), fill = "#268bd2", alpha = 0.2) +
+    geom_line(aes(y = mu), linewidth = 1.2, colour = "#268bd2") +
+    coord_cartesian(ylim = lim.y) +
+    labs(x = "X", y = "Y") +
+    theme_Publication(18)
+```
+
+```{r ajustes}
+## Ajuste de regressões polinomiais gaussianas de graus 1, 2, 4 e 6.
+## X e Y padronizados (escore z), para que as distribuições a priori
+## façam sentido em qualquer grau
+graus <- c(1, 2, 4, 6)
+media.x <- mean(dados$x); dp.x <- sd(dados$x)
+media.y <- mean(dados$y); dp.y <- sd(dados$y)
+dados$x_s <- (dados$x - media.x) / dp.x
+dados$y_s <- (dados$y - media.y) / dp.y
+
+ajusta_pol <- function(grau, d = dados) {
+    termos <- paste0("b", 1:grau, " * x_s^", 1:grau, collapse = " + ")
+    formula <- c(alist(y_s ~ dnorm(mu, sigma)),
+                 str2lang(paste("mu <- b0 +", termos)),
+                 alist(b0 ~ dnorm(0, 1)),
+                 lapply(1:grau, function(j) str2lang(paste0("b", j, " ~ dnorm(0, 10)"))),
+                 alist(sigma ~ dexp(1)))
+    inicio <- c(list(b0 = 0, sigma = 1),
+                setNames(as.list(rep(0, grau)), paste0("b", 1:grau)))
+    quap(formula, data = d, start = inicio)
+}
+set.seed(42)
+ajustes <- setNames(lapply(graus, ajusta_pol), graus)
+
+## Previstos: média e envelopes de previsão de 50% e 95%, na escala original
+grade.s <- data.frame(x_s = (x.grade - media.x) / dp.x)
+previstos <- do.call(rbind, lapply(graus, function(g) {
+    mu  <- link(ajustes[[as.character(g)]], data = grade.s) * dp.y + media.y
+    sim.y <- sim(ajustes[[as.character(g)]], data = grade.s) * dp.y + media.y
+    i95 <- apply(sim.y, 2, PI, prob = 0.95)
+    i50 <- apply(sim.y, 2, PI, prob = 0.50)
+    data.frame(grau = g, x = x.grade, media = colMeans(mu),
+               inf95 = i95[1, ], sup95 = i95[2, ],
+               inf50 = i50[1, ], sup50 = i50[2, ])
+}))
+previstos$painel <- factor(paste("Grau", previstos$grau),
+                           levels = paste("Grau", graus))
+
+## Envelope de 95% do processo gerador comparado ao do modelo de um grau
+cores.env <- c("Processo gerador" = "#859900", "Modelo" = "#268bd2")
+plot_envelopes <- function(g) {
+    env <- rbind(
+        data.frame(fonte = "Processo gerador", x = processo$x,
+                   inf = processo$inf, sup = processo$sup),
+        data.frame(fonte = "Modelo", x = x.grade,
+                   inf = filter(previstos, grau == g)$inf95,
+                   sup = filter(previstos, grau == g)$sup95))
+    env$fonte <- factor(env$fonte, levels = names(cores.env))
+    ggplot(env, aes(x)) +
+        geom_ribbon(aes(ymin = inf, ymax = sup, fill = fonte), alpha = 0.35) +
+        geom_point(data = dados, aes(x, y), colour = "#dc322f", size = 2.5) +
+        scale_fill_manual(values = cores.env, name = NULL,
+                          labels = c("Processo gerador", paste0("Modelo de grau ", g))) +
+        coord_cartesian(ylim = lim.y) +
+        labs(x = "X", y = "Y", title = "Intervalos de previsão de 95%") +
+        theme_Publication(18) +
+        theme(legend.key.size = unit(0.6, "cm"))
+}
+
+## Painel com os ajustes de um conjunto de graus
+plot_ajustes <- function(gs, ncol = 2) {
+    ggplot(filter(previstos, grau %in% gs), aes(x)) +
+        geom_ribbon(aes(ymin = inf95, ymax = sup95), fill = "#268bd2", alpha = 0.2) +
+        geom_ribbon(aes(ymin = inf50, ymax = sup50), fill = "#268bd2", alpha = 0.3) +
+        geom_line(aes(y = media), linewidth = 1, colour = "#073642") +
+        geom_point(data = dados, aes(x, y), colour = "#dc322f", size = 2.5) +
+        facet_wrap(~ painel, ncol = ncol) +
+        coord_cartesian(ylim = lim.y) +
+        labs(x = "X", y = "Y") +
+        theme_Publication(18)
+}
+```
+
+```{r criterios}
+## Log-verossimilhança de cada observação (colunas) em cada amostra da
+## posterior (linhas), para o modelo de um dado grau (escala padronizada)
+loglik_post <- function(grau, n.amostras = 4000) {
+    post <- extract.samples(ajustes[[as.character(grau)]], n = n.amostras)
+    X <- sapply(0:grau, function(j) dados$x_s^j)                # n x (grau+1)
+    B <- sapply(0:grau, function(j) post[[paste0("b", j)]])     # amostras x (grau+1)
+    mu <- B %*% t(X)                                            # amostras x n
+    Y <- matrix(dados$y_s, nrow(mu), ncol(mu), byrow = TRUE)
+    dnorm(Y, mu, post$sigma, log = TRUE)    # sigma da amostra s em toda a linha s
+}
+set.seed(42)
+ll <- lapply(graus, loglik_post)
+crit <- do.call(rbind, lapply(seq_along(graus), function(k) {
+    ll.k <- ll[[k]]
+    ## lppd: soma, sobre as observações, do log da verossimilhança média
+    lppd <- sum(apply(ll.k, 2, function(l) log_sum_exp(l) - log(length(l))))
+    ## log-verossimilhança total em cada amostra da posterior
+    ll.tot <- rowSums(ll.k)
+    ## WAIC e erro padrão
+    w <- WAIC(ajustes[[as.character(graus[k])]], n = 4000)
+    data.frame(grau = graus[k], lppd = lppd,
+               ll.media = mean(ll.tot),
+               ll.inf = PI(ll.tot, 0.95)[1], ll.sup = PI(ll.tot, 0.95)[2],
+               waic = w$WAIC, waic.se = w$std_err)
+}))
+crit$modelo <- factor(paste("Grau", crit$grau), levels = paste("Grau", graus))
+
+## Objetos com nomes curtos, para os comandos mostrados nos slides
+m1 <- ajustes[["1"]]; m2 <- ajustes[["2"]]; m4 <- ajustes[["4"]]; m6 <- ajustes[["6"]]
+```
+
+```{r loo}
+## Validação cruzada "deixando um de fora" (LOO): cada modelo é ajustado n
+## vezes, cada vez sem uma das observações. Para cada ajuste, calcula a
+## log-verossimilhança da observação deixada de fora em cada amostra da posterior
+ll_fora <- function(fit, grau, i, n.amostras = 4000) {
+    post <- extract.samples(fit, n = n.amostras)
+    B <- sapply(0:grau, function(j) post[[paste0("b", j)]])     # amostras x (grau+1)
+    mu <- B %*% dados$x_s[i]^(0:grau)
+    dnorm(dados$y_s[i], mu, post$sigma, log = TRUE)
+}
+set.seed(42)
+ll.loo <- lapply(graus, function(g)
+    sapply(1:n, function(i) ll_fora(ajusta_pol(g, dados[-i, ]), g, i)))  # amostras x n
+loo <- do.call(rbind, lapply(seq_along(graus), function(k) {
+    ## lppd de cada observação deixada de fora
+    pontual <- apply(ll.loo[[k]], 2, function(l) log_sum_exp(l) - log(length(l)))
+    data.frame(grau = graus[k], lppd.loo = sum(pontual),
+               se = sqrt(n * var(pontual)))   # erro padrão, como no WAIC
+}))
+loo$modelo <- factor(paste("Grau", loo$grau), levels = paste("Grau", graus))
+
+## Ilustração: ajustes com e sem a observação de menor X
+i.fora <- which.min(dados$x)
+ilustra <- do.call(rbind, lapply(c(2, max(graus)), function(g) {
+    fit.fora <- ajusta_pol(g, dados[-i.fora, ])
+    rbind(data.frame(grau = g, ajuste = "Todos os dados", x = x.grade,
+                     mu = colMeans(link(ajustes[[as.character(g)]], data = grade.s)) * dp.y + media.y),
+          data.frame(grau = g, ajuste = "Sem a observação destacada", x = x.grade,
+                     mu = colMeans(link(fit.fora, data = grade.s)) * dp.y + media.y))
+}))
+ilustra$painel <- factor(paste("Grau", ilustra$grau),
+                         levels = paste("Grau", c(2, max(graus))))
+ilustra$ajuste <- factor(ilustra$ajuste,
+                         levels = c("Todos os dados", "Sem a observação destacada"))
+
+## PSIS de cada modelo, com o maior valor de k de Pareto
+set.seed(42)
+tab.psis <- do.call(rbind, lapply(seq_along(graus), function(k) {
+    p <- suppressMessages(suppressWarnings(
+        PSIS(ajustes[[as.character(graus[k])]], n = 4000, pointwise = TRUE)))
+    data.frame(modelo = paste("Grau", graus[k]),
+               lppd.psis = sum(p$lppd), lppd.loo = loo$lppd.loo[k],
+               k.max = max(p$k))
+}))
+```
+
+.destaque[MUITO IMPORTANTE]
+
+.pull-left[
+
+Toda esta aula é sobre comparar modelos quanto ao seu **poder
+preditivo** ou seja 
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**A capacidade do modelo de aproximar o processo
+probabilístico que gera os dados**]
+
+<br>
+
+Não estamos comparando modelos quanto à sua capacidade de revelar
+relações de causa e efeito.
+
+<br>
+
+Exemplo de modelo mecânico e determinístico: a máquina de Kelvin
+(1872) prevê as marés muito
+bem, sem representar o mecanismo físico que produz as marés.  ]
+
+.pull-right[
+.center[
+<video width="50%" autoplay loop muted playsinline>
+  <source src="kelvin.mp4" type="video/mp4">
+</video>
+]
+.right[.f6[Simulação: [National Oceanography Centre / Tide and Time](https://tide-and-time.uk/tide-predicting-machines-simulation-kelvin-machine)]]
+]
+
+---
+
+## Um processo gerador
+
+.pull-left[
+
+<br>
+
+$$\begin{aligned}
+Y &\sim \text{Normal}(\mu, \, \sigma) \\[0.5em]
+\mu &= e^{(X - 0{,}3)^2} - 1 \\[0.5em]
+\sigma &= 0{,}1
+\end{aligned}$$
+
+<br>
+
+A linha mostra o valor esperado $\mu$, e a faixa, o intervalo que
+contém 95% dos valores de $Y$ para cada valor de $X$.
+]
+
+.pull-right[
+```{r grafico-processo, fig.width = 5, fig.asp = 1, out.width = "100%"}
+p.processo
+```
+]
+
+---
+
+## Dados gerados por este processo
+
+.pull-left[
+
+<br>
+
+$$\begin{aligned}
+Y &\sim \text{Normal}(\mu, \, \sigma) \\[0.5em]
+\mu &= e^{(X - 0{,}3)^2} - 1 \\[0.5em]
+\sigma &= 0{,}1
+\end{aligned}$$
+
+<br>
+
+Uma amostra de `r n` observações sorteadas deste processo.
+]
+
+.pull-right[
+```{r grafico-amostra, fig.width = 5, fig.asp = 1, out.width = "100%"}
+p.processo +
+    geom_point(data = dados, aes(x, y), colour = "#dc322f", size = 3)
+```
+]
+
+---
+
+## Modelos que vamos ajustar: polinômios
+
+.pull-left[
+
+**Expressão geral** de um polinômio de grau $p$:
+
+$$\mu = \beta_0 + \sum_{j=1}^{p} \beta_j X^j$$
+
+**Exemplos**
+
+* Grau 1 (reta): $\mu = \beta_0 + \beta_1 X$
+
+* Grau 2: $\mu = \beta_0 + \beta_1 X + \beta_2 X^2$
+
+* Grau 3: $\mu = \beta_0 + \beta_1 X + \beta_2 X^2 + \beta_3 X^3$
+
+Todos são **preditores lineares**: as potências de $X$ são novas
+variáveis preditoras.
+]
+
+.pull-right[
+```{r exemplos-polinomios, fig.width = 5, fig.asp = 1.3, out.width = "85%"}
+## Exemplos de polinômios de graus 1 a 3, com coeficientes arbitrários
+x.ex <- seq(0, 10, length.out = 200)
+exemplos <- rbind(
+    data.frame(x = x.ex, y = 1 + 0.5 * (x.ex - 5),
+               painel = "mu == beta[0] + beta[1]*X"),
+    data.frame(x = x.ex, y = 4 - 0.3 * (x.ex - 5)^2,
+               painel = "mu == beta[0] + beta[1]*X + beta[2]*X^2"),
+    data.frame(x = x.ex, y = 0.05 * (x.ex - 5)^3 - 0.5 * (x.ex - 5),
+               painel = "mu == beta[0] + beta[1]*X + beta[2]*X^2 + beta[3]*X^3"))
+exemplos$painel <- factor(exemplos$painel, levels = unique(exemplos$painel))
+ggplot(exemplos, aes(x, y)) +
+    geom_line(linewidth = 1.2, colour = "#268bd2") +
+    facet_wrap(~ painel, ncol = 1, scales = "free_y", labeller = label_parsed) +
+    labs(x = "X", y = expression(mu)) +
+    theme_Publication(16) +
+    theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+```
+]
+
+---
+
+## Modelos que vamos ajustar: especificação
+
+.pull-left[
+
+$$\begin{aligned}
+y_i &\sim \text{Normal}(\mu_i, \, \sigma) \\[0.5em]
+\mu_i &= \beta_0 + \sum_{j=1}^{p} \beta_j \, x_i^j \\[0.5em]
+\beta_0 &\sim \text{Normal}(0, \, 1) \\[0.5em]
+\beta_j &\sim \text{Normal}(0, \, 10) \\[0.5em]
+\sigma &\sim \text{Exponencial}(1)
+\end{aligned}$$
+]
+
+.pull-right[
+
+* $x_i$ e $y_i$: valores de $X$ e $Y$ padronizados (escore z).
+
+* $p$: grau do polinômio. Vamos ajustar modelos de graus `r paste(head(graus, -1), collapse = ", ")` e `r tail(graus, 1)`.
+
+* Distribuições a priori **pouco informativas** para os coeficientes
+  $\beta_j$: permitem valores muito grandes.
+
+* Ajuste com a função `quap()` do pacote *rethinking*.
+]
+
+---
+
+## Subajuste (*underfitting*)
+
+.pull-left[
+
+<br>
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"Failure to identify features in the data-generating process that are
+strongly replicable."
+
+.right[Burnham & Anderson (2002)]
+]
+
+]
+
+.pull-right[
+```{r subajuste, fig.width = 5, fig.asp = 1, out.width = "100%"}
+plot_ajustes(1, ncol = 1)
+```
+]
+
+---
+
+## Subajuste (*underfitting*)
+
+.pull-left[
+
+<br>
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"Failure to identify features in the data-generating process that are
+strongly replicable."
+
+.right[Burnham & Anderson (2002)]
+]
+
+]
+
+.pull-right[
+```{r subajuste-envelopes, fig.width = 5, fig.asp = 1, out.width = "100%"}
+plot_envelopes(1)
+```
+]
+
+---
+
+## Log-verossimilhança e distância ao processo gerador
+
+.pull-left[
+
+* Um modelo que aproxima bem o processo gerador atribui aos dados
+  probabilidades próximas das que o processo gerador atribui.
+
+{{content}}
+]
+
+.pull-right[
+.center[
+```{r akaike, out.width = "50%"}
+knitr::include_graphics("akaike.jpg")
+```
+
+Hirotugu Akaike (1927–2009)
+]
+]
+
+--
+
+* Akaike mostrou que a log-verossimilhança de um modelo expressa a
+  informação sobre o processo gerador contida no modelo.
+
+{{content}}
+
+--
+
+* Mostrou também que a diferença de log-verossimilhança entre dois
+  modelos estima a diferença na informação perdida por cada um deles
+  ao descrever o processo.
+
+{{content}}
+
+--
+
+* Assim, essa diferença é um critério para encontrar o modelo com maior
+  poder preditivo.
+
+---
+
+## Diferenças entre log-verossimilhanças
+
+.pull-left[
+
+**Densidade preditiva pontual em escala log** (*log pointwise
+predictive density*):
+
+$$\text{lppd}(y, \Theta) = \sum_{i=1}^{n} \log \frac{1}{S} \sum_{s=1}^{S} p(y_i \mid \Theta_s)$$
+
+* $y_i$: cada observação.
+
+* $\Theta_s$: cada uma das $S$ amostras da distribuição posterior dos
+  parâmetros.
+
+* Para cada observação, a média da verossimilhança sobre a posterior;
+  depois, a soma dos logaritmos dessas médias.
+]
+
+.pull-right[
+<br>
+
+```{r tabela-lppd}
+kable(crit[, c("modelo", "lppd")], digits = 2, row.names = FALSE,
+      col.names = c("Modelo", "lppd"),
+      format.args = list(decimal.mark = ","))
+```
+]
+
+---
+
+## Ajuste dos modelos aos dados
+
+.center[
+```{r ajustes-graus-2, fig.width = 10, fig.asp = 0.6, out.width = "80%"}
+plot_ajustes(graus)
+```
+]
+
+.right[Linha: valor esperado. Faixas: intervalos de previsão de 50% e 95%.]
+
+---
+
+## Sobreajuste (*overfitting*)
+
+.pull-left[
+
+<br>
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+"To make inferences about unique features of the data at hand, as if
+they applied to all (or most all) samples (hence the population)."
+
+.right[Burnham & Anderson (2002)]
+]
+
+<br>
+
+Fazer inferências sobre características únicas dos dados disponíveis,
+como se valessem para todas (ou quase todas) as amostras, ou seja, para
+a população.
+]
+
+.pull-right[
+```{r sobreajuste-envelopes, fig.width = 5, fig.asp = 1, out.width = "100%"}
+plot_envelopes(max(graus))
+```
+]
+
+---
+
+## O critério de informação de Akaike (AIC)
+
+.pull-left[
+
+* Akaike descobriu que a log-verossimilhança calculada com os mesmos
+  dados usados para ajustar o modelo superestima a informação sobre o
+  processo que gera os dados.
+
+* Esse viés é proporcional ao número de parâmetros do modelo ( $k$ ).
+
+* Com isso, propôs um estimador não enviesado para grandes amostras:
+
+$$\text{AIC} = -2 \sum_{i} \log p(y_i \mid \hat{\theta}) + \underbrace{2k}_{\text{correção do viés}}$$
+]
+
+.pull-right[
+.center[
+```{r akaike-2, out.width = "50%"}
+knitr::include_graphics("akaike.jpg")
+```
+
+Hirotugu Akaike (1927–2009)
+]
+]
+
+---
+
+## Critério Bayesiano: WAIC
+
+.pull-left[
+
+<br>
+
+$$\text{WAIC}(y, \Theta) = -2 ( \text{lppd} - \underbrace{\sum_i \text{var}_{\theta} \log p(y_i \mid \theta)}_{\text{penalização}} )$$
+
+<br>
+
+* A penalização é a soma das variâncias dos logaritimos das probabilidades de cada observação .
+
+* Assim como o AIC, o WAIC expressa perda de informação ao usar o modelo para aproximar o processo gerador dos dados.
+
+* Portanto, menores valores de WAIC indicam maior poder preditivo.
+]
+
+.pull-right[
+```{r grafico-waic, fig.width = 5, fig.asp = 1, out.width = "100%"}
+ggplot(crit, aes(modelo, waic)) +
+    geom_pointrange(aes(ymin = waic - 2 * waic.se, ymax = waic + 2 * waic.se),
+                    colour = "#268bd2", linewidth = 1, size = 0.8) +
+    labs(x = NULL, y = "WAIC") +
+    theme_Publication(18)
+```
+
+.right[.f6[Barras: WAIC ± 2 erros padrão.]]
+]
+
+---
+
+## Comparando modelos com a função `compare()`
+
+```{r compare, echo = TRUE}
+compare(m1, m2, m4, m6)
+```
+
+.pull-left[.f6[
+* **WAIC**, **SE**: WAIC e seu erro padrão.
+* **dWAIC**: diferença para o modelo de menor WAIC.
+* **dSE**: erro padrão dessa diferença.
+* **pWAIC**: penalização; **weight**: peso de Akaike.
+]]
+
+.pull-right[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Para comparar dois modelos, verifique se o intervalo
+**diferença de WAIC ± 2 erros padrão** inclui o zero. Se incluir, os
+modelos não diferem quanto ao poder preditivo.
+]
+
+.f6[Erros padrão das diferenças entre todos os pares: `compare(m1, m2, m4, m6)@dSE`]
+]
+
+---
+
+## Validação cruzada
+
+.pull-left[
+
+* O poder preditivo de um modelo é medido pela sua capacidade de prever
+  **dados novos**, que não foram usados no ajuste.
+
+* **Validação cruzada**: dividimos os dados em uma parte para **ajuste**
+  (treino) e outra para **teste**. Ajustamos o modelo à primeira e
+  calculamos a log-verossimilhança da segunda.
+
+* **Deixando um de fora** (*leave-one-out*, LOO): cada observação é
+  deixada de fora uma vez, e o modelo é ajustado às $n - 1$ restantes.
+
+* Com $n =$ `r n` observações, são `r n` ajustes de cada modelo.
+]
+
+.pull-right[
+```{r ilustra-loo, fig.width = 5, fig.asp = 1.2, out.width = "90%"}
+ggplot(ilustra, aes(x)) +
+    geom_line(aes(y = mu, colour = ajuste, linetype = ajuste), linewidth = 1) +
+    geom_point(data = dados[-i.fora, ], aes(x, y), colour = "#dc322f", size = 2) +
+    geom_point(data = dados[i.fora, ], aes(x, y), shape = 21, size = 5, stroke = 1.5,
+               colour = "#d33682", fill = NA) +
+    scale_colour_manual(values = c("#586e75", "#268bd2"), name = NULL) +
+    scale_linetype_manual(values = c("dashed", "solid"), name = NULL) +
+    facet_wrap(~ painel, ncol = 1) +
+    coord_cartesian(ylim = lim.y) +
+    labs(x = "X", y = "Y") +
+    guides(colour = guide_legend(ncol = 1), linetype = guide_legend(ncol = 1)) +
+    theme_Publication(16) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+]
+
+---
+
+## lppd por validação cruzada
+
+.pull-left[
+
+$$\text{lppd}_{\text{CV}} = \sum_{i=1}^{n} \log \frac{1}{S} \sum_{s=1}^{S} p(y_i \mid \Theta_{-i,s})$$
+
+* $\Theta_{-i,s}$: amostra $s$ da posterior do modelo ajustado **sem** a
+  observação $i$.
+
+* Cada observação é prevista por um ajuste que não a usou: a lppd
+  resultante estima o poder preditivo para dados novos.
+
+* Sem penalização: a lppd calculada com os dados do ajuste
+  (círculos vazios) sempre aumenta com o grau; a lppd por validação
+  cruzada, não.
+]
+
+.pull-right[
+```{r grafico-loo, fig.width = 5, fig.asp = 1, out.width = "100%"}
+ggplot(loo, aes(modelo, lppd.loo)) +
+    geom_pointrange(aes(ymin = lppd.loo - 2 * se, ymax = lppd.loo + 2 * se),
+                    colour = "#268bd2", linewidth = 1, size = 0.8) +
+    geom_point(data = crit, aes(modelo, lppd), shape = 21, size = 3.5,
+               stroke = 1.2, colour = "#586e75", fill = NA) +
+    labs(x = NULL, y = "lppd") +
+    theme_Publication(18)
+```
+
+.right[.f6[Pontos cheios: lppd por LOO ± 2 erros padrão. Círculos vazios: lppd com os dados do ajuste.]]
+]
+
+---
+
+## PSIS: validação cruzada sem reajustar o modelo
+
+.pull-left[
+
+* A LOO exige $n$ ajustes de cada modelo. O **PSIS** (*Pareto-smoothed
+  importance sampling*) aproxima a LOO usando apenas a posterior do
+  ajuste com todos os dados.
+
+* Para cada observação $i$, cada amostra da posterior recebe um **peso**
+  proporcional a $1/p(y_i \mid \Theta_s)$: amostras em que $y_i$ é pouco
+  provável representam melhor a posterior sem $y_i$.
+
+* Os maiores pesos são suavizados com uma distribuição de Pareto. O
+  parâmetro $k$ dessa distribuição é um **diagnóstico**: $k > 0{,}5$ indica
+  observações muito influentes, e uma aproximação pouco confiável.
+
+* Em `compare()`, use `func = PSIS` para comparar pelo PSIS.
+]
+
+.pull-right[
+```{r psis, echo = TRUE, message = TRUE, warning = TRUE}
+PSIS(m2)
+```
+<br>
+```{r tabela-psis}
+kable(tab.psis, digits = 2, row.names = FALSE,
+      col.names = c("Modelo", "lppd (PSIS)", "lppd (LOO)", "k máximo"),
+      format.args = list(decimal.mark = ","))
+```
+]
+
+---
+
+## Mensagens para levar para casa
+
+* Modelos estatísticos são aproximações dos processos probabilísticos que geram os dados.
+
+* O poder preditivo de um modelo é sua capacidade de aproximar o processo gerador.
+
+* Se avaliamos o poder preditivo com os mesmos dados usados para ajustar o modelo, o modelo mais complexo sempre terá melhor desempenho.
+
+* Para evitar este risco de *overfitting* temos que estimar o poder do modelo prever observações fora da amostra.
+
+* Podemos obter estas estimativas com critérios de informação (WAIC), e validação cruzada (incluindo sua aproximação PSIS).
+
+---
+
+## Referências
+
+* Burnham, K.P. & Anderson, D.R. (2002). *Model Selection and Multimodel
+  Inference: A Practical Information-Theoretic Approach*. 2ª ed. Springer.
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with
+  Examples in R and Stan*. 2ª ed. CRC Press.
+
+* Vehtari, A., Gelman, A. & Gabry, J. (2017). Practical Bayesian model
+  evaluation using leave-one-out cross-validation and WAIC. *Statistics
+  and Computing*, 27, 1413–1432.
