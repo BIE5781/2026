@@ -2,7 +2,7 @@
 title: "Modelos lineares generalizados"
 subtitle: "Disciplina BIE5781 - IB - USP"
 author: "PI"
-date: ' 26 de outubro de 2026'
+date: ' 21 de outubro de 2026'
 output:
   xaringan::moon_reader:
     lib_dir: libs
