@@ -631,15 +631,18 @@ $$\text{WAIC}(y, \Theta) = -2 ( \text{lppd} - \underbrace{\sum_i \text{var}_{\th
 ]
 
 .pull-right[
-```{r grafico-waic, fig.width = 5, fig.asp = 1, out.width = "100%"}
+.center[
+```{r grafico-waic, fig.width = 5, fig.asp = 1, out.width = "80%"}
 ggplot(crit, aes(modelo, waic)) +
     geom_pointrange(aes(ymin = waic - 2 * waic.se, ymax = waic + 2 * waic.se),
                     colour = "#268bd2", linewidth = 1, size = 0.8) +
+    geom_point(data = crit, aes(modelo, -2*lppd), shape = 21, size = 3.5,
+               stroke = 1.2, colour = "#586e75", fill = NA)+
     labs(x = NULL, y = "WAIC") +
     theme_Publication(18)
 ```
-
-.right[.f6[Barras: WAIC ± 2 erros padrão.]]
+]
+.right[.f6[Barras: WAIC ± 2 erros padrão. Pontos vazados: −2 × lppd (sem penalização) ]]
 ]
 
 ---
@@ -747,15 +750,15 @@ ggplot(loo, aes(modelo, lppd.loo)) +
   importance sampling*) aproxima a LOO usando apenas a posterior do
   ajuste com todos os dados.
 
-* Para cada observação $i$, cada amostra da posterior recebe um **peso**
-  proporcional a $1/p(y_i \mid \Theta_s)$: amostras em que $y_i$ é pouco
-  provável representam melhor a posterior sem $y_i$.
+* Calcula a lppd de cada observação ponderando cada amostra da
+  posterior pela probabilidade atribuída à observação: amostras em que
+  $y_i$ é pouco provável representam melhor a posterior sem $y_i$.
 
-* Os maiores pesos são suavizados com uma distribuição de Pareto. O
-  parâmetro $k$ dessa distribuição é um **diagnóstico**: $k > 0{,}5$ indica
-  observações muito influentes, e uma aproximação pouco confiável.
+* Os maiores pesos são suavizados com uma distribuição de Pareto, que tem um parâmetro $k$. 
 
-* Em `compare()`, use `func = PSIS` para comparar pelo PSIS.
+* **Diagnóstico**: $k > 0{,}5$ indica observações muito influentes, e
+  uma aproximação pouco confiável (busque outro método).
+
 ]
 
 .pull-right[
@@ -768,6 +771,7 @@ kable(tab.psis, digits = 2, row.names = FALSE,
       col.names = c("Modelo", "lppd (PSIS)", "lppd (LOO)", "k máximo"),
       format.args = list(decimal.mark = ","))
 ```
+.f7[Na função `compare()`, use o argumento `func = PSIS` para comparar modelos pelo PSIS.]
 ]
 
 ---
