@@ -188,7 +188,7 @@ Como um fator de confusão afeta nossa estimativa do efeito de `\(x\)` sobre `\(
 
 # Fork
 
-Efeito direto de `\(x\)` sobre `\(y\)`, mais um fator de confusão `\(z\)`
+## Uma variável `\(z\)` afeta tanto `\(x\)` quanto `\(y\)`
 
 &lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-fork-efeito-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
 
@@ -276,7 +276,7 @@ O ponto azul indica o valor verdadeiro (`\(0.5\)`).
 
 ## Fork: dados e reta ajustada sem controlar por `\(z\)`
 
-&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-dados-sem-correcao-1.png" alt="" width="45%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-fork-dados-sem-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -290,8 +290,7 @@ $$
 y &amp;\sim \mathrm{Normal}(\mu, \sigma) \\
 \mu &amp;= a + \beta_{x}x + \beta_{z}z \\
 \alpha &amp;\sim \mathrm{Normal}(0, 5) \\
-\beta_{x} &amp;\sim \mathrm{Normal}(0, 0.3) \\
-\beta_{z} &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{x}, \beta_{z} &amp;\sim \mathrm{Normal}(0, 0.3) \\
 \sigma &amp;\sim \mathrm{Exponential}(1)
 \end{aligned}`
 $$
@@ -449,9 +448,9 @@ Em Yellowstone, podemos perguntar se o risco de predação por lobos altera onde
 
 ---
 
-## Pipe
+# Pipe
 
-- Todo o efeito de `\(x\)` sobre `\(y\)` é mediado por `\(z\)`
+## O efeito de `\(x\)` em `\(y\)` é mediado por `\(z\)`
 
 &lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-pipe-efeito-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
@@ -515,11 +514,11 @@ sigma 1.35 0.07 1.24  1.45
 --
 
 .pull-right[
-### Estimativa do efeito de `\(x\)` sem controlar por `\(z\)`
+Estimativa do efeito de `\(x\)` sem controlar por `\(z\)`
 
 O ponto azul é o efeito total de `\(x\)` sobre `\(y\)` (aprox. `\(2\,E[p(1-p)]\)`, com `\(p = \mathrm{invlogit}(x)\)`).
 
-&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-sem-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-sem-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -561,11 +560,11 @@ sigma  0.97 0.05  0.89  1.05
 --
 
 .pull-right[
-### Estimativa do efeito de `\(x\)` controlando por `\(z\)`
+Estimativa do efeito de `\(x\)` controlando por `\(z\)`
 
-O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pelo mediador bloqueia o caminho.
+O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pelo mediador bloqueia o caminho causal entre `\(x\)` e `\(y\)`.
 
-&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-com-correcao-1.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-pipe-coef-com-correcao-1.png" alt="" width="70%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -600,13 +599,15 @@ O ponto azul é o efeito direto de `\(x\)` sobre `\(y\)` (`\(0\)`): controlar pe
 
 - Um erro comum é incluir variáveis medidas após o tratamento.
 
+- Existe uma esperança que incluindo o mediador, seria possivel estimar o efeito direto de `\(x\)` sobre `\(y\)`. Mas, na prática, isso é muito difícil.
+
 &lt;img src="figures/DAGS/x-y_pipe.svg" alt="" width="25%" style="display: block; margin: auto;" /&gt;
 
 ---
 
 ## Variáveis pós-tratamento
 
-Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento sobre o peso final pode ser mediada pela presença do fungo. Como o fungo é medido após o tratamento, incluí-lo como controle pode mascarar o efeito total da intervenção.
+Você conduz um experimento para testar se a aplicação de um novo fungicida biológico aumenta a biomassa final de mudas de uma espécie de plantas. Semanas após a aplicação, você mede a carga fúngica (porcentagem da área foliar com lesões) e, ao final da estação, a biomassa seca das plantas. O objetivo é quantificar a eficácia total do tratamento, mas surge a dúvida se a carga fúngica foliar deve ser incluída como covariável no modelo.
 
 &lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-tratamento-fungico-1.png" alt="" width="80%" style="display: block; margin: auto;" /&gt;
 
@@ -684,7 +685,7 @@ Montgomery et al. (2018).
 --
 
 
-- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito de uma droga numa população de macacos. A pergunta é  se a droga afeta a pressão arterial. Ela mediu a quantidade de droga no sangue e a pressão arterial. A dúvida é se ela deveria incluir a quantidade de droga no sangue como covariável no modelo. 
+- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
 
 O que você responde?
 
@@ -831,6 +832,16 @@ Qualidade e localização são independentes, mas ambas aumentam a chance de o r
 
 &lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-simulacao-restaurantes-1.png" alt="" width="75%" style="display: block; margin: auto;" /&gt;
 
+
+---
+
+## Exemplo: amostras em coleções biológicas
+
+Um pesquisador quer testar se existe uma relação entre o tamanho corporal e o quão chamativa é a coloração (ex: cores de advertência) em uma família de anfíbios. Ele compila um banco de dados usando registros de coleções de museus e levantamentos de campo.
+
+Vamos supor que o tamanho corporal e a coloração não estão relacionados, mas ambos afetam a probabilidade de um indivíduo ser detectado e coletado. Assim, ao usar indivíduos coletados, o pesquisador pode encontrar uma associação espúria entre tamanho corporal e coloração.
+
+&lt;img src="Aula_Inferencia_Causal_I_files/figure-html/figura-dag-colisor-anfibio-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ---
 

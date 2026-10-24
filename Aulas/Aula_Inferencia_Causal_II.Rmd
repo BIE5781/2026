@@ -191,18 +191,164 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
 }
 ```
 
-## Usando DAGs para construir modelos
+## Recaptitulando
 
-Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+.pull-left[
+- O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
+- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipótese sobre as independências condicionais entre as variáveis.
+- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
+- Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
+]
+.pull-right[
+**Pipe**
 
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+```{r figura-caminho, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
+knitr::include_graphics("figures/DAGS/pipe.svg")
+```
+
+**Fork**
+
+```{r figura-bifurcacao, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
+knitr::include_graphics("figures/DAGS/fork.svg")
+```
+
+**Collider**
+
+```{r figura-colisor, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
+knitr::include_graphics("figures/DAGS/colider.svg")
+```
+]
 
 ---
 
-## Caminhos abertos e fechados
+## Usando DAGs para construir modelos
+
+.pull-left[
+- Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+
+- **do-calculus**: Existem regras matemáticas que permitem derivar o efeito causal de uma variável sobre outra a partir de um DAG.
+
+
+$$
+\begin{aligned}
+x_1 &= \mathcal{f}(u_1) \\
+x_2 &= \mathcal{f}(x_1, u_2) \\
+x_3 &= \mathcal{f}(x_1, u_3) \\
+x_4 &= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &= \mathcal{f}(x_4, u_5)
+\end{aligned}
+$$
+
+]
+.pull-right[
+```{r figura-dag-xy-condicionado-nou, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  x1 -> x2
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(x1 = "$x_1$", x2 = "$x_2$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$" ))
+```
+] 
+
+---
+
+## Representando intervenções
+
+.pull-left[
+
+- Vamos imaginar uma intervenção na variável "regador" ($x_2$), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação $do(x_2)$, que remove todas as setas que entram em $x_2$.
+
+$$
+\begin{aligned}
+x_1 &= \mathcal{f}(u_1) \\
+x_2 &= \mathcal{f}(x_1, u_2) \\
+x_3 &= \mathcal{f}(x_1, u_3) \\
+x_4 &= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &= \mathcal{f}(x_4, u_5)
+\end{aligned}
+$$
+
+]
+.pull-right[
+```{r figura-dag-xy-condicionado-chuva, echo=FALSE, eval=TRUE, fig.height = 7, fig.width=10, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  x1 -> x2
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(x1 = "$x_1$", x2 = "$x_2$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$"),
+side_labels = c(x1 = "Estação", x2 = "Regador", x3 = "Chuva", x4 = "Umidade do solo", x5 = "Crescimento da planta"))
+```
+] 
+
+---
+
+## Representando intervenções
+
+.pull-left[
+
+- Vamos imaginar uma intervenção na variável "regador" ($x_2$), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação $do(x_2)$, que remove todas as setas que entram em $x_2$.
+
+$$
+\begin{aligned}
+x_1 &= \mathcal{f}(u_1) \\
+x_2^* &= \mathrm{do}(x_2 = \text{ligado}) \\
+x_3 &= \mathcal{f}(x_1, u_3) \\
+x_4 &= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &= \mathcal{f}(x_4, u_5)
+\end{aligned}
+$$
+
+]
+.pull-right[
+```{r figura-dag-xy-condicionado-chuva-x2, echo=FALSE, eval=TRUE, fig.height = 7, fig.width=10, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x5 [pos=\"0,0\"]
+  x4 [pos=\"0,1\"]
+  x3 [pos=\"-1,2\"]
+  x2 [pos=\"1,2\"]
+  x1 [pos=\"0,3\"]
+  x1 -> x3
+  x3 -> x4
+  x2 -> x4
+  x4 -> x5
+}", labels = c(x1 = "$x_1$", x2 = "$x_2^*$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$"),
+side_labels = c(x1 = "Estação", x2 = "Regador Ligado", x3 = "Chuva", x4 = "Umidade do solo", x5 = "Crescimento da planta"))
+```
+] 
+
+---
+
+## Em que condições podemos estimar o efeito causal de $X$ sobre $Y$?
+
+- Quando: $p(y | do(x)) = p(y | x, z)$
+
+- Em quais condições existe um conjunto de variáveis $Z$ que podemos controlar para estimar o efeito causal de $X$ sobre $Y$?
+
+---
+
+## Caminhos 
+
+
 
 - Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
 - Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+
+
+- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
 
 ---
 

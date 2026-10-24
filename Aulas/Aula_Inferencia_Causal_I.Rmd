@@ -412,7 +412,7 @@ knitr::include_graphics("figures/DAGS/x-y_all.svg")
 
 # Fork
 
-Efeito direto de $x$ sobre $y$, mais um fator de confusão $z$
+## Uma variável $z$ afeta tanto $x$ quanto $y$
 
 ```{r figura-dag-fork-efeito, echo=FALSE, eval=TRUE, out.width="45%", fig.width=8, fig.height=4, fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
 fork = plot_dag("dag {
@@ -517,7 +517,7 @@ plot_coef(precis(m1, pars = "bx"), xlim = c(0, 1.5), verdadeiro = 0.5, linha = 1
 
 ## Fork: dados e reta ajustada sem controlar por $z$
 
-```{r figura-fork-dados-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="45%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+```{r figura-fork-dados-sem-correcao, echo=FALSE, eval=TRUE, fig.width=7, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 plot_xy(x, y, z)
 abline(coef(m1)["a"], coef(m1)["bx"], lwd = 5, col = 1)
 ```
@@ -536,8 +536,7 @@ $$
 y &\sim \mathrm{Normal}(\mu, \sigma) \\
 \mu &= a + \beta_{x}x + \beta_{z}z \\
 \alpha &\sim \mathrm{Normal}(0, 5) \\
-\beta_{x} &\sim \mathrm{Normal}(0, 0.3) \\
-\beta_{z} &\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{x}, \beta_{z} &\sim \mathrm{Normal}(0, 0.3) \\
 \sigma &\sim \mathrm{Exponential}(1)
 \end{aligned}
 $$
@@ -742,9 +741,9 @@ plot_dag("dag {
 
 ---
 
-## Pipe
+# Pipe
 
-- Todo o efeito de $x$ sobre $y$ é mediado por $z$
+## O efeito de $x$ em $y$ é mediado por $z$
 
 ```{r figura-dag-pipe-efeito, echo=FALSE, eval=TRUE, fig.width=8, fig.height=3, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
 pipe = plot_dag("dag {
@@ -810,11 +809,11 @@ precis(m1) |> round(2)
 --
 
 .pull-right[
-### Estimativa do efeito de $x$ sem controlar por $z$
+Estimativa do efeito de $x$ sem controlar por $z$
 
 O ponto azul é o efeito total de $x$ sobre $y$ (aprox. $2\,E[p(1-p)]$, com $p = \mathrm{invlogit}(x)$).
 
-```{r figura-pipe-coef-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+```{r figura-pipe-coef-sem-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 efeito_total <- 2 * mean(inv_logit(x) * (1 - inv_logit(x)))
 plot_coef(precis(m1, pars = "bx"), xlim = c(0, 2.5), verdadeiro = efeito_total, linha = 1)
 ```
@@ -853,11 +852,11 @@ precis(m2) |> round(2)
 --
 
 .pull-right[
-### Estimativa do efeito de $x$ controlando por $z$
+Estimativa do efeito de $x$ controlando por $z$
 
-O ponto azul é o efeito direto de $x$ sobre $y$ ($0$): controlar pelo mediador bloqueia o caminho.
+O ponto azul é o efeito direto de $x$ sobre $y$ ($0$): controlar pelo mediador bloqueia o caminho causal entre $x$ e $y$.
 
-```{r figura-pipe-coef-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
+```{r figura-pipe-coef-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 plot_coef(precis(m2, pars = c("bx", "bz")), xlim = c(-0.3, 2.5), verdadeiro = efeito_total, linha = 2)
 ```
 ]
@@ -916,6 +915,8 @@ plot_dag("dag {
 
 - Um erro comum é incluir variáveis medidas após o tratamento.
 
+- Existe uma esperança que incluindo o mediador, seria possivel estimar o efeito direto de $x$ sobre $y$. Mas, na prática, isso é muito difícil.
+
 ```{r figura-dag-pipe-exemplos, echo=FALSE, eval=TRUE, out.width="25%", fig.align="center"}
 knitr::include_graphics("figures/DAGS/x-y_pipe.svg")
 ```
@@ -924,19 +925,19 @@ knitr::include_graphics("figures/DAGS/x-y_pipe.svg")
 
 ## Variáveis pós-tratamento
 
-Ao avaliar a eficácia de um tratamento contra fungos, grande parte do efeito do tratamento sobre o peso final pode ser mediada pela presença do fungo. Como o fungo é medido após o tratamento, incluí-lo como controle pode mascarar o efeito total da intervenção.
+Você conduz um experimento para testar se a aplicação de um novo fungicida biológico aumenta a biomassa final de mudas de uma espécie de plantas. Semanas após a aplicação, você mede a carga fúngica (porcentagem da área foliar com lesões) e, ao final da estação, a biomassa seca das plantas. O objetivo é quantificar a eficácia total do tratamento, mas surge a dúvida se a carga fúngica foliar deve ser incluída como covariável no modelo.
 
-```{r figura-dag-tratamento-fungico, echo=FALSE, eval=TRUE, fig.width=10, fig.height=5, out.width="80%",fig.align="center", dpi=300, dev="png",  dev.args=list(bg="transparent")}
+```{r figura-dag-tratamento-fungico, echo=FALSE, eval=TRUE, fig.width=10, fig.height=4.5, out.width="80%",fig.align="center", dpi=300, dev="png",  dev.args=list(bg="transparent")}
 plot_dag("dag {
   T [pos=\"1,2\"]
   Pi [pos=\"3,3\"]
   Pf [pos=\"3,2\"]
-  F [pos=\"2, 1\"]
+  L [pos=\"2, 1\"]
   Pi -> Pf
   T -> Pf
-  T -> F
-  F -> Pf
-}", side_labels = c(T = "Tratamento", Pi = "Peso inicial", Pf = "Peso final", F = "Fungo"))
+  T -> L
+  L -> Pf
+}", side_labels = c(T = "Tratamento", Pi = "Peso inicial", Pf = "Peso final", L = "Áres de lesões"))
 ```
 
 ---
@@ -1090,7 +1091,7 @@ Montgomery et al. (2018).
 --
 
 
-- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito de uma droga numa população de macacos. A pergunta é  se a droga afeta a pressão arterial. Ela mediu a quantidade de droga no sangue e a pressão arterial. A dúvida é se ela deveria incluir a quantidade de droga no sangue como covariável no modelo. 
+- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
 
 O que você responde?
 
@@ -1278,6 +1279,24 @@ ggplot2::ggplot(rest, ggplot2::aes(L, Q, color = existe)) +
   )
 ```
 
+
+---
+
+## Exemplo: amostras em coleções biológicas
+
+Um pesquisador quer testar se existe uma relação entre o tamanho corporal e o quão chamativa é a coloração (ex: cores de advertência) em uma família de anfíbios. Ele compila um banco de dados usando registros de coleções de museus e levantamentos de campo.
+
+Vamos supor que o tamanho corporal e a coloração não estão relacionados, mas ambos afetam a probabilidade de um indivíduo ser detectado e coletado. Assim, ao usar indivíduos coletados, o pesquisador pode encontrar uma associação espúria entre tamanho corporal e coloração.
+
+```{r figura-dag-colisor-anfibio, echo=FALSE, eval=TRUE, fig.width=15, fig.height=5, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+  plot_dag("dag {
+  T [pos=\"0,1\"]
+  C [pos=\"2,1\"]
+  D [pos=\"1,0\"]
+  T -> D
+  C -> D
+}", side_labels = c(T = "Tamanho corporal", C = "Coloração", D = "Detecção"))
+```
 
 ---
 

@@ -48,18 +48,118 @@ class: center, middle, inverse, title-slide
 
 
 
-## Usando DAGs para construir modelos
+## Recaptitulando
 
-Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+.pull-left[
+- O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
+- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipótese sobre as independências condicionais entre as variáveis.
+- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
+- Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
+]
+.pull-right[
+**Pipe**
 
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+&lt;img src="figures/DAGS/pipe.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+**Fork**
+
+&lt;img src="figures/DAGS/fork.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+
+**Collider**
+
+&lt;img src="figures/DAGS/colider.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
-## Caminhos abertos e fechados
+## Usando DAGs para construir modelos
+
+.pull-left[
+- Se representarmos nossas relações causais propostas por meio de DAGs, teremos um conjunto de regras que nos informa quais variáveis incluir no modelo para estimar determinado efeito.
+
+- **do-calculus**: Existem regras matemáticas que permitem derivar o efeito causal de uma variável sobre outra a partir de um DAG.
+
+
+$$
+`\begin{aligned}
+x_1 &amp;= \mathcal{f}(u_1) \\
+x_2 &amp;= \mathcal{f}(x_1, u_2) \\
+x_3 &amp;= \mathcal{f}(x_1, u_3) \\
+x_4 &amp;= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &amp;= \mathcal{f}(x_4, u_5)
+\end{aligned}`
+$$
+
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-condicionado-nou-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+] 
+
+---
+
+## Representando intervenções
+
+.pull-left[
+
+- Vamos imaginar uma intervenção na variável "regador" (`\(x_2\)`), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação `\(do(x_2)\)`, que remove todas as setas que entram em `\(x_2\)`.
+
+$$
+`\begin{aligned}
+x_1 &amp;= \mathcal{f}(u_1) \\
+x_2 &amp;= \mathcal{f}(x_1, u_2) \\
+x_3 &amp;= \mathcal{f}(x_1, u_3) \\
+x_4 &amp;= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &amp;= \mathcal{f}(x_4, u_5)
+\end{aligned}`
+$$
+
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-condicionado-chuva-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+] 
+
+---
+
+## Representando intervenções
+
+.pull-left[
+
+- Vamos imaginar uma intervenção na variável "regador" (`\(x_2\)`), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação `\(do(x_2)\)`, que remove todas as setas que entram em `\(x_2\)`.
+
+$$
+`\begin{aligned}
+x_1 &amp;= \mathcal{f}(u_1) \\
+x_2^* &amp;= \mathrm{do}(x_2 = \text{ligado}) \\
+x_3 &amp;= \mathcal{f}(x_1, u_3) \\
+x_4 &amp;= \mathcal{f}(x_2, x_3, u_4) \\
+x_5 &amp;= \mathcal{f}(x_4, u_5)
+\end{aligned}`
+$$
+
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-condicionado-chuva-x2-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+] 
+
+---
+
+## Em que condições podemos estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
+
+- Quando: `\(p(y | do(x)) = p(y | x, z)\)`
+
+- Em quais condições existe um conjunto de variáveis `\(Z\)` que podemos controlar para estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
+
+---
+
+## Caminhos 
+
+
 
 - Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
 - Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+
+
+- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
 
 ---
 
