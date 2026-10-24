@@ -379,9 +379,10 @@ Hirotugu Akaike (1927–2009)
 ]
 
 .pull-right[
-&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-waic-1.png" alt="" width="100%" /&gt;
-
-.right[.f6[Barras: WAIC ± 2 erros padrão.]]
+.center[
+&lt;img src="Aula_08_comparacao_modelos_files/figure-html/grafico-waic-1.png" alt="" width="80%" /&gt;
+]
+.right[.f6[Barras: WAIC ± 2 erros padrão. Pontos vazados: −2 × lppd (sem penalização) ]]
 ]
 
 ---
@@ -476,15 +477,15 @@ modelos não diferem quanto ao poder preditivo.
   importance sampling*) aproxima a LOO usando apenas a posterior do
   ajuste com todos os dados.
 
-* Para cada observação `\(i\)`, cada amostra da posterior recebe um **peso**
-  proporcional a `\(1/p(y_i \mid \Theta_s)\)`: amostras em que `\(y_i\)` é pouco
-  provável representam melhor a posterior sem `\(y_i\)`.
+* Calcula a lppd de cada observação ponderando cada amostra da
+  posterior pela probabilidade atribuída à observação: amostras em que
+  `\(y_i\)` é pouco provável representam melhor a posterior sem `\(y_i\)`.
 
-* Os maiores pesos são suavizados com uma distribuição de Pareto. O
-  parâmetro `\(k\)` dessa distribuição é um **diagnóstico**: `\(k &gt; 0{,}5\)` indica
-  observações muito influentes, e uma aproximação pouco confiável.
+* Os maiores pesos são suavizados com uma distribuição de Pareto, que tem um parâmetro `\(k\)`. 
 
-* Em `compare()`, use `func = PSIS` para comparar pelo PSIS.
+* **Diagnóstico**: `\(k &gt; 0{,}5\)` indica observações muito influentes, e
+  uma aproximação pouco confiável (busque outro método).
+
 ]
 
 .pull-right[
@@ -509,6 +510,7 @@ Some Pareto k values are high (&gt;0.5). Set pointwise=TRUE to inspect individua
 |Grau 2 |      -27,39|     -25,71|     1,15|
 |Grau 4 |      -28,89|     -26,80|     1,11|
 |Grau 6 |      -31,83|     -28,27|     1,20|
+.f7[Na função `compare()`, use o argumento `func = PSIS` para comparar modelos pelo PSIS.]
 ]
 
 ---
