@@ -143,23 +143,60 @@ $$
 
 ---
 
-## Em que condições podemos estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
+## Estimando o efeito causal de `\(X\)` sobre `\(Y\)`?
 
-- Quando: `\(p(y | do(x)) = p(y | x, z)\)`
+
+.pull-left[
+
+
+- Para estimar um efeito causal usando um modelo estatístico, precisamos encontrar um conjunto de variáveis `\(Z\)` que podemos controlar, de forma que o efeito causal de `\(do(X)\)` sobre `\(Y\)` seja igual ao efeito estatístico de `\(X\)` sobre `\(Y\)` controlando por `\(Z\)`.
+.center[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+    `\(p(y | do(x)) = p(y | x, z)\)`
+    ]]
 
 - Em quais condições existe um conjunto de variáveis `\(Z\)` que podemos controlar para estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
+
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-do-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+] 
 
 ---
 
 ## Caminhos 
 
+.pull-left[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
 
+- x -&gt; z -&gt; y
+    - lm(y ~ x) : aberto
+    - lm(y ~ x + z) : fechado
 
-- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
-- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+- x &lt;- z -&gt; y
+    - lm(y ~ x) : aberto
+    - lm(y ~ x + z) : fechado
+]
 
+--
 
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+.pull-right[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
+
+- x -&gt; z &lt;- y
+    - lm(y ~ x) : fechado
+    - lm(y ~ x + z) : aberto
+
+]
+
+--
+
+Ferramentas automatizadas: 
+
+ - [dagitty.net](http://www.dagitty.net/dags.html)
+ - [dagitty R package](https://cran.r-project.org/web/packages/dagitty/index.html)
 
 ---
 
@@ -169,9 +206,22 @@ $$
 
 ---
 
-## Critério da porta dos fundos
+## Critério da porta dos fundos (Backdoor criterion)
 
-Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto de variáveis de controle que não contenha descendentes de `\(X\)` e bloqueie todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)`.
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+    Para estimar o efeito causal de `\(X\)` sobre `\(Y\)`, identifique um conjunto de variáveis de controle que não contenha descendentes de `\(X\)` e bloqueie todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)`.
+    ]
+
+.pull-left[
+    - Descendentes de `\(X\)` não podem ser incluídos como variáveis de controle (nenhuma vaviável pós-tratamento).
+    - Todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)` devem ser bloqueados. 
+]
+--
+.pull-right[
+- Variáveis que são Pipes e forks **bloqueiam** caminhos quando incluidas nos modelos.
+
+- Variáveis que são Colliders **abrem** caminhos quando incluidas nos modelos.
+]
 
 ---
 
@@ -202,6 +252,68 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 &lt;img src="figures/DAGS/hiv_stroke.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;
 
 ---
+
+## Outras variáveis de controle
+
+.pull-left[
+- As vezes, não temos nenhum caminho não causal aberto entre `\(X\)` e `\(Y\)`, mas acrescentar variáveis no modelo pode melhorar ou piorar a precisão da estimativa do efeito causal de `\(X\)` sobre `\(Y\)`.
+
+- Pais de `\(Y\)` que não são pais de `\(X\)` podem ser incluídas para reduzir a variância da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
+
+- No DAG ao lado, incluir `\(Z\)` no modelo não muda a estimativa do efeito de `\(X\)` sobre `\(Y\)`, mas reduz a variância da estimativa.
+
+- A variância de `\(Y\)` capturada por `\(Z\)` ajuda a localizar o efeito de `\(X\)` sobre `\(Y\)`.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figure-dag-precision-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## Outras variáveis de controle (precision sink)
+
+
+.pull-left[
+- Por outro lado, também é possivel piorar a precisão da estimativa incluindo variáveis de controle equivocadas.
+   
+- Pais de `\(X\)` que não afetam `\(Y\)` pioram a precisão da estimativa.
+
+- No DAG ao lado, incluir `\(Z\)` no modelo não muda a estimativa do efeito de `\(X\)` sobre `\(Y\)`, mas aumenta a variância da estimativa.
+
+- Incluir `\(Z\)` reduz a quantidade de variância de `\(X\)` que é usada para estimar o efeito de `\(X\)` sobre `\(Y\)`, aumentando a variância da estimativa.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figure-dag-sink-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&gt; Não inclua `\(Z\)` nesse caso!
+]
+
+---
+
+
+## Outras variáveis de controle (bias amplification)
+
+
+.pull-left[
+- A situação é mais grave ainda quando existe um fork entre `\(X\)` e `\(Y\)` e incluímos uma variável de controle que é um pai de `\(X\)` que não afeta `\(Y\)`.
+
+- Nesse caso, a inclusão de `\(Z\)` no modelo é catastrófica.
+
+- A inclusão de `\(Z\)`:
+  -  remove a variância de `\(X\)` que seria preditora de `\(Y\)` diretamente, e, portanto
+  -  amplifica o efeito da variância de `\(X\)` que é causada por `\(u\)`, aumentando o viés da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figure-dag-bias-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&gt; Não inclua `\(Z\)` nesse caso (MESMO)!
+]
+
+--
+
+[Pearl, J. (2011) Understanding bias amplification. American Journal of Epidemiology, 174(11), 1223–1227](https://doi.org/10.1093/aje/kwr352)
+
+
+---
+
 
 ## Bons controles
 

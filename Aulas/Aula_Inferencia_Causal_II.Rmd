@@ -62,6 +62,7 @@ xaringanExtra::use_tile_view()
 ## `latent`: nós não observados, desenhados com círculo pontilhado e sem preenchimento.
 ## Por padrão usa os nós marcados com [latent] no dagitty, ex.: `u [latent]`;
 ## também pode ser um vetor de nomes, ex.: latent = c("u", "z").
+## As setas que saem de nós latentes são tracejadas.
 ## Os nomes dos nós no DAG devem ser simples (ex.: ux), sem `$` nem `\`.
 ## `node_radius` (unidades de coordenadas) é calculado automaticamente a partir de
 ## `node_size` e de fig.width/fig.height do chunk, para as setas começarem e
@@ -131,21 +132,70 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
     y = nodes$y[from] + node_radius * dy / len,
     xend = nodes$x[to] - node_radius * dx / len,
     yend = nodes$y[to] - node_radius * dy / len,
-    bidirected = edges$e == "<->"
+    bidirected = edges$e == "<->",
+    dashed = nodes$latent[from] |
+      (edges$e == "<->" & nodes$latent[to])
   )
 
   seta <- function(ends) {
     grid::arrow(type = "closed", ends = ends, length = grid::unit(arrow_mm, "mm"))
   }
   p <- ggplot2::ggplot()
+  plot_width <- if (is.null(fig_width)) 7 else fig_width
+  plot_height <- if (is.null(fig_height)) 5 else fig_height
+  inches_per_unit <- min(
+    plot_width / (diff(range(nodes$x)) + 2 * pad_x),
+    plot_height / (diff(range(nodes$y)) + 2 * padding)
+  )
+  arrow_length <- arrow_mm / 25.4 / inches_per_unit
   for (bi in c(FALSE, TRUE)) {
     e <- edges[edges$bidirected == bi, ]
     if (nrow(e) == 0) next
+    solid <- e[!e$dashed, ]
+    if (nrow(solid) > 0) {
+      p <- p + ggplot2::geom_segment(
+        data = solid, ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+        linewidth = 1.1, color = edge_color,
+        arrow = seta(if (bi) "both" else "last")
+      )
+    }
+    dashed <- e[e$dashed, ]
+    if (nrow(dashed) == 0) next
+    dx <- dashed$xend - dashed$x
+    dy <- dashed$yend - dashed$y
+    len <- sqrt(dx^2 + dy^2)
+    head_length <- pmin(arrow_length, len / 2)
+    ux <- dx / len
+    uy <- dy / len
+    shaft <- dashed
+    shaft$xend <- dashed$xend - head_length * ux
+    shaft$yend <- dashed$yend - head_length * uy
+    if (bi) {
+      shaft$x <- dashed$x + head_length * ux
+      shaft$y <- dashed$y + head_length * uy
+    }
     p <- p + ggplot2::geom_segment(
-      data = e, ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
-      linewidth = 1.1, color = edge_color,
-      arrow = seta(if (bi) "both" else "last")
+      data = shaft, ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+      linewidth = 1.1, color = edge_color, linetype = "dashed"
     )
+    head_to <- dashed
+    head_to$x <- dashed$xend - head_length * ux
+    head_to$y <- dashed$yend - head_length * uy
+    p <- p + ggplot2::geom_segment(
+      data = head_to,
+      ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+      linewidth = 1.1, color = edge_color, arrow = seta("last")
+    )
+    if (bi) {
+      head_from <- dashed
+      head_from$xend <- dashed$x + head_length * ux
+      head_from$yend <- dashed$y + head_length * uy
+      p <- p + ggplot2::geom_segment(
+        data = head_from,
+        ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+        linewidth = 1.1, color = edge_color, arrow = seta("first")
+      )
+    }
   }
   if (!is.null(side_labels)) {
     i <- match(names(side_labels), nodes$node)
@@ -332,23 +382,80 @@ side_labels = c(x1 = "Estação", x2 = "Regador Ligado", x3 = "Chuva", x4 = "Umi
 
 ---
 
-## Em que condições podemos estimar o efeito causal de $X$ sobre $Y$?
+## Estimando o efeito causal de $X$ sobre $Y$?
 
-- Quando: $p(y | do(x)) = p(y | x, z)$
+
+.pull-left[
+
+
+- Para estimar um efeito causal usando um modelo estatístico, precisamos encontrar um conjunto de variáveis $Z$ que podemos controlar, de forma que o efeito causal de $do(X)$ sobre $Y$ seja igual ao efeito estatístico de $X$ sobre $Y$ controlando por $Z$.
+.center[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+    $p(y | do(x)) = p(y | x, z)$
+    ]]
 
 - Em quais condições existe um conjunto de variáveis $Z$ que podemos controlar para estimar o efeito causal de $X$ sobre $Y$?
+
+]
+.pull-right[
+```{r figura-dag-xy-do, echo=FALSE, eval=TRUE, fig.height = 10, fig.width=10, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  z0 [latent, pos=\"3,5\"]
+  z1 [pos=\"3,3.5\"] 
+  B [latent, pos=\"3.95,3.5\"]
+  z2 [pos=\"3,2\"]
+  z3 [pos=\"5,2\"]
+  X [pos=\"1,2\"]
+  Y [pos=\"3,0.5\"]
+  z0 -> z1
+  z0 -> X
+  z1 -> z2
+  z2 -> z3
+  z3 -> Y
+  z0 -> B
+  B -> z3
+  z2 -> Y
+  X -> Y
+  X -> z2
+}", labels = c(X = "$X$", Y = "$Y$", z0 = "$Z_0$", z1 = "$Z_1$", z2 = "$Z_2$", z3 = "$Z_3$", B = "$B$"))
+```
+] 
 
 ---
 
 ## Caminhos 
 
+.pull-left[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
 
+- x -> z -> y
+    - lm(y ~ x) : aberto
+    - lm(y ~ x + z) : fechado
 
-- Caminhos que contêm caminhos ou bifurcações não controlados ficam abertos.
-- Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.
+- x <- z -> y
+    - lm(y ~ x) : aberto
+    - lm(y ~ x + z) : fechado
+]
 
+--
 
-- Ferramenta automatizada: [dagitty.net](http://www.dagitty.net/dags.html)
+.pull-right[
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
+
+- x -> z <- y
+    - lm(y ~ x) : fechado
+    - lm(y ~ x + z) : aberto
+
+]
+
+--
+
+Ferramentas automatizadas: 
+
+ - [dagitty.net](http://www.dagitty.net/dags.html)
+ - [dagitty R package](https://cran.r-project.org/web/packages/dagitty/index.html)
 
 ---
 
@@ -360,9 +467,22 @@ knitr::include_graphics("figures/DAGS/paths_dag.png")
 
 ---
 
-## Critério da porta dos fundos
+## Critério da porta dos fundos (Backdoor criterion)
 
-Para estimar o efeito causal de $X$ sobre $Y$, identifique um conjunto de variáveis de controle que não contenha descendentes de $X$ e bloqueie todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$.
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+    Para estimar o efeito causal de $X$ sobre $Y$, identifique um conjunto de variáveis de controle que não contenha descendentes de $X$ e bloqueie todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$.
+    ]
+
+.pull-left[
+    - Descendentes de $X$ não podem ser incluídos como variáveis de controle (nenhuma vaviável pós-tratamento).
+    - Todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$ devem ser bloqueados. 
+]
+--
+.pull-right[
+- Variáveis que são Pipes e forks **bloqueiam** caminhos quando incluidas nos modelos.
+
+- Variáveis que são Colliders **abrem** caminhos quando incluidas nos modelos.
+]
 
 ---
 
@@ -401,6 +521,95 @@ knitr::include_graphics("figures/DAGS/hiv_stroke.svg")
 ```
 
 ---
+
+## Outras variáveis de controle
+
+.pull-left[
+- As vezes, não temos nenhum caminho não causal aberto entre $X$ e $Y$, mas acrescentar variáveis no modelo pode melhorar ou piorar a precisão da estimativa do efeito causal de $X$ sobre $Y$.
+
+- Pais de $Y$ que não são pais de $X$ podem ser incluídas para reduzir a variância da estimativa do efeito de $X$ sobre $Y$.
+
+- No DAG ao lado, incluir $Z$ no modelo não muda a estimativa do efeito de $X$ sobre $Y$, mas reduz a variância da estimativa.
+
+- A variância de $Y$ capturada por $Z$ ajuda a localizar o efeito de $X$ sobre $Y$.
+]
+.pull-right[
+```{r figure-dag-precision, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", fig.height=4, dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"2,1\"]
+  x -> y
+  z -> y
+}", labels = c(x = "$X$", y = "$Y$", z = "$Z$"))
+```
+]
+
+---
+
+## Outras variáveis de controle (precision sink)
+
+
+.pull-left[
+- Por outro lado, também é possivel piorar a precisão da estimativa incluindo variáveis de controle equivocadas.
+   
+- Pais de $X$ que não afetam $Y$ pioram a precisão da estimativa.
+
+- No DAG ao lado, incluir $Z$ no modelo não muda a estimativa do efeito de $X$ sobre $Y$, mas aumenta a variância da estimativa.
+
+- Incluir $Z$ reduz a quantidade de variância de $X$ que é usada para estimar o efeito de $X$ sobre $Y$, aumentando a variância da estimativa.
+]
+.pull-right[
+```{r figure-dag-sink, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", fig.height=4, dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"0,1\"]
+  x -> y
+  z -> x
+}", labels = c(x = "$X$", y = "$Y$", z = "$Z$"))
+```
+> Não inclua $Z$ nesse caso!
+]
+
+---
+
+
+## Outras variáveis de controle (bias amplification)
+
+
+.pull-left[
+- A situação é mais grave ainda quando existe um fork entre $X$ e $Y$ e incluímos uma variável de controle que é um pai de $X$ que não afeta $Y$.
+
+- Nesse caso, a inclusão de $Z$ no modelo é catastrófica.
+
+- A inclusão de $Z$:
+  -  remove a variância de $X$ que seria preditora de $Y$ diretamente, e, portanto
+  -  amplifica o efeito da variância de $X$ que é causada por $u$, aumentando o viés da estimativa do efeito de $X$ sobre $Y$.
+]
+.pull-right[
+```{r figure-dag-bias, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", fig.height=4, dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  x [pos=\"0,0\"]
+  y [pos=\"2,0\"]
+  z [pos=\"0,1\"]
+  u [latent, pos=\"1,1\"]
+  x -> y
+  u -> y
+  u -> x
+  z -> x
+}", labels = c(x = "$X$", y = "$Y$", z = "$Z$"))
+```
+> Não inclua $Z$ nesse caso (MESMO)!
+]
+
+--
+
+[Pearl, J. (2011) Understanding bias amplification. American Journal of Epidemiology, 174(11), 1223–1227](https://doi.org/10.1093/aje/kwr352)
+
+
+---
+
 
 ## Bons controles
 
