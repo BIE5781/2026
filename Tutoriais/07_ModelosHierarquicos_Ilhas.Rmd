@@ -3,7 +3,7 @@ title: "Tutorial de modelos mistos e hierárquicos"
 author:
  - "Paulo Inácio Prado"
  - "Diogo Melo"
-date: "2026-10-23"
+date: "2026-10-28"
 
 output:
     distill::distill_article:
@@ -99,12 +99,17 @@ esperada entre a resposta e o preditor:
 $$
 \begin{aligned} 
   y_i &\sim \text{Normal}(\mu_i, \sigma) \\
-  \mu_i &= \alpha + \beta x_i
+  \mu_i &= \alpha + \beta x_i \\
+  \alpha &\sim \text{Normal}(., .) \\
+  \beta &\sim \text{Normal}(. , .) \\
+  \sigma &\sim exp(.)
 \end{aligned} 
 $$
 
-Em que $y_i$ é o logaritmo centralizado da riqueza de espécies e $x_i$ é
-o logaritmo padronizado da área da ilha, para cada ilha $i$.
+Em que $y_i$ é o logaritmo centralizado da riqueza de espécies e $x_i$
+é o logaritmo padronizado da área da ilha, para cada ilha $i$. Os
+pontos nos parâmetros das distribuiçãoes a priori indicam que são
+números que ainda vamos definir, aseguir.
 
 **Inclinações e interceptos independentes por local:** este modelo
 equivale a ajustar uma regressão linear separada para cada arquipélago
@@ -114,7 +119,10 @@ independentes para o preditor linear:
 $$
 \begin{aligned}
   y_i &\sim \text{Normal}(\mu_i, \sigma) \\
-  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i
+  \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
+  \alpha_{\text{site[i]}}&\sim \text{Normal}(., .) \\
+  \beta_{\text{site[i]}} &\sim \text{Normal}(. , .) \\
+  \sigma &\sim exp(.)
 \end{aligned}
 $$
 
@@ -133,6 +141,11 @@ $$
   \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} &\sim \text{Normal}(\mu_\alpha, \sigma_\alpha) \\
   \beta_{\text{site}} &\sim \text{Normal}(\mu_\beta, \sigma_\beta) \\
+  \mu_\alpha &\sim \text{Normal}(., .)\\
+  \sigma_\alpha &\sim \text{exp}(.)\\
+  \mu_\beta &\sim \text{Normal}(., .)\\
+  \sigma_\beta &\sim \text{exp}(.)\\
+  \sigma &\sim exp(.)
 \end{aligned}
 $$
 
@@ -144,16 +157,16 @@ modelos pelas abordagens bayesiana e de máxima verossimilhança.
 
 Em resumo, os três modelos são:
 
-1. m0: inclinação e intercepto únicos (pooling completo)
-2. m1: inclinações e interceptos diferentes por local (sem pooling)
-3. m2: inclinações e interceptos agrupados entre locais (pooling parcial)
+1. m0: inclinação e intercepto únicos: agregação ("*pooling*") completo
+2. m1: inclinações e interceptos diferentes por local (sem *pooling*)
+3. m2: inclinações e interceptos agrupados entre locais (*pooling* parcial)
 
 ## Abordagem bayesiana
 
 
 ### Inclinação e intercepto únicos
 
-Precisamos dos valores da variável resposta e do preditor para cada ilha,
+Os dados são os valores da variável resposta e do preditor para cada ilha,
 como mostram as primeiras linhas do conjunto de dados abaixo:
 
 ```{r }
@@ -170,15 +183,17 @@ $$
 \begin{aligned} 
   y_i & \sim \text{Normal}(\mu_i, \sigma) \\
   \mu_i &= \alpha + \beta x_i \\
-  \alpha & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \beta & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
-  \sigma & \sim \text{Exponential}(\lambda = 1)
+  \alpha & \sim \text{Normal}(0, 2)\\
+  \beta & \sim \text{Log-normal}(0, 0.7)\\
+  \sigma & \sim \text{Exponential}(1)
 \end{aligned} 
 $$
 
 O código a seguir ajusta esse modelo usando o pacote *rethinking*:
 
 ```{r }
+## adicionamos o argumento log_lik=TRUE para obter a
+## log-verossimilhança por observação e comparar os modelos
 m0 <- ulam(
     alist(
         lc_S ~ dnorm( mu, sigma ) ,
@@ -186,8 +201,11 @@ m0 <- ulam(
         alpha ~ dnorm(0, 2),
         beta ~ dlnorm(0, 0.7), 
         sigma ~ dexp(1)
-    ) , data = islands[, c("ls_area", "lc_S")] , chains=4 , cores=4 , log_lik=TRUE ) # adicionamos o argumento log_lik para obter a
-             # log-verossimilhança por observação e comparar os modelos
+    ) , data = islands[, c("ls_area", "lc_S")] ,
+    chains=4 ,
+    cores=4 ,
+    log_lik=TRUE )
+
 ```
 
 Use o comando abaixo para obter um resumo das distribuições posteriores
@@ -214,7 +232,7 @@ Precisamos de um modelo com mais parâmetros para descrever as variações
 da relação entre espécies e área observadas entre os locais de estudo.
 Podemos permitir que cada local tenha seu próprio intercepto e sua
 própria inclinação. Para isso, precisamos de uma terceira variável: um
-índice numérico que identifica o local:
+índice numérico que identifica o local, que já está em nosso conjunto de dados:
 
 ```{r }
 head(islands[, c("ls_area", "lc_S", "site")])
@@ -225,16 +243,16 @@ Denotamos por $\alpha_{\text{site[i]}}$ o intercepto da observação $i$
 no respectivo local; o mesmo vale para a inclinação
 $\beta_{\text{site[i]}}$. Como temos `r max(islands$site)` locais,
 precisamos especificar esse mesmo número de prioris para os interceptos
-e para as inclinações. Usando $\theta_{\text{site}} \sim
-	ext{distribuição()}$ como abreviação para esse conjunto de prioris,
+e para as inclinações. Usando $\theta_{\text{site}} \sim ext{distribuição()}$ 
+como abreviação para esse conjunto de prioris,
 podemos escrever o modelo assim:
 
 $$
 \begin{aligned}
   y_i &\sim \text{Normal}(\mu_i, \sigma) \\
   \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
-  \alpha_{\text{site}} & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \beta_{\text{site}} & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
+  \alpha_{\text{site}} & \sim \text{Normal}(0, 2)\\
+  \beta_{\text{site}} & \sim \text{Log-normal}(0, 0.7)\\
   \sigma & \sim \text{Exponential}(\lambda = 1)
 \end{aligned}
 $$
@@ -294,7 +312,7 @@ superajuste.
 Uma alternativa intermediária é permitir que os parâmetros variem entre
 locais, mas agrupá-los em uma distribuição. Assim, temos
 **hiperparâmetros**, isto é, parâmetros das distribuições dos parâmetros
-do preditor linear. Portanto, precisamos atribuir prioris aos
+do preditor linear. Portanto, precisamos atribuir distribuição a priori aos
 hiperparâmetros:
 
 
@@ -304,11 +322,11 @@ $$
   \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} & \sim \text{Normal}(\mu_\alpha, \sigma_\alpha)\\
   \beta_{\text{site}} & \sim \text{Normal}(\mu_\beta, \sigma_\beta)\\
-  \mu_\alpha & \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \mu_\beta & \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
-  \sigma_\alpha & \sim \text{Exponential}(\lambda = 1)\\
-  \sigma_\beta & \sim \text{Exponential}(\lambda = 0.25)\\
-  \sigma & \sim \text{Exponential}(\lambda = 1)\\
+  \mu_\alpha & \sim \text{Normal}(0, 2)\\
+  \mu_\beta & \sim \text{Log-normal}(0, 0.7)\\
+  \sigma_\alpha & \sim \text{Exponential}(1)\\
+  \sigma_\beta & \sim \text{Exponential}(0.25)\\
+  \sigma & \sim \text{Exponential}(1)\\
 \end{aligned}
 $$
 
@@ -369,7 +387,7 @@ parâmetros sofrem shrinkage em direção a uma média comum:
 ```{r }
 plot(m1.ab$slope, rep(1,nrow(m1.ab)),
      ylim = c(0.5, 2.5),
-     xlab = "Mean posterior slopes",
+     xlab = "Médias posteriore das incliações",
      yaxt="n", ylab="" , cex.axis=2,
      cex.lab = 2, pch = 19)
 points(m2.ab$slope, rep(2,nrow(m2.ab)), pch =19)
@@ -415,7 +433,7 @@ m2.priors <- data.frame(mu_b = rlnorm(1e4, meanlog = 0, sdlog = 0.7),
 sim.prior.slopes <- rnorm(length(m2.priors$mu_b), mean = m2.priors$mu_b, sd = m2.priors$sigma_b)
 ## densidades das prioris e posteriores simuladas
 plot(density(sim.slopes),
-     xlab = "Slopes", main ="",
+     xlab = "Inclinações", main ="",
      xlim = c(-2,5))
 lines(density(sim.prior.slopes), col ="blue")
 legend("topleft", legend = c("Prior", "Posterior"),
@@ -459,16 +477,22 @@ menor.
 
 ## Abordagem de máxima verossimilhança
 
-Há funções e bibliotecas em R com rotinas eficientes para ajustar várias
-classes de modelos pelo método da máxima verossimilhança. A maioria usa
-a [sintaxe de fórmulas de
+Há funções e bibliotecas em R com rotinas eficientes para ajustar
+várias classes de modelos pelo método da máxima verossimilhança. A
+maioria usa a [sintaxe de fórmulas de
 modelos](https://www.ucd.ie/ecomodel/Resources/R_formulae_WebVersion.html),
-que expressa a estrutura do preditor linear (ou não linear).
+que expressa a estrutura do preditor linear (ou não linear). Esta
+mesma sintaxe também é usada em alguns pacotes de ajuste Bayesiano,
+sendo o [brms](https://paulbuerkner.com/brms/) o mais completo para
+isto.
+
+Aqui vamos usar esta sintaxe para fazer o ajuste por máxima
+verossimilhança, para comparação.
 
 
 ### Inclinação e intercepto únicos
 
-Esta é uma regressão linear simples. Como [já vimos](https://statistical-inference.netlify.app/03_linear_models.html), ajustamos esse modelo por máxima verossimilhança com a função `lm`:
+Esta é uma regressão linear simples. Como [já vimos](https://bie5781.github.io/2026/Tutoriais/03_modelo_linear.html#usando-a-fun%C3%A7%C3%A3o-lm-para-ajustar-o-modelo), ajustamos esse modelo por máxima verossimilhança com a função `lm`:
 
 
 ```{r }
@@ -536,7 +560,7 @@ levels(islands$site_id)
 Ao incluir um efeito aditivo do índice do local, permitimos interceptos
 diferentes^[isto é, a riqueza média em escala logarítmica varia entre
 locais]. Ao incluir uma interação entre a área da ilha e o índice do
-local, permitimos inclinações diferentes^[isto é, o efeito da área da
+local, permitimos inclinações diferentes nesta escala^[isto é, o efeito da área da
 ilha varia entre locais]:
 
 
@@ -551,7 +575,7 @@ Obtemos então os coeficientes estimados com:
 ```
 
 Em R, a estrutura padrão do preditor linear para uma regressão múltipla
-com variáveis categóricas é:
+com variáveis categóricas é o contraste com o controle ou referência:
 
 $$mu_i = \alpha_0 + \alpha_{site[i]} + (\beta_0 + \beta_{site[i]}) \, \text{ls_area}$$
 
@@ -621,10 +645,11 @@ intercepto: centrados em $\alpha$, ajustam o intercepto fixo de cada
 local. De modo análogo, $b_{\text{site}}$ representa o efeito aleatório
 do local sobre a inclinação.
 
-O pacote de referência para ajustar modelos de efeitos mistos por
-máxima verossimilhança é
-[lme4](http://cran.nexr.com/web/packages/lme4/vignettes/lmer.pdf). The
-A função `lmer` ajusta modelos lineares mistos gaussianos. Para ajustar
+Os pacotes de referência para ajustar modelos de efeitos mistos por
+máxima verossimilhança são 
+[lme4](http://cran.nexr.com/web/packages/lme4/vignettes/lmer.pdf) e [glmmTMB](https://glmmtmb.github.io/glmmTMB/). 
+
+A função `lem4::lmer` ajusta modelos lineares mistos gaussianos. Para ajustar
 o modelo com efeitos aleatórios nos interceptos e nas inclinações, use:
 
 
@@ -632,7 +657,7 @@ o modelo com efeitos aleatórios nos interceptos e nas inclinações, use:
 m2.ML <- lmer(lc_S ~ ls_area + (ls_area|site_fac), data = islands, REML=FALSE)
 ```
 
-Na sintaxe de `lmer`, o termo `(ls_area|site_fac)` indica que o local é
+Na sintaxe de modelos usadas em muitos pacotes (incluindo o `lmer`), o termo `(ls_area|site_fac)` indica que o local é
 um efeito aleatório associado ao preditor fixo `ls_area`. Esse termo
 acrescenta efeitos aleatórios ao intercepto e à inclinação do preditor
 linear^[na realidade, *(ls_area|site_fac)* é uma abreviação de
@@ -688,8 +713,10 @@ algumas coincidem mais do que outras?
 
 ### Comparação de modelos
 
-Use a função `bbmle::AICctab` para criar uma tabela de seleção de
-modelos com o AIC corrigido para amostras pequenas:
+A comparação de modelos ajustados por mima verossimilhança pode ser
+feita com o Critério de Informação de Akaike (AIC). Use a função
+`bbmle::AICctab` para criar uma tabela de seleção de modelos com o AIC
+corrigido para amostras pequenas:
 
 
 ```{r }
@@ -703,7 +730,9 @@ interceptos e inclinações parcialmente agrupados é o melhor.
 
 # Referências
 
-* Gelman, A., Hwang, J., & Vehtari, A. (2014). Understanding predictive information criteria for Bayesian models. Statistics and computing, 24(6), 997-1016.
+* Gelman, A., Hwang, J., & Vehtari, A. (2014). Understanding
+  predictive information criteria for Bayesian models. Statistics and
+  computing, 24(6), 997-1016.
 
 * Ohyama, L., Holt, R. D., Matthews, T. J., & Lucky, A. (2021). The
   species–area relationship in ant ecology. Journal of Biogeography,

@@ -94,8 +94,8 @@ code span.wa { color: #5e5e5e; font-style: italic; }
 
 
   <!--  https://schema.org/Article -->
-  <meta property="article:published" itemprop="datePublished" content="2026-10-23" />
-  <meta property="article:created" itemprop="dateCreated" content="2026-10-23" />
+  <meta property="article:published" itemprop="datePublished" content="2026-10-28" />
+  <meta property="article:created" itemprop="dateCreated" content="2026-10-28" />
   <meta name="article:author" content="Paulo Inácio Prado" />
   <meta name="article:author" content="Diogo Melo" />
 
@@ -112,7 +112,7 @@ code span.wa { color: #5e5e5e; font-style: italic; }
   <!--radix_placeholder_rmarkdown_metadata-->
 
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["Tutorial de modelos mistos e hierárquicos"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Paulo Inácio Prado"]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Diogo Melo"]}]}]},{"type":"character","attributes":{},"value":["2026-10-23"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["Tutorial de modelos mistos e hierárquicos"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Paulo Inácio Prado"]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Diogo Melo"]}]}]},{"type":"character","attributes":{},"value":["2026-10-28"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[3]}]}]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   
@@ -2495,7 +2495,7 @@ distill-header .nav a {
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"Tutorial de modelos mistos e hierárquicos","authors":[{"author":"Paulo Inácio Prado","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""},{"author":"Diogo Melo","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2026-10-23T00:00:00.000-03:00","citationText":"Prado & Melo, 2026"}
+{"title":"Tutorial de modelos mistos e hierárquicos","authors":[{"author":"Paulo Inácio Prado","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""},{"author":"Diogo Melo","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2026-10-28T00:00:00.000-03:00","citationText":"Prado & Melo, 2026"}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -2519,7 +2519,7 @@ distill-header .nav a {
 ,   
   Diogo Melo
   
-<br />2026-10-23
+<br />2026-10-28
 </div>
 
 <div class="d-article">
@@ -2614,11 +2614,16 @@ esperada entre a resposta e o preditor:</p>
 <p><span class="math display">\[
 \begin{aligned}
   y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
-  \mu_i &amp;= \alpha + \beta x_i
+  \mu_i &amp;= \alpha + \beta x_i \\
+  \alpha &amp;\sim \text{Normal}(., .) \\
+  \beta &amp;\sim \text{Normal}(. , .) \\
+  \sigma &amp;\sim exp(.)
 \end{aligned}
 \]</span></p>
-<p>Em que <span class="math inline">\(y_i\)</span> é o logaritmo centralizado da riqueza de espécies e <span class="math inline">\(x_i\)</span> é
-o logaritmo padronizado da área da ilha, para cada ilha <span class="math inline">\(i\)</span>.</p>
+<p>Em que <span class="math inline">\(y_i\)</span> é o logaritmo centralizado da riqueza de espécies e <span class="math inline">\(x_i\)</span>
+é o logaritmo padronizado da área da ilha, para cada ilha <span class="math inline">\(i\)</span>. Os
+pontos nos parâmetros das distribuiçãoes a priori indicam que são
+números que ainda vamos definir, aseguir.</p>
 <p><strong>Inclinações e interceptos independentes por local:</strong> este modelo
 equivale a ajustar uma regressão linear separada para cada arquipélago
 (local de estudo). Assim, cada local tem um intercepto e uma inclinação
@@ -2626,7 +2631,10 @@ independentes para o preditor linear:</p>
 <p><span class="math display">\[
 \begin{aligned}
   y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
-  \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i
+  \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
+  \alpha_{\text{site[i]}}&amp;\sim \text{Normal}(., .) \\
+  \beta_{\text{site[i]}} &amp;\sim \text{Normal}(. , .) \\
+  \sigma &amp;\sim exp(.)
 \end{aligned}
 \]</span></p>
 <p>Em que <span class="math inline">\(\alpha_{\text{site[i]}}\)</span> e <span class="math inline">\(\beta_{\text{site[i]}}\)</span> são o
@@ -2642,6 +2650,11 @@ uma distribuição de probabilidade, geralmente gaussiana.</p>
   \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} &amp;\sim \text{Normal}(\mu_\alpha, \sigma_\alpha) \\
   \beta_{\text{site}} &amp;\sim \text{Normal}(\mu_\beta, \sigma_\beta) \\
+  \mu_\alpha &amp;\sim \text{Normal}(., .)\\
+  \sigma_\alpha &amp;\sim \text{exp}(.)\\
+  \mu_\beta &amp;\sim \text{Normal}(., .)\\
+  \sigma_\beta &amp;\sim \text{exp}(.)\\
+  \sigma &amp;\sim exp(.)
 \end{aligned}
 \]</span></p>
 <p>Ao agrupar os parâmetros em uma mesma distribuição, supomos que há
@@ -2650,13 +2663,13 @@ dependência entre eles.</p>
 modelos pelas abordagens bayesiana e de máxima verossimilhança.</p>
 <p>Em resumo, os três modelos são:</p>
 <ol type="1">
-<li>m0: inclinação e intercepto únicos (pooling completo)</li>
-<li>m1: inclinações e interceptos diferentes por local (sem pooling)</li>
-<li>m2: inclinações e interceptos agrupados entre locais (pooling parcial)</li>
+<li>m0: inclinação e intercepto únicos: agregação (“<em>pooling</em>”) completo</li>
+<li>m1: inclinações e interceptos diferentes por local (sem <em>pooling</em>)</li>
+<li>m2: inclinações e interceptos agrupados entre locais (<em>pooling</em> parcial)</li>
 </ol>
 <h2 id="abordagem-bayesiana">Abordagem bayesiana</h2>
 <h3 id="inclinação-e-intercepto-únicos">Inclinação e intercepto únicos</h3>
-<p>Precisamos dos valores da variável resposta e do preditor para cada ilha,
+<p>Os dados são os valores da variável resposta e do preditor para cada ilha,
 como mostram as primeiras linhas do conjunto de dados abaixo:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
@@ -2672,23 +2685,27 @@ do intercepto e do desvio-padrão são menos informativas:</p>
 \begin{aligned}
   y_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\
   \mu_i &amp;= \alpha + \beta x_i \\
-  \alpha &amp; \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \beta &amp; \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
-  \sigma &amp; \sim \text{Exponential}(\lambda = 1)
+  \alpha &amp; \sim \text{Normal}(0, 2)\\
+  \beta &amp; \sim \text{Log-normal}(0, 0.7)\\
+  \sigma &amp; \sim \text{Exponential}(1)
 \end{aligned}
 \]</span></p>
 <p>O código a seguir ajusta esse modelo usando o pacote <em>rethinking</em>:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## adicionamos o argumento log_lik=TRUE para obter a</span></span>
+<span><span class="co">## log-verossimilhança por observação e comparar os modelos</span></span>
+<span><span class="va">m0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
 <span>        <span class="va">lc_S</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span> <span class="va">mu</span>, <span class="va">sigma</span> <span class="op">)</span> ,</span>
 <span>        <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">alpha</span> <span class="op">+</span> <span class="va">beta</span> <span class="op">*</span> <span class="va">ls_area</span>,</span>
 <span>        <span class="va">alpha</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span><span class="op">)</span>,</span>
 <span>        <span class="va">beta</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Lognormal.html">dlnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.7</span><span class="op">)</span>, </span>
 <span>        <span class="va">sigma</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span>    <span class="op">)</span> , data <span class="op">=</span> <span class="va">islands</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;ls_area&quot;</span>, <span class="st">&quot;lc_S&quot;</span><span class="op">)</span><span class="op">]</span> , chains<span class="op">=</span><span class="fl">4</span> , cores<span class="op">=</span><span class="fl">4</span> , log_lik<span class="op">=</span><span class="cn">TRUE</span> <span class="op">)</span> <span class="co"># adicionamos o argumento log_lik para obter a</span></span>
-<span>             <span class="co"># log-verossimilhança por observação e comparar os modelos</span></span></code></pre>
+<span>    <span class="op">)</span> , data <span class="op">=</span> <span class="va">islands</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;ls_area&quot;</span>, <span class="st">&quot;lc_S&quot;</span><span class="op">)</span><span class="op">]</span> ,</span>
+<span>    chains<span class="op">=</span><span class="fl">4</span> ,</span>
+<span>    cores<span class="op">=</span><span class="fl">4</span> ,</span>
+<span>    log_lik<span class="op">=</span><span class="cn">TRUE</span> <span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>Use o comando abaixo para obter um resumo das distribuições posteriores
@@ -2713,7 +2730,7 @@ dados; precisamos de um modelo mais complexo.</p>
 da relação entre espécies e área observadas entre os locais de estudo.
 Podemos permitir que cada local tenha seu próprio intercepto e sua
 própria inclinação. Para isso, precisamos de uma terceira variável: um
-índice numérico que identifica o local:</p>
+índice numérico que identifica o local, que já está em nosso conjunto de dados:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">islands</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;ls_area&quot;</span>, <span class="st">&quot;lc_S&quot;</span>, <span class="st">&quot;site&quot;</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
@@ -2724,15 +2741,15 @@ própria inclinação. Para isso, precisamos de uma terceira variável: um
 no respectivo local; o mesmo vale para a inclinação
 <span class="math inline">\(\beta_{\text{site[i]}}\)</span>. Como temos 18 locais,
 precisamos especificar esse mesmo número de prioris para os interceptos
-e para as inclinações. Usando <span class="math inline">\(\theta_{\text{site}} \sim
-    ext{distribuição()}\)</span> como abreviação para esse conjunto de prioris,
+e para as inclinações. Usando <span class="math inline">\(\theta_{\text{site}} \sim ext{distribuição()}\)</span>
+como abreviação para esse conjunto de prioris,
 podemos escrever o modelo assim:</p>
 <p><span class="math display">\[
 \begin{aligned}
   y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
   \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
-  \alpha_{\text{site}} &amp; \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \beta_{\text{site}} &amp; \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
+  \alpha_{\text{site}} &amp; \sim \text{Normal}(0, 2)\\
+  \beta_{\text{site}} &amp; \sim \text{Log-normal}(0, 0.7)\\
   \sigma &amp; \sim \text{Exponential}(\lambda = 1)
 \end{aligned}
 \]</span></p>
@@ -2787,7 +2804,7 @@ superajuste.</p>
 <p>Uma alternativa intermediária é permitir que os parâmetros variem entre
 locais, mas agrupá-los em uma distribuição. Assim, temos
 <strong>hiperparâmetros</strong>, isto é, parâmetros das distribuições dos parâmetros
-do preditor linear. Portanto, precisamos atribuir prioris aos
+do preditor linear. Portanto, precisamos atribuir distribuição a priori aos
 hiperparâmetros:</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -2795,11 +2812,11 @@ hiperparâmetros:</p>
   \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} &amp; \sim \text{Normal}(\mu_\alpha, \sigma_\alpha)\\
   \beta_{\text{site}} &amp; \sim \text{Normal}(\mu_\beta, \sigma_\beta)\\
-  \mu_\alpha &amp; \sim \text{Normal}(\mu = 0, \sigma = 2)\\
-  \mu_\beta &amp; \sim \text{Log-normal}(\mu = 0, \sigma = 0.7)\\
-  \sigma_\alpha &amp; \sim \text{Exponential}(\lambda = 1)\\
-  \sigma_\beta &amp; \sim \text{Exponential}(\lambda = 0.25)\\
-  \sigma &amp; \sim \text{Exponential}(\lambda = 1)\\
+  \mu_\alpha &amp; \sim \text{Normal}(0, 2)\\
+  \mu_\beta &amp; \sim \text{Log-normal}(0, 0.7)\\
+  \sigma_\alpha &amp; \sim \text{Exponential}(1)\\
+  \sigma_\beta &amp; \sim \text{Exponential}(0.25)\\
+  \sigma &amp; \sim \text{Exponential}(1)\\
 \end{aligned}
 \]</span></p>
 <p>O código para ajustar esse modelo é:</p>
@@ -2856,7 +2873,7 @@ parâmetros sofrem shrinkage em direção a uma média comum:</p>
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">m1.ab</span><span class="op">$</span><span class="va">slope</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">m1.ab</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>     ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">2.5</span><span class="op">)</span>,</span>
-<span>     xlab <span class="op">=</span> <span class="st">&quot;Mean posterior slopes&quot;</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">&quot;Médias posteriore das incliações&quot;</span>,</span>
 <span>     yaxt<span class="op">=</span><span class="st">&quot;n&quot;</span>, ylab<span class="op">=</span><span class="st">&quot;&quot;</span> , cex.axis<span class="op">=</span><span class="fl">2</span>,</span>
 <span>     cex.lab <span class="op">=</span> <span class="fl">2</span>, pch <span class="op">=</span> <span class="fl">19</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/points.html">points</a></span><span class="op">(</span><span class="va">m2.ab</span><span class="op">$</span><span class="va">slope</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">m2.ab</span><span class="op">)</span><span class="op">)</span>, pch <span class="op">=</span><span class="fl">19</span><span class="op">)</span></span>
@@ -2900,7 +2917,7 @@ incluímos as distribuições a priori das inclinações:</p>
 <span><span class="va">sim.prior.slopes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">m2.priors</span><span class="op">$</span><span class="va">mu_b</span><span class="op">)</span>, mean <span class="op">=</span> <span class="va">m2.priors</span><span class="op">$</span><span class="va">mu_b</span>, sd <span class="op">=</span> <span class="va">m2.priors</span><span class="op">$</span><span class="va">sigma_b</span><span class="op">)</span></span>
 <span><span class="co">## densidades das prioris e posteriores simuladas</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/density.html">density</a></span><span class="op">(</span><span class="va">sim.slopes</span><span class="op">)</span>,</span>
-<span>     xlab <span class="op">=</span> <span class="st">&quot;Slopes&quot;</span>, main <span class="op">=</span><span class="st">&quot;&quot;</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">&quot;Inclinações&quot;</span>, main <span class="op">=</span><span class="st">&quot;&quot;</span>,</span>
 <span>     xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>,<span class="fl">5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/lines.html">lines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/density.html">density</a></span><span class="op">(</span><span class="va">sim.prior.slopes</span><span class="op">)</span>, col <span class="op">=</span><span class="st">&quot;blue&quot;</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html">legend</a></span><span class="op">(</span><span class="st">&quot;topleft&quot;</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Prior&quot;</span>, <span class="st">&quot;Posterior&quot;</span><span class="op">)</span>,</span>
@@ -2939,13 +2956,18 @@ problema. Uma vantagem do modelo parcialmente agrupado é que essa
 regularização ocorre naturalmente, e o número efetivo de parâmetros é
 menor.</p>
 <h2 id="abordagem-de-máxima-verossimilhança">Abordagem de máxima verossimilhança</h2>
-<p>Há funções e bibliotecas em R com rotinas eficientes para ajustar várias
-classes de modelos pelo método da máxima verossimilhança. A maioria usa
-a <a href="https://www.ucd.ie/ecomodel/Resources/R_formulae_WebVersion.html">sintaxe de fórmulas de
+<p>Há funções e bibliotecas em R com rotinas eficientes para ajustar
+várias classes de modelos pelo método da máxima verossimilhança. A
+maioria usa a <a href="https://www.ucd.ie/ecomodel/Resources/R_formulae_WebVersion.html">sintaxe de fórmulas de
 modelos</a>,
-que expressa a estrutura do preditor linear (ou não linear).</p>
+que expressa a estrutura do preditor linear (ou não linear). Esta
+mesma sintaxe também é usada em alguns pacotes de ajuste Bayesiano,
+sendo o <a href="https://paulbuerkner.com/brms/">brms</a> o mais completo para
+isto.</p>
+<p>Aqui vamos usar esta sintaxe para fazer o ajuste por máxima
+verossimilhança, para comparação.</p>
 <h3 id="inclinação-e-intercepto-únicos-1">Inclinação e intercepto únicos</h3>
-<p>Esta é uma regressão linear simples. Como <a href="https://statistical-inference.netlify.app/03_linear_models.html">já vimos</a>, ajustamos esse modelo por máxima verossimilhança com a função <code>lm</code>:</p>
+<p>Esta é uma regressão linear simples. Como <a href="https://bie5781.github.io/2026/Tutoriais/03_modelo_linear.html#usando-a-fun%C3%A7%C3%A3o-lm-para-ajustar-o-modelo">já vimos</a>, ajustamos esse modelo por máxima verossimilhança com a função <code>lm</code>:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m0.ML</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html">lm</a></span><span class="op">(</span><span class="va">lc_S</span> <span class="op">~</span> <span class="va">ls_area</span>, data <span class="op">=</span> <span class="va">islands</span><span class="op">)</span></span></code></pre>
@@ -3000,7 +3022,7 @@ categórico com um nível para cada local:</p>
 </div>
 <p>Ao incluir um efeito aditivo do índice do local, permitimos interceptos
 diferentes<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>. Ao incluir uma interação entre a área da ilha e o índice do
-local, permitimos inclinações diferentes<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>:</p>
+local, permitimos inclinações diferentes nesta escala<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m1.ML</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html">lm</a></span><span class="op">(</span><span class="va">lc_S</span> <span class="op">~</span> <span class="va">ls_area</span> <span class="op">+</span> <span class="va">site_id</span> <span class="op">+</span> <span class="va">ls_area</span><span class="op">:</span><span class="va">site_id</span>, data<span class="op">=</span><span class="va">islands</span><span class="op">)</span></span></code></pre>
@@ -3013,7 +3035,7 @@ local, permitimos inclinações diferentes<a href="#fn5" class="footnote-ref" id
 </div>
 </div>
 <p>Em R, a estrutura padrão do preditor linear para uma regressão múltipla
-com variáveis categóricas é:</p>
+com variáveis categóricas é o contraste com o controle ou referência:</p>
 <p><span class="math display">\[mu_i = \alpha_0 + \alpha_{site[i]} + (\beta_0 + \beta_{site[i]}) \, \text{ls_area}\]</span></p>
 <p>Em que <span class="math inline">\(\alpha_0\)</span> é o intercepto do primeiro nível da variável
 categórica (o local codificado como #1), e <span class="math inline">\(\beta_0\)</span> é a inclinação
@@ -3080,17 +3102,17 @@ média zero. Esses são os <strong>efeitos aleatórios</strong> do local sobre o
 intercepto: centrados em <span class="math inline">\(\alpha\)</span>, ajustam o intercepto fixo de cada
 local. De modo análogo, <span class="math inline">\(b_{\text{site}}\)</span> representa o efeito aleatório
 do local sobre a inclinação.</p>
-<p>O pacote de referência para ajustar modelos de efeitos mistos por
-máxima verossimilhança é
-<a href="http://cran.nexr.com/web/packages/lme4/vignettes/lmer.pdf">lme4</a>. The
-A função <code>lmer</code> ajusta modelos lineares mistos gaussianos. Para ajustar
+<p>Os pacotes de referência para ajustar modelos de efeitos mistos por
+máxima verossimilhança são
+<a href="http://cran.nexr.com/web/packages/lme4/vignettes/lmer.pdf">lme4</a> e <a href="https://glmmtmb.github.io/glmmTMB/">glmmTMB</a>.</p>
+<p>A função <code>lem4::lmer</code> ajusta modelos lineares mistos gaussianos. Para ajustar
 o modelo com efeitos aleatórios nos interceptos e nas inclinações, use:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m2.ML</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/lme4/man/lmer.html">lmer</a></span><span class="op">(</span><span class="va">lc_S</span> <span class="op">~</span> <span class="va">ls_area</span> <span class="op">+</span> <span class="op">(</span><span class="va">ls_area</span><span class="op">|</span><span class="va">site_fac</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">islands</span>, REML<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Na sintaxe de <code>lmer</code>, o termo <code>(ls_area|site_fac)</code> indica que o local é
+<p>Na sintaxe de modelos usadas em muitos pacotes (incluindo o <code>lmer</code>), o termo <code>(ls_area|site_fac)</code> indica que o local é
 um efeito aleatório associado ao preditor fixo <code>ls_area</code>. Esse termo
 acrescenta efeitos aleatórios ao intercepto e à inclinação do preditor
 linear<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>.</p>
@@ -3135,8 +3157,10 @@ verossimilhança (verde) e pelo método bayesiano (vermelho):</p>
 <p><strong>Perguntas:</strong> por que as retas não coincidem exatamente? Por que
 algumas coincidem mais do que outras?</p>
 <h3 id="comparação-de-modelos-1">Comparação de modelos</h3>
-<p>Use a função <code>bbmle::AICctab</code> para criar uma tabela de seleção de
-modelos com o AIC corrigido para amostras pequenas:</p>
+<p>A comparação de modelos ajustados por mima verossimilhança pode ser
+feita com o Critério de Informação de Akaike (AIC). Use a função
+<code>bbmle::AICctab</code> para criar uma tabela de seleção de modelos com o AIC
+corrigido para amostras pequenas:</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/bbmle/man/ICtab.html">AICctab</a></span><span class="op">(</span><span class="va">m0.ML</span>, <span class="va">m1.ML</span>, <span class="va">m2.ML</span>, nobs<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">islands</span><span class="op">)</span><span class="op">)</span></span></code></pre>
@@ -3148,7 +3172,9 @@ inclinações independentes superajusta os dados, enquanto o modelo com
 interceptos e inclinações parcialmente agrupados é o melhor.</p>
 <h1 id="referências">Referências</h1>
 <ul>
-<li><p>Gelman, A., Hwang, J., &amp; Vehtari, A. (2014). Understanding predictive information criteria for Bayesian models. Statistics and computing, 24(6), 997-1016.</p></li>
+<li><p>Gelman, A., Hwang, J., &amp; Vehtari, A. (2014). Understanding
+predictive information criteria for Bayesian models. Statistics and
+computing, 24(6), 997-1016.</p></li>
 <li><p>Ohyama, L., Holt, R. D., Matthews, T. J., &amp; Lucky, A. (2021). The
 species–area relationship in ant ecology. Journal of Biogeography,
 48(8), 1824-1841.</p></li>
