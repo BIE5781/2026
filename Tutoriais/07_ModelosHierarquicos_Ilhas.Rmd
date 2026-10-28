@@ -429,7 +429,7 @@ m2.samp <- extract.samples(m2, pars = c("mu_b", "sigma_b"))
 sim.slopes <- rnorm(length(m2.samp$mu_b), mean = m2.samp$mu_b, sd = m2.samp$sigma_b)
 ## simular a priori das inclinações
 m2.priors <- data.frame(mu_b = rlnorm(1e4, meanlog = 0, sdlog = 0.7),
-                        sigma_b = rexp(1e4, rate =1))
+                        sigma_b = rexp(1e4, rate =0.25))
 sim.prior.slopes <- rnorm(length(m2.priors$mu_b), mean = m2.priors$mu_b, sd = m2.priors$sigma_b)
 ## densidades das prioris e posteriores simuladas
 plot(density(sim.slopes),
@@ -657,14 +657,7 @@ o modelo com efeitos aleatórios nos interceptos e nas inclinações, use:
 m2.ML <- lmer(lc_S ~ ls_area + (ls_area|site_fac), data = islands, REML=FALSE)
 ```
 
-Na sintaxe de modelos usadas em muitos pacotes (incluindo o `lmer`), o termo `(ls_area|site_fac)` indica que o local é
-um efeito aleatório associado ao preditor fixo `ls_area`. Esse termo
-acrescenta efeitos aleatórios ao intercepto e à inclinação do preditor
-linear^[na realidade, *(ls_area|site_fac)* é uma abreviação de
-*(1|site_fac) + (ls_area|site_fac)*, que indica explicitamente um
-efeito aleatório para o intercepto e outro para a inclinação. Um modelo
-com efeito aleatório somente na inclinação incluiria apenas
-*(1|site_fac)*].
+Na sintaxe de modelos usadas em muitos pacotes (incluindo o `lmer`), o termo `(ls_area|site_fac)` indica que o intercepto e a inclinação associados ao local variam entre locais. Na realidade, *(ls_area|site_fac)* é uma abreviação de *(1 + ls_area|site_fac)*, que inclui efeitos aleatórios para o intercepto e para a inclinação e estima também a correlação entre eles. Como o ajuste usa máxima verossimilhança (`REML=FALSE`), essa correlação também é estimada por máxima verossimilhança. Um modelo com efeito aleatório somente na inclinação seria especificado como *(0 + ls_area|site_fac)*. Nosso modelo bayseano poderia ser modidicado para incluir a correlação entre os efeitos aleatórios, mas não vamos fazer isso aqui. No rethinking, isso involve definir uma distribuição multivariada para ambos os efeitos aleatórios, o que é mais complexo.
 
 O resumo do modelo mostra as estimativas das variâncias dos efeitos
 aleatórios (parâmetros $\sigma_a$ e $\sigma_b$), as estimativas dos
@@ -747,9 +740,15 @@ pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente 
 $$
 \begin{aligned}
 	y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+<<<<<<< HEAD
 	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, \cdot x_i \\
 	\alpha_0 & \sim \text{Normal}(0,1) \\
 	\beta_0 & \sim \text{Normal}(0,1) \\
+=======
+	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, x_i \\
+	\alpha_0 & \sim \text{Normal}(0,2) \\
+	\beta_0 & \sim \text{Log-normal}(0,0.7) \\
+>>>>>>> 9671a1728fdf168b934cb6ef641048f8d527cd21
 	\sigma & \sim \text{Exponential}(1)\\
 	\alpha_z{\text{site}} & \sim \text{Normal}(0,1)\\
 	\beta_z{\text{site}} &  \sim \text{Normal}(0,1)\\
@@ -770,8 +769,8 @@ m2b <- ulam(
         b_z[site] ~ dnorm(0, 1),
         sigma ~ dexp(1),
         ## Hiperpriors
-        a0 ~ dnorm(0, 1),
-        b0 ~ dnorm(0, 1),
+        a0 ~ dnorm(0, 2),
+        b0 ~ dlnorm(0, 0.7),
         sigma_a ~ dexp(1),
         sigma_b ~ dexp(0.25),
         ## Variaveis derivadas:
