@@ -108,7 +108,9 @@ m1 <- ulam(
 
 ## Médias de rebatidas
 
-.baseball-estimates.center[![](figures/baseball_estimates.png)]
+```{r baseball-estimates, echo=FALSE, eval=TRUE, out.width="60%", fig.align="center"}
+knitr::include_graphics("figures/baseball_estimates.png")
+```
 
 - Estimativas extremas são deslocadas em direção à média da população.
 
