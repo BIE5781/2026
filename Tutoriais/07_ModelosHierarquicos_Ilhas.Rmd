@@ -322,11 +322,11 @@ $$
   \mu_i &= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} & \sim \text{Normal}(\mu_\alpha, \sigma_\alpha)\\
   \beta_{\text{site}} & \sim \text{Normal}(\mu_\beta, \sigma_\beta)\\
+  \sigma & \sim \text{Exponential}(1)\\
   \mu_\alpha & \sim \text{Normal}(0, 2)\\
   \mu_\beta & \sim \text{Log-normal}(0, 0.7)\\
   \sigma_\alpha & \sim \text{Exponential}(1)\\
-  \sigma_\beta & \sim \text{Exponential}(0.25)\\
-  \sigma & \sim \text{Exponential}(1)\\
+  \sigma_\beta & \sim \text{Exponential}(0.25)
 \end{aligned}
 $$
 
@@ -726,6 +726,63 @@ Segundo essa seleção, ajustar interceptos e inclinações independentes
 produz claramente superajuste. Sem prioris, o modelo com interceptos e
 inclinações independentes superajusta os dados, enquanto o modelo com
 interceptos e inclinações parcialmente agrupados é o melhor.
+
+
+## Modelo não-centrado
+
+O modelo hierárquico (*partial pooling*) que ajustamos cria uma
+correlação entre o valor da média e do desvio-padrão das distribuições
+de intercepto e inclinação. Isso em geral cria problemas de
+divergência do amostrador. Por isso, você deve ter recebido um alerta
+de uma ou mais amostras divergentes. Este é um problema sério.
+
+Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como 
+
+$$\theta = a_0 + z*\sigma$$
+
+Ou seja, uma constante mais a variável normal padronizada multiplicada
+pelo parâmetro de desvio-padrão. O novo modelo fica:
+
+$$
+\begin{aligned}
+	y_i &\sim \text{Normal}(\mu_i, \sigma) \\
+	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \sigma_alpha + (\beta_0+ \beta_z{\text{site[i]}} \sigma_beta) \, x_i \\
+	\alpha_0 & \sim \text{Normal}(0,1) \\
+	\beta_0 & \sim \text{Normal}(0,1) \\
+	\sigma & \sim \text{Exponential}(1)\\
+	\alpha_z{\text{site}} & \sim \text{Normal}(0,1)\\
+	\beta_z{\text{site}} & & \sim \text{Normal}(0,1)\\
+	\sigma_\alpha & \sim \text{Exponential}(1)\\
+	\sigma_\beta & \sim \text{Exponential}(0.25)\\
+	\end{aligned}
+$$
+
+Faça o ajuste de modelo no rethinking com:
+
+```{r }
+m2b <- ulam(
+    alist(
+        lc_S ~ dnorm( mu, sigma ) ,
+        mu <- a0 + a_z[site]*sigma_a+ (b0+ b_z[site]*sigma_b)* ls_area,
+        ## Priors
+        a_z[site] ~ dnorm(0, 1),
+        b_z[site] ~ dnorm(0, 1),
+        sigma ~ dexp(1),
+        ## Hiperpriors
+        a0 ~ dnorm(0, 1),
+        b0 ~ dnorm(0, 1),
+        sigma_a ~ dexp(1),
+        sigma_b ~ dexp(0.25),
+        ## Variaveis derivadas:
+        ## interceptos e inclinacoes de cada grupo na escala original
+        gq> vector[site]:a <<- a0 + a_z * sigma_a,
+        gq> vector[site]:b <<- b0 + b_z * sigma_b) ,
+    data = islands[, c("ls_area", "lc_S", "site")] , chains=4 , cores=4 , log_lik=TRUE )
+```
+
+Veja que não há probelmas de divergência do amostrador
+agora. Inpecione as posteriores dos parâmetros e experimente
+adicionarar as retas ao gráfico, adaptandos os códigos acima
 
 
 # Referências

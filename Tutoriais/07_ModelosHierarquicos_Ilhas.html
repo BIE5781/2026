@@ -2543,6 +2543,7 @@ distill-header .nav a {
 <li><a href="#interceptos-e-inclinações-agrupados-1" id="toc-interceptos-e-inclinações-agrupados-1">Interceptos e inclinações agrupados</a></li>
 <li><a href="#comparação-de-modelos-1" id="toc-comparação-de-modelos-1">Comparação de modelos</a></li>
 </ul></li>
+<li><a href="#modelo-não-centrado" id="toc-modelo-não-centrado">Modelo não-centrado</a></li>
 </ul></li>
 <li><a href="#referências" id="toc-referências">Referências</a></li>
 </ul>
@@ -2812,11 +2813,11 @@ hiperparâmetros:</p>
   \mu_i &amp;= \alpha_{\text{site[i]}} + \beta_{\text{site[i]}} \, x_i \\
   \alpha_{\text{site}} &amp; \sim \text{Normal}(\mu_\alpha, \sigma_\alpha)\\
   \beta_{\text{site}} &amp; \sim \text{Normal}(\mu_\beta, \sigma_\beta)\\
+  \sigma &amp; \sim \text{Exponential}(1)\\
   \mu_\alpha &amp; \sim \text{Normal}(0, 2)\\
   \mu_\beta &amp; \sim \text{Log-normal}(0, 0.7)\\
   \sigma_\alpha &amp; \sim \text{Exponential}(1)\\
-  \sigma_\beta &amp; \sim \text{Exponential}(0.25)\\
-  \sigma &amp; \sim \text{Exponential}(1)\\
+  \sigma_\beta &amp; \sim \text{Exponential}(0.25)
 \end{aligned}
 \]</span></p>
 <p>O código para ajustar esse modelo é:</p>
@@ -3170,6 +3171,55 @@ corrigido para amostras pequenas:</p>
 produz claramente superajuste. Sem prioris, o modelo com interceptos e
 inclinações independentes superajusta os dados, enquanto o modelo com
 interceptos e inclinações parcialmente agrupados é o melhor.</p>
+<h2 id="modelo-não-centrado">Modelo não-centrado</h2>
+<p>O modelo hierárquico (<em>partial pooling</em>) que ajustamos cria uma
+correlação entre o valor da média e do desvio-padrão das distribuições
+de intercepto e inclinação. Isso em geral cria problemas de
+divergência do amostrador. Por isso, você deve ter recebido um alerta
+de uma ou mais amostras divergentes. Este é um problema sério.</p>
+<p>Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como</p>
+<p><span class="math display">\[\theta = a_0 + z*\sigma\]</span></p>
+<p>Ou seja, uma constante mais a variável normal padronizada multiplicada
+pelo parâmetro de desvio-padrão. O novo modelo fica:</p>
+<p><span class="math display">\[
+\begin{aligned}
+    y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
+    \mu_i &amp;= \alpha_0 + \alpha_z{\text{site[i]}} \sigma_alpha + (\beta_0+ \beta_z{\text{site[i]}} \sigma_beta) \, x_i \\
+    \alpha_0 &amp; \sim \text{Normal}(0,1) \\
+    \beta_0 &amp; \sim \text{Normal}(0,1) \\
+    \sigma &amp; \sim \text{Exponential}(1)\\
+    \alpha_z{\text{site}} &amp; \sim \text{Normal}(0,1)\\
+    \beta_z{\text{site}} &amp; &amp; \sim \text{Normal}(0,1)\\
+    \sigma_\alpha &amp; \sim \text{Exponential}(1)\\
+    \sigma_\beta &amp; \sim \text{Exponential}(0.25)\\
+    \end{aligned}
+\]</span></p>
+<p>Faça o ajuste de modelo no rethinking com:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m2b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>        <span class="va">lc_S</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span> <span class="va">mu</span>, <span class="va">sigma</span> <span class="op">)</span> ,</span>
+<span>        <span class="va">mu</span> <span class="op">&lt;-</span> <span class="va">a0</span> <span class="op">+</span> <span class="va">a_z</span><span class="op">[</span><span class="va">site</span><span class="op">]</span><span class="op">*</span><span class="va">sigma_a</span><span class="op">+</span> <span class="op">(</span><span class="va">b0</span><span class="op">+</span> <span class="va">b_z</span><span class="op">[</span><span class="va">site</span><span class="op">]</span><span class="op">*</span><span class="va">sigma_b</span><span class="op">)</span><span class="op">*</span> <span class="va">ls_area</span>,</span>
+<span>        <span class="co">## Priors</span></span>
+<span>        <span class="va">a_z</span><span class="op">[</span><span class="va">site</span><span class="op">]</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">b_z</span><span class="op">[</span><span class="va">site</span><span class="op">]</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">sigma</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="co">## Hiperpriors</span></span>
+<span>        <span class="va">a0</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">b0</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">sigma_a</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">sigma_b</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">0.25</span><span class="op">)</span>,</span>
+<span>        <span class="co">## Variaveis derivadas:</span></span>
+<span>        <span class="co">## interceptos e inclinacoes de cada grupo na escala original</span></span>
+<span>        <span class="va">gq</span><span class="op">&gt;</span> <span class="va">vector</span><span class="op">[</span><span class="va">site</span><span class="op">]</span><span class="op">:</span><span class="va">a</span> <span class="op">&lt;&lt;-</span> <span class="va">a0</span> <span class="op">+</span> <span class="va">a_z</span> <span class="op">*</span> <span class="va">sigma_a</span>,</span>
+<span>        <span class="va">gq</span><span class="op">&gt;</span> <span class="va">vector</span><span class="op">[</span><span class="va">site</span><span class="op">]</span><span class="op">:</span><span class="va">b</span> <span class="op">&lt;&lt;-</span> <span class="va">b0</span> <span class="op">+</span> <span class="va">b_z</span> <span class="op">*</span> <span class="va">sigma_b</span><span class="op">)</span> ,</span>
+<span>    data <span class="op">=</span> <span class="va">islands</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;ls_area&quot;</span>, <span class="st">&quot;lc_S&quot;</span>, <span class="st">&quot;site&quot;</span><span class="op">)</span><span class="op">]</span> , chains<span class="op">=</span><span class="fl">4</span> , cores<span class="op">=</span><span class="fl">4</span> , log_lik<span class="op">=</span><span class="cn">TRUE</span> <span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Veja que não há probelmas de divergência do amostrador
+agora. Inpecione as posteriores dos parâmetros e experimente
+adicionarar as retas ao gráfico, adaptandos os códigos acima</p>
 <h1 id="referências">Referências</h1>
 <ul>
 <li><p>Gelman, A., Hwang, J., &amp; Vehtari, A. (2014). Understanding
