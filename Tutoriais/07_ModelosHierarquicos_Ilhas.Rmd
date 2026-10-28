@@ -752,7 +752,7 @@ $$
 	\beta_0 & \sim \text{Normal}(0,1) \\
 	\sigma & \sim \text{Exponential}(1)\\
 	\alpha_z{\text{site}} & \sim \text{Normal}(0,1)\\
-	\beta_z{\text{site}} & & \sim \text{Normal}(0,1)\\
+	\beta_z{\text{site}} &  \sim \text{Normal}(0,1)\\
 	\sigma_\alpha & \sim \text{Exponential}(1)\\
 	\sigma_\beta & \sim \text{Exponential}(0.25)\\
 	\end{aligned}
@@ -781,8 +781,10 @@ m2b <- ulam(
     data = islands[, c("ls_area", "lc_S", "site")] , chains=4 , cores=4 , log_lik=TRUE )
 ```
 
-Veja que agora não há problemas de divergência do amostrador. Inspecione as posteriores dos parâmetros e experimente
-adicionar as retas estimadas pelo modelo não centralizado ao gráfico, adaptandos os códigos acima
+Veja que agora não há problemas de divergência do
+amostrador. Inspecione as posteriores dos parâmetros e experimente
+adicionar as retas estimadas pelo modelo não centralizado ao gráfico,
+adaptandos os códigos da primeira seção do tutorial.
 
 
 # Referências
