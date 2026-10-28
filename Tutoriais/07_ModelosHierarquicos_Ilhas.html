@@ -20,9 +20,8 @@ visibility: hidden;
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -33,7 +32,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -3173,14 +3172,15 @@ inclinações independentes superajusta os dados, enquanto o modelo com
 interceptos e inclinações parcialmente agrupados é o melhor.</p>
 <h2 id="modelo-não-centrado">Modelo não-centrado</h2>
 <p>O modelo hierárquico (<em>partial pooling</em>) que ajustamos cria uma
-correlação entre o valor da média e do desvio-padrão das distribuições
-de intercepto e inclinação. Isso em geral cria problemas de
-divergência do amostrador. Por isso, você deve ter recebido um alerta
-de uma ou mais amostras divergentes. Este é um problema sério.</p>
+relação potencialmente problemática entre o valor da média e do desvio-padrão das distribuições
+de intercepto e inclinação. Quando o valor do desvio-padrão é muito baixo, isso limite fortemente os valores possíveis desses parâmetros.
+Isso em geral cria problemas de divergência do amostrador. Por isso, você deve ter recebido um alerta
+de uma ou mais amostras divergentes. Este é um problema sério e não deve ser ignorado. Para mais detalhes sobre como
+verificar e lidar com questões computacionais no ajuste dos modelos, veja: <a href="https://betanalpha.github.io/assets/case_studies/rstan_workflow.html">https://betanalpha.github.io/assets/case_studies/rstan_workflow.html</a>.</p>
 <p>Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como</p>
 <p><span class="math display">\[\theta = a_0 + z*\sigma\]</span></p>
-<p>Ou seja, uma constante mais a variável normal padronizada multiplicada
-pelo parâmetro de desvio-padrão. O novo modelo fica:</p>
+<p>Ou seja, um parâmetro <span class="math inline">\(\alpha_0\)</span> (representando a média) mais a variável normal padronizada multiplicada
+pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente ao modelo original mas computacionalmente mais estável, fica:</p>
 <p><span class="math display">\[
 \begin{aligned}
     y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
@@ -3217,9 +3217,8 @@ pelo parâmetro de desvio-padrão. O novo modelo fica:</p>
 <span>    data <span class="op">=</span> <span class="va">islands</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;ls_area&quot;</span>, <span class="st">&quot;lc_S&quot;</span>, <span class="st">&quot;site&quot;</span><span class="op">)</span><span class="op">]</span> , chains<span class="op">=</span><span class="fl">4</span> , cores<span class="op">=</span><span class="fl">4</span> , log_lik<span class="op">=</span><span class="cn">TRUE</span> <span class="op">)</span></span></code></pre>
 </div>
 </div>
-<p>Veja que não há probelmas de divergência do amostrador
-agora. Inpecione as posteriores dos parâmetros e experimente
-adicionarar as retas ao gráfico, adaptandos os códigos acima</p>
+<p>Veja que agora não há problemas de divergência do amostrador. Inspecione as posteriores dos parâmetros e experimente
+adicionar as retas estimadas pelo modelo não centralizado ao gráfico, adaptandos os códigos acima</p>
 <h1 id="referências">Referências</h1>
 <ul>
 <li><p>Gelman, A., Hwang, J., &amp; Vehtari, A. (2014). Understanding
