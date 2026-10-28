@@ -3179,13 +3179,13 @@ Isso em geral cria problemas de divergência do amostrador. Por isso, você deve
 de uma ou mais amostras divergentes. Este é um problema sério e não deve ser ignorado. Para mais detalhes sobre como
 verificar e lidar com questões computacionais no ajuste dos modelos, veja: <a href="https://betanalpha.github.io/assets/case_studies/rstan_workflow.html">https://betanalpha.github.io/assets/case_studies/rstan_workflow.html</a>.</p>
 <p>Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como</p>
-<p><span class="math display">\[\theta = a_0 + z*\sigma\]</span></p>
+<p><span class="math display">\[\theta = a_0 + z \times \sigma\]</span></p>
 <p>Ou seja, um parâmetro <span class="math inline">\(\alpha_0\)</span> (representando a média) mais a variável normal padronizada multiplicada
 pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente ao modelo original mas computacionalmente mais estável, fica:</p>
 <p><span class="math display">\[
 \begin{aligned}
     y_i &amp;\sim \text{Normal}(\mu_i, \sigma) \\
-    \mu_i &amp;= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, x_i \\
+    \mu_i &amp;= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, \cdot x_i \\
     \alpha_0 &amp; \sim \text{Normal}(0,1) \\
     \beta_0 &amp; \sim \text{Normal}(0,1) \\
     \sigma &amp; \sim \text{Exponential}(1)\\

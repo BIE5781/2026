@@ -739,7 +739,7 @@ verificar e lidar com questões computacionais no ajuste dos modelos, veja: [htt
 
 Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como 
 
-$$\theta = a_0 + z*\sigma$$
+$$\theta = a_0 + z \times \sigma$$
 
 Ou seja, um parâmetro $\alpha_0$ (representando a média) mais a variável normal padronizada multiplicada
 pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente ao modelo original mas computacionalmente mais estável, fica:
@@ -747,7 +747,7 @@ pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente 
 $$
 \begin{aligned}
 	y_i &\sim \text{Normal}(\mu_i, \sigma) \\
-	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, x_i \\
+	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, \cdot x_i \\
 	\alpha_0 & \sim \text{Normal}(0,1) \\
 	\beta_0 & \sim \text{Normal}(0,1) \\
 	\sigma & \sim \text{Exponential}(1)\\
