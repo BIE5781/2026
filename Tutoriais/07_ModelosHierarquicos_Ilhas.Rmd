@@ -740,15 +740,9 @@ pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente 
 $$
 \begin{aligned}
 	y_i &\sim \text{Normal}(\mu_i, \sigma) \\
-<<<<<<< HEAD
 	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, \cdot x_i \\
-	\alpha_0 & \sim \text{Normal}(0,1) \\
-	\beta_0 & \sim \text{Normal}(0,1) \\
-=======
-	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, x_i \\
 	\alpha_0 & \sim \text{Normal}(0,2) \\
 	\beta_0 & \sim \text{Log-normal}(0,0.7) \\
->>>>>>> 9671a1728fdf168b934cb6ef641048f8d527cd21
 	\sigma & \sim \text{Exponential}(1)\\
 	\alpha_z{\text{site}} & \sim \text{Normal}(0,1)\\
 	\beta_z{\text{site}} &  \sim \text{Normal}(0,1)\\
