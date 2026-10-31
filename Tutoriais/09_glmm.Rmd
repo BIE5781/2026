@@ -98,7 +98,7 @@ que na sua inclinação.
   faixa etária não dissesse nada sobre o desvio do mesmo país em outra
   faixa. O gráfico acima mostra que não é assim.
 
-A sobredispersão portanto, nem sempre é só "variação demais". Muitas
+A sobredispersão, portanto, nem sempre é só "variação demais". Muitas
 vezes, ela é o sinal de que há um fator que afeta as observações e que
 não está no modelo. Aqui, esse fator é o país: tudo o que faz um país
 ter mortalidade mais alta ou mais baixa que os outros em todas as
@@ -265,7 +265,7 @@ torna o diagnóstico `rhat` menos informativo.
 ### Nota: e a parametrização não-centrada?
 
 No tutorial anterior sobre modelos hierárquicos, vimos que a
-[**parametrização não-centrada**](07_ModelosHierarquicos_Ilhas.html#modelo-não-centrado) costuma melhorar a amostragem. Nela,
+[**parametrização não-centrada**](Tutoriais/07_ModelosHierarquicos_Ilhas.html#modelo-não-centrado) costuma melhorar a amostragem. Nela,
 cada intercepto é escrito como a média mais um desvio padronizado,
 multiplicado pelo desvio-padrão entre grupos,
 $\beta_{0j} = \bar{\beta}_0 + z_j \, \sigma_P$, com
@@ -286,9 +286,12 @@ m3nc <- ulam(
     start = list(b0 = 4.6, bz = rep(0, length(paises)), b1 = 1, sigma_pais = 1))
 ```
 
-Aqui, porém, o modelo não-centrado é uma escolha pior, pois volta o aviso de
-`treedepth`. Além disso o tamanho amostral efetivo (`ess_bulk`) dos  `b0`, dos `bz` e de `sigma_pais` fica
-abaixo de 150, contra mais de 1.400 no modelo centrado. Por fim, a métrica de convergência Rhat ultrapassa o valor limite de 1.01 para muitas estimativas. Compare:
+Aqui, porém, o modelo não-centrado é uma escolha pior, pois volta o
+aviso de `treedepth`. Além disso o tamanho amostral efetivo
+(`ess_bulk`) dos `b0`, dos `bz` e de `sigma_pais` fica abaixo de 150,
+contra mais de 1.400 no modelo centrado. Por fim, a métrica de
+convergência Rhat ultrapassa o valor limite de 1.01 para muitas
+estimativas. Compare:
 
 ```{r compara-nao-centrado}
 precis(m3, depth = 2)
@@ -323,8 +326,8 @@ Confira a convergência (`rhat` e `ess_bulk`) e as estimativas. Com
 precis(m3, depth = 2, prob = 0.95)
 ```
 
-A posterior de $\bar{\beta}_0$ (`b0_media`) é a distribuição posterior
-da taxa esperada de óbitos aos 50 anos de idade :
+A exponencial de $\bar{\beta}_0$ (`b0_media`) é a taxa esperada de
+óbitos aos 50 anos de idade num país típico:
 
 ```{r interpretacao-hierarquico-taxa}
 ## extrai a posterior dos parâmetros do modelo
@@ -333,24 +336,22 @@ post <- extract.samples(m3)
 quantile(exp(post$b0_media), c(0.025, 0.5, 0.975))
 ```
 
-A posterior de $\beta_1$ (`b1`) descreve o aumento esperado na
-mortalidade a cada década de idade:
+A posterior de $\beta_1$ (`b1`) descreve o aumento esperado (em escala
+multiplicativa) na mortalidade a cada década de idade:
 
-```{r interpretacao-hierarquico}
+```{r interpretacao-hierarquico-inclinacao}
 ## Quantas vezes a taxa aumenta a cada década de idade
 quantile(exp(post$b1), c(0.025, 0.5, 0.975))
-## Quantas vezes a taxa de um país um desvio-padrão acima da média
-## é maior que a de um país típico
-quantile(exp(post$sigma_pais), c(0.025, 0.5, 0.975))
 ```
 
-Compare com a estimativa deste coeficientes obtidos com modelos
+Compare com as estimativas deste coeficiente obtidas com os modelos
 equivalentes não hierárquicos, do [tutorial sobre glms](Tutoriais/06_glms.html). 
 Houve uma grande mudança?
 
-Finalmente, a posterior de $\sigma_P$ descreve a diferença nas taxas de mortalidade médias e de um país que tem taxa de um desvio-padrão a mais que a média:
+Finalmente, a exponencial de $\sigma_P$ (`sigma_pais`) é o quanto a taxa de
+um país um desvio-padrão acima da média é maior que a de um país típico:
 
-```{r interpretacao-hierarquico}
+```{r interpretacao-hierarquico-sigma}
 ## Quantas vezes a taxa de um país um desvio-padrão acima da média
 ## é maior que a de um país típico
 quantile(exp(post$sigma_pais), c(0.025, 0.5, 0.975))
@@ -358,21 +359,21 @@ quantile(exp(post$sigma_pais), c(0.025, 0.5, 0.975))
 
 ## Previsões para os países usados no ajuste
 
-### Taxa média e distribuição preditiva de cada país
+### Posterior da taxa média de cada país
 
 Como no tutorial sobre GLMs, vamos calcular a posterior da taxa por 100 mil
 habitantes, agora para cada país. Para isso, a tabela de valores para as
 previsões precisa ter também o índice do país. Criamos uma grade com
 todas as combinações de idades e países, com $\ln P = 0$:
 
-```{r previstos-hierarquico}
+```{r previstos-hierarquico, echo=TRUE}
 idade.grade <- seq(10, 90, length.out = 50)
 grade <- expand.grid(idade.meio = idade.grade, pais = seq_along(paises))
 grade.lista <- list(idade_d = (grade$idade.meio - 50) / 10,
                     pais = grade$pais,
                     log_pop = rep(0, nrow(grade)))   # população de 100 mil
 
-taxa.post3 <- link(m3, data = grade.lista)
+taxa.post3 <- link(m3, data = grade.lista)   # amostras x (idades x países)
 IC3 <- apply(taxa.post3, 2, PI, prob = 0.95)
 previstos3 <- data.frame(idade.meio = grade$idade.meio,
                          pais = paises[grade$pais],
@@ -380,63 +381,129 @@ previstos3 <- data.frame(idade.meio = grade$idade.meio,
                          inf = IC3[1, ], sup = IC3[2, ])
 ```
 
-E a distribuição preditiva? No tutorial sobre GLMs, simulamos os óbitos em
-populações de 100 mil habitantes. Mas, como vimos, a variação da Poisson
-depende do tamanho da população. Para comparar a previsão com os dados,
-o correto é simular os óbitos com a **população real** de cada faixa
-etária de cada país, e dividir o resultado pela população para obter a
-taxa. Basta usar a função `sim()` sem o argumento `data`, o que faz a
-simulação para os mesmos dados usados no ajuste:
+O gráfico mostra as taxas observadas (pontos) e a média da posterior da
+taxa prevista para cada país (linhas), com uma cor para cada país:
 
-```{r preditiva-hierarquico}
-obitos.sim3 <- sim(m3)                     # amostras x observações
-taxa.sim3 <- sweep(obitos.sim3, 2, obitos$pop.e5, "/")
-IC.sim3 <- apply(taxa.sim3, 2, PI, prob = 0.95)
-obitos$sim.inf <- IC.sim3[1, ]
-obitos$sim.sup <- IC.sim3[2, ]
-```
-
-No gráfico, cada painel é um país. A linha e a faixa cinza são a média e
-o intervalo de 95% da posterior da taxa; os segmentos azuis, os
-intervalos de 95% da distribuição preditiva de cada observação; e os
-pontos vermelhos, as taxas observadas:
-
-```{r grafico-previstos-hierarquico, fig.asp=1.1, layout="l-body-outset"}
-ggplot(previstos3, aes(idade.meio)) +
-    geom_ribbon(aes(ymin = inf, ymax = sup), fill = "grey60") +
-    geom_line(aes(y = media)) +
-    geom_linerange(data = obitos, aes(ymin = sim.inf, ymax = sim.sup),
-                   colour = "blue", linewidth = 2, alpha = 0.5) +
-    geom_point(data = obitos, aes(y = taxa), colour = "red", size = 1.5) +
-    facet_wrap(~ pais, ncol = 4) +
+```{r grafico-previstos-hierarquico, echo=TRUE, fig.asp=0.7}
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_line(data = previstos3, aes(y = media)) +
+    geom_point(size = 2) +
     scale_y_log10() +
     labs(x = "Idade (ponto médio da faixa, anos)",
-         y = "Óbitos por 100 mil habitantes (escala log)") +
-    theme_bw()
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_classic()
 ```
 
-Confira:
+O código acima também calculou o intervalo de 95% da posterior da taxa
+de cada país (colunas `inf` e `sup` de `previstos3`). Confira os
+valores no objeto `previstos3`.  Note que os intervalos são tão
+estreitos que não apareceriam no gráfico. Por quê?
 
-* Cada país tem agora a sua própria curva, e as curvas acompanham os
+### Distribuição preditiva dos totais de óbitos de cada país
+
+E a distribuição preditiva? No tutorial sobre GLMs, simulamos os óbitos
+em populações de 100 mil habitantes. Mas a variação da Poisson depende
+do tamanho da população. Para comparar a previsão com os dados, o
+correto é simular os óbitos com a **população real** de cada faixa
+etária de cada país. Basta usar a função `sim()` sem o argumento `data`,
+o que faz a simulação para os mesmos dados usados no ajuste:
+
+```{r preditiva-hierarquico, echo=TRUE}
+obitos.sim3 <- sim(m3)        # óbitos simulados: amostras x observações
+dim(obitos.sim3)
+```
+
+Cada coluna de `obitos.sim3` é uma linha da tabela `obitos`, ou seja,
+uma faixa etária de um país. Somando as colunas de cada país, obtemos a
+distribuição preditiva posterior do **total de óbitos** do país, que
+podemos comparar com o total observado:
+
+```{r tabela-totais-paises, echo=TRUE, eval =TRUE}
+totais <- do.call(rbind, lapply(paises, function(p) {
+    colunas <- obitos$pais == p
+    total.sim <- rowSums(obitos.sim3[, colunas])
+    data.frame(pais = p,
+               observado = sum(obitos$obitos[colunas]),
+               media = mean(total.sim),
+               inf = PI(total.sim, prob = 0.95)[1],
+               sup = PI(total.sim, prob = 0.95)[2])
+}))
+kable(totais, digits = 0, row.names = FALSE,
+      col.names = c("País", "Observado", "Média prevista", "2,5%", "97,5%"),
+      format.args = list(big.mark = ".", decimal.mark = ","))
+```
+
+O modelo parece se sair muito bem para estimar totais de casos por
+país. Mas como será seu desempenho para estimar as taxas a cada faixa
+etária? Para avaliar isso, vamos comparar os
+óbitos observados com a distribuição preditiva de cada faixa, para os
+dois países mais extremos: o de maior e o de menor intercepto
+($\beta_{0j}$), ou seja, com as maiores e as menores taxas de
+mortalidade previstas em todas as idades:
+
+```{r tabela-faixas-paises, echo=TRUE, eval =TRUE}
+## Média da posterior do intercepto de cada país
+post <- extract.samples(m3)
+b0.pais <- colMeans(post$b0)
+## Países de maior e de menor intercepto
+selecionados <- paises[c(which.max(b0.pais), which.min(b0.pais))]
+selecionados
+
+## Observados, média e intervalo de 95% da preditiva por faixa etária
+faixas <- do.call(rbind, lapply(selecionados, function(p) {
+    linhas <- which(obitos$pais == p)
+    IC <- apply(obitos.sim3[, linhas], 2, PI, prob = 0.95)
+    data.frame(pais = p,
+               idade = obitos$idade[linhas],
+               observado = obitos$obitos[linhas],
+               media = colMeans(obitos.sim3[, linhas]),
+               inf = IC[1, ], sup = IC[2, ])
+}))
+kable(faixas, digits = 0, row.names = FALSE,
+      col.names = c("País", "Faixa etária", "Observado", "Média prevista",
+                    "2,5%", "97,5%"),
+      format.args = list(big.mark = ".", decimal.mark = ","))
+```
+
+#### Para pensar:
+
+* Cada país tem agora a sua própria reta, e as retas acompanham os
   dados muito melhor do que a curva única dos modelos anteriores. Isso é
   o que o efeito de país resolve: as diferenças consistentes entre os
   países.
 
-* Os intervalos da distribuição preditiva (azul) são quase tão estreitos
-  quanto os da taxa média (cinza). Por quê? Lembre do tamanho das
-  populações e da relação entre a média e a variância na Poisson.
+* Os intervalos da distribuição preditiva dos totais são estreitos. Por
+  quê? Lembre do tamanho das populações e da relação entre a média e a
+  variância na Poisson.
 
-* Ainda há muitos pontos fora dos intervalos. Em quase todos os países,
-  a taxa da faixa mais jovem fica abaixo da linha. Em alguns países,
-  como a Moldávia e a Ucrânia, os pontos formam uma curva menos
-  inclinada que a prevista. O que isso sugere sobre a suposição de que
-  a relação é log-linear, com a mesma inclinação em todos os países?
-  Ainda resta sobredispersão, que um modelo com efeito aleatório também
-  na inclinação poderia acomodar em parte.
+* A média prevista do total de cada país é praticamente igual ao total
+  observado. Isso não é sinal de que o modelo descreve bem os dados. É
+  uma propriedade do modelo Poisson com função de ligação logarítmica:
+  quando há um intercepto para cada país, as estimativas que maximizam a
+  verossimilhança fazem a soma dos valores previstos de cada país ser
+  igual à soma dos observados. Com dados tão informativos, a posterior
+  fica muito próxima dessas estimativas. Os erros de cada faixa etária
+  se compensam na soma: o que o modelo prevê a mais em algumas faixas,
+  prevê a menos em outras. Para avaliar o ajuste, precisamos olhar as
+  faixas etárias, como no gráfico e na última tabela.
+
+* Na tabela por faixa etária, quantos valores observados estão dentro
+  do intervalo de 95% da distribuição preditiva? Em que faixas o modelo
+  prevê óbitos a mais, e em quais prevê a menos? Os desvios seguem o
+  mesmo padrão nos dois países?
+
+* No gráfico, em quase todos os países a taxa da faixa mais jovem fica
+  abaixo da reta, e em alguns países, como a Moldávia e a Ucrânia, os
+  pontos formam uma curva menos inclinada que a prevista. O que isso
+  sugere sobre a suposição de que a relação é log-linear, com a mesma
+  inclinação em todos os países? Ainda resta sobredispersão, que um
+  modelo com efeito aleatório também na inclinação poderia acomodar em
+  parte.
 
 * Compare a largura do intervalo de $\beta_1$ com a dos modelos
   anteriores. Com essa sobredispersão restante, você confia nessa
   precisão?
+
 
 # Quantos óbitos o Brasil teria?
 
@@ -455,13 +522,34 @@ pop.br80 <- pop.br |>
     arrange(idade.meio)
 ```
 
-O Brasil não está entre os países usados no ajuste, e por isso não tem
-um intercepto estimado. Mas o modelo descreve a **população de países**:
-os interceptos vêm de uma $\text{Normal}(\bar{\beta}_0, \sigma_P)$. Se
-tratarmos o Brasil como mais um país sorteado dessa população, o seu
-intercepto é um sorteio dessa distribuição.
+Vimos que o modelo erra bastante as faixas etárias de cada país. Ainda
+assim, vale usá-lo para estimar o total de óbitos do Brasil, por três
+razões:
 
-Para obter a posterior do número de óbitos no Brasil, fazemos o
+* O que queremos estimar é um **total**, e os erros das faixas etárias
+  tendem a se compensar na soma. Vimos que o modelo reproduz muito bem
+  o total de óbitos de cada país usado no ajuste.
+
+* Para um país que não está nos dados, a maior fonte de incerteza é o
+  seu **nível** de mortalidade: o Brasil pode ser um país de mortalidade
+  alta ou baixa. Essa incerteza é descrita por $\sigma_P$, que o modelo
+  estima. Como veremos essa incerteza domina o intervalo da previsão. Os erros
+  nas inclinações e interceptos são pequenos perto dela.
+
+Mas há um cuidado. A compensação dos erros depende da pirâmide etária.
+A população brasileira é mais jovem que a dos países usados no ajuste,
+e por isso os erros nas faixas mais jovens e intermediárias pesam mais
+no total do Brasil do que no total desses países. Um modelo com
+inclinações por país levaria em conta também a incerteza sobre a forma
+da curva (veja no final deste tutorial).
+
+O Brasil não está entre os países usados no ajuste, e por isso não tem
+um intercepto estimado. Mas o modelo descreve a distribuição de
+interceptos, como uma $\text{Normal}(\bar{\beta}_0,
+\sigma_P)$. Supondo que o Brasil também faz parte desta distribuição,
+o seu intercepto é um sorteio dessa distribuição.
+
+Então, para obter a posterior do número de óbitos no Brasil, fazemos o
 seguinte, para cada amostra $s$ da posterior:
 
 1. Sorteamos um intercepto para o Brasil,
@@ -494,16 +582,19 @@ total.esperado3 <- rowSums(lambda.br3)
 ## 3. Óbitos sorteados de uma Poisson em cada faixa, e o total
 obitos.sim.br3 <- matrix(rpois(length(lambda.br3), lambda.br3), nrow = S)
 total.sim3 <- rowSums(obitos.sim.br3)
-## Media e intervalo do todal de obitos esperado
+## Media e intervalo do total de obitos previsto
 mean(total.sim3)
 PI(total.sim3, prob = 0.95)
-## Probabilidade de um total de mosrtes maior ao observado no Brasil
+## Probabilidade de um total de obitos maior que o observado no Brasil
 mean(total.sim3 > obitos.br)
 ```
 
-Para ver o papel do efeito aleatório, compare com a previsão para um
-**país típico**, ou seja, usando $\bar{\beta}_0$ no lugar do intercepto
-sorteado:
+Para ver o impacto da incerteza introduzida pela distribuição de
+interceptos, compare com a posterior obtida sempre com o mesmo valor
+de intercepto, como fizemos nas seções anteriores, como fizemos para
+calcular o número de óbitos previsto por país. Aqui vamos calcular a
+posterior do total de obitos para o Brasil, mas fixando o intercepto
+em sua média ($\bar{\beta}_0$). Com isso, obtemos a posterior de óbitos para o Brasil, caso fosse como um **país típico** quanto à mortalidade.
 
 ```{r previsao-br-tipico}
 lambda.tipico <- sapply(seq_len(nrow(pop.br80)), function(i)
@@ -518,9 +609,9 @@ mean(total.tipico > obitos.br)
 Os dois intervalos são muito diferentes. O primeiro responde à pergunta
 "quantos óbitos teria **um país qualquer** dessa população de países,
 com a pirâmide etária do Brasil?". O segundo, "quantos óbitos teria **o
-país típico**?". Qual das duas perguntas nos interessa?
+país típico**", se tivesse a pirâmide etária do Brasil? Qual das duas perguntas nos interessa?
 
-O gráfico compara a distribuição preditiva com o número observado:
+O gráfico compara essas duas distribuições preditivas com o número observado:
 
 ```{r grafico-brasil-hierarquico, fig.asp=0.7}
 dens(total.tipico, xlim = range(c(total.sim3, obitos.br)),
@@ -574,7 +665,7 @@ total.sim2 <- rowSums(sim(m2, data = dados.br))
 Agora, uma tabela com a média, o intervalo de 95% e a probabilidade de
 um total maior ou igual ao observado, segundo cada modelo:
 
-```{r tabela-comparacao}
+```{r tabela-comparacao, eval=TRUE}
 resume <- function(total) {
     c(media = mean(total), PI(total, prob = 0.95),
       p.obs = mean(total >= obitos.br))
@@ -623,7 +714,7 @@ de um mesmo país são parecidas entre si. Quando essa estrutura existe, um
 modelo que a representa descreve melhor a variação e faz previsões mais
 honestas para novos grupos.
 
-## Para discutir
+### Para pensar
 
 * O número observado de óbitos no Brasil é plausível segundo cada
   modelo? Qual modelo dá a resposta mais honesta, considerando o que
@@ -637,6 +728,60 @@ honestas para novos grupos.
   ainda são independentes no modelo hierárquico. O gráfico dos países
   sugere que isso é verdade? Como você mudaria o modelo para incluir
   diferenças entre países também na inclinação?
+
+
+# Um próximo passo: uma inclinação para cada país
+
+A posterior do número de óbitos previstos por faixa etária mostra que
+os desvios não têm o mesmo tamanho em todos os países. Na Moldávia, o
+modelo prevê mais que o dobro dos óbitos observados acima dos 80 anos,
+e cerca de 30% a menos entre 40 e 79 anos. No Japão, os desvios vão
+nos mesmos sentidos, mas são muito menores. Em outras palavras, a taxa
+da Moldávia aumenta com a idade bem mais devagar do que prevê a
+inclinação comum a todos os países. Isso indica que os países diferem
+não só na altura da relação entre a taxa e a idade, mas também na sua
+inclinação.
+
+Um próximo passo seria permitir que cada país tenha a sua própria
+inclinação, também vinda de uma distribuição normal que descreve a
+variação entre os países:
+
+$$
+\begin{aligned}
+Y_{ij} &\sim \text{Poisson}(\lambda_{ij}) \\
+\ln \lambda_{ij} &= \ln P_{ij} + \beta_{0j} + \beta_{1j} \, d_i \\
+\beta_{0j} &\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\
+\beta_{1j} &\sim \text{Normal}(\bar{\beta}_1, \, \sigma_I) \\
+\bar{\beta}_0 &\sim \text{Normal}(\ln 100, \, 2) \\
+\bar{\beta}_1 &\sim \text{Normal}(1, \, 0{,}5) \\
+\sigma_P &\sim \text{Exponencial}(1) \\
+\sigma_I &\sim \text{Exponencial}(2)
+\end{aligned}
+$$
+
+Agora $\bar{\beta}_1$ é a inclinação de um país típico, e $\sigma_I$, o
+desvio-padrão das inclinações entre os países. A distribuição a priori
+$\text{Exponencial}(2)$ tem média 0,5: diferenças de inclinação desse
+tamanho já são grandes, pois um país com inclinação 0,5 acima da média
+teria uma taxa $e^{0{,}5 \times 4} \approx 7$ vezes maior aos 90 anos do
+que aos 50, em relação ao país típico.
+
+**Experimente:** ajuste este modelo com a função `ulam()`. Basta trocar
+`b1` por `b1[pais]` no preditor linear e acrescentar as linhas da
+distribuição das inclinações e das distribuições a priori de
+`b1_media` e `sigma_incl`. Não esqueça de indicar os valores iniciais
+das novas variáveis em `start` (por exemplo, `b1 = rep(1, length(paises))`,
+`b1_media = 1` e `sigma_incl = 0.5`). Depois, refaça o gráfico e as
+tabelas desta seção. Os desvios por faixa etária diminuíram? Como ficou
+a previsão para o Brasil? E o que muda no cálculo dessa previsão, agora
+que o Brasil precisa de um intercepto **e** de uma inclinação sorteados?
+
+Neste modelo, o intercepto e a inclinação de cada país são sorteados de
+forma independente. Um passo além seria permitir que eles sejam
+correlacionados, por exemplo, que países com mortalidade mais alta aos
+50 anos tenham um aumento menor com a idade. Esse tipo de modelo é
+tratado no capítulo 14 de McElreath (2020).
+
 
 # Fontes dos dados e referências
 

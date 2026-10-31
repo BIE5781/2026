@@ -100,7 +100,7 @@ final <- reagrupa(mortes, obitos) |>
     rename(obitos = n) |>
     inner_join(rename(reagrupa(pop, pop), pop = n), by = c("pais", "idade")) |>
     ## Países excluídos da análise (ver justificativa no tutorial)
-    filter(!pais %in% c("Romania", "Japan", "South Korea", "Moldova")) |>
+    filter(!pais %in% c("Romania", "South Korea")) |>
     mutate(pop.e5 = pop / 1e5,          # população em unidades de 100 mil habitantes
            taxa = obitos / pop.e5)      # óbitos por 100 mil habitantes
 
