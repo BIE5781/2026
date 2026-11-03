@@ -2554,7 +2554,17 @@ distill-header .nav a {
 <li><a href="#para-pensar-1" id="toc-para-pensar-1">Para pensar</a></li>
 </ul></li>
 </ul></li>
-<li><a href="#um-próximo-passo-uma-inclinação-para-cada-país" id="toc-um-próximo-passo-uma-inclinação-para-cada-país">Um próximo passo: uma inclinação para cada país</a></li>
+<li><a href="#um-próximo-passo-uma-inclinação-para-cada-país" id="toc-um-próximo-passo-uma-inclinação-para-cada-país">Um próximo passo: uma inclinação para cada país</a>
+<ul>
+<li><a href="#por-que-inclinações-variáveis" id="toc-por-que-inclinações-variáveis">Por que inclinações variáveis</a></li>
+<li><a href="#especificação-1" id="toc-especificação-1">Especificação</a></li>
+<li><a href="#ajuste-1" id="toc-ajuste-1">Ajuste</a></li>
+<li><a href="#resultados" id="toc-resultados">Resultados</a></li>
+<li><a href="#quantos-óbitos-o-brasil-teria-1" id="toc-quantos-óbitos-o-brasil-teria-1">Quantos óbitos o Brasil teria?</a>
+<ul>
+<li><a href="#para-pensar-2" id="toc-para-pensar-2">Para pensar</a></li>
+</ul></li>
+</ul></li>
 <li><a href="#fontes-dos-dados-e-referências" id="toc-fontes-dos-dados-e-referências">Fontes dos dados e referências</a></li>
 </ul>
 </nav>
@@ -2649,9 +2659,9 @@ mesma inclinação para todos:</p>
 \begin{aligned}
 Y_{ij} &amp;\sim \text{Poisson}(\lambda_{ij}) \\
 \ln \lambda_{ij} &amp;= \ln P_{ij} + \beta_{0j} + \beta_1 \, d_i \\
+\beta_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\
 \beta_{0j} &amp;\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\
 \bar{\beta}_0 &amp;\sim \text{Normal}(\ln 100, \, 2) \\
-\beta_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\
 \sigma_P &amp;\sim \text{Exponencial}(1)
 \end{aligned}
 \]</span></p>
@@ -2713,7 +2723,7 @@ fator em número inteiro:</p>
 cada valor do índice <code>pais</code>. A distribuição desses interceptos tem dois
 parâmetros, <code>b0_media</code> e <code>sigma_pais</code>, cada um com a sua distribuição a
 priori. Indicamos também os valores iniciais das cadeias com o
-argumento <code>start</code> (veja a nota logo abaixo do ajuste):</p>
+argumento <code>init</code> (veja a nota logo abaixo do ajuste):</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m3</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
@@ -2726,8 +2736,8 @@ argumento <code>start</code> (veja a nota logo abaixo do ajuste):</p>
 <span>        <span class="va">sigma_pais</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    data <span class="op">=</span> <span class="va">dados</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">4.6</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">paises</span><span class="op">)</span><span class="op">)</span>, b0_media <span class="op">=</span> <span class="fl">4.6</span>,</span>
-<span>                 b1 <span class="op">=</span> <span class="fl">1</span>, sigma_pais <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+<span>    init <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">4.6</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">paises</span><span class="op">)</span><span class="op">)</span>, b0_media <span class="op">=</span> <span class="fl">4.6</span>,</span>
+<span>                           b1 <span class="op">=</span> <span class="fl">1</span>, sigma_pais <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <h3 id="nota-por-que-medir-a-idade-em-décadas">Nota: por que medir a idade em décadas?</h3>
@@ -2774,12 +2784,23 @@ próximo do aumento de cerca de 2,4 vezes por década da lei de Gompertz.</p></l
 </ul>
 <p>São valores plausíveis antes de ver os dados, e por isso não favorecem
 nenhum resultado em particular: as cadeias apenas começam numa região
-razoável. Com a idade em décadas, as cadeias convergem mesmo sem o
-argumento <code>start</code>, mas indicar valores iniciais plausíveis é uma boa
-prática quando as contagens são grandes. Um cuidado: o valor indicado em
-<code>start</code> é o mesmo para as quatro cadeias. Cadeias que partem do mesmo
-ponto podem concordar entre si sem ter explorado toda a posterior, o que
-torna o diagnóstico <code>rhat</code> menos informativo.</p>
+razoável. Com a idade em décadas, as cadeias convergem mesmo sem indicar
+valores iniciais, mas indicá-los é uma boa prática quando as contagens
+são grandes.</p>
+<p>Os valores iniciais são passados ao argumento <code>init</code>, como uma
+<strong>função</strong> que retorna a lista de valores, um elemento para cada
+parâmetro. O <code>ulam()</code> repassa esse argumento ao Stan, que chama a função
+uma vez para cada cadeia. A função <code>ulam()</code> também tem um argumento
+<code>start</code>, mas nas versões mais recentes do pacote <em>rethinking</em> (2.46) ele
+gera o erro <code>the condition has length &gt; 1</code> quando a lista tem mais de um
+parâmetro. O argumento <code>init</code> funciona em todas as versões.</p>
+<p>Um cuidado: com a função acima, o valor inicial é o mesmo para as quatro
+cadeias. Cadeias que partem do mesmo ponto podem concordar entre si sem
+ter explorado toda a posterior, o que torna o diagnóstico <code>rhat</code> menos
+informativo. Uma alternativa é sortear os valores iniciais em torno dos
+centros das prioris, por exemplo com <code>b1 = rnorm(1, 1, 0.1)</code>: como a
+função é chamada uma vez por cadeia, cada cadeia começa num ponto
+diferente.</p>
 <h3 id="nota-e-a-parametrização-não-centrada">Nota: e a parametrização não-centrada?</h3>
 <p>No tutorial anterior sobre modelos hierárquicos, vimos que a
 <a href="Tutoriais/07_ModelosHierarquicos_Ilhas.html#modelo-não-centrado"><strong>parametrização não-centrada</strong></a> costuma melhorar a amostragem. Nela,
@@ -2800,7 +2821,8 @@ multiplicado pelo desvio-padrão entre grupos,
 <span>        <span class="va">gq</span><span class="op">&gt;</span> <span class="va">vector</span><span class="op">[</span><span class="va">pais</span><span class="op">]</span><span class="op">:</span><span class="va">b</span> <span class="op">&lt;&lt;-</span> <span class="va">b0</span> <span class="op">+</span> <span class="va">bz</span> <span class="op">*</span> <span class="va">sigma_pais</span>   <span class="co"># intercepto de cada país</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    data <span class="op">=</span> <span class="va">dados</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, bz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">paises</span><span class="op">)</span><span class="op">)</span>, b1 <span class="op">=</span> <span class="fl">1</span>, sigma_pais <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+<span>    init <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, bz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">paises</span><span class="op">)</span><span class="op">)</span>, b1 <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>                           sigma_pais <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>Aqui, porém, o modelo não-centrado é uma escolha pior, pois volta o
@@ -2955,93 +2977,93 @@ podemos comparar com o total observado:</p>
 <tr class="odd">
 <td style="text-align: left;">Canada</td>
 <td style="text-align: right;">29.390</td>
-<td style="text-align: right;">29.384</td>
-<td style="text-align: right;">28.910</td>
-<td style="text-align: right;">29.884</td>
+<td style="text-align: right;">29.389</td>
+<td style="text-align: right;">28.926</td>
+<td style="text-align: right;">29.858</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Denmark</td>
 <td style="text-align: right;">2.850</td>
-<td style="text-align: right;">2.850</td>
-<td style="text-align: right;">2.698</td>
-<td style="text-align: right;">2.989</td>
+<td style="text-align: right;">2.852</td>
+<td style="text-align: right;">2.692</td>
+<td style="text-align: right;">3.009</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">England &amp; Wales</td>
 <td style="text-align: right;">98.475</td>
-<td style="text-align: right;">98.462</td>
-<td style="text-align: right;">97.604</td>
-<td style="text-align: right;">99.357</td>
+<td style="text-align: right;">98.491</td>
+<td style="text-align: right;">97.617</td>
+<td style="text-align: right;">99.343</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">France</td>
 <td style="text-align: right;">91.520</td>
-<td style="text-align: right;">91.517</td>
-<td style="text-align: right;">90.654</td>
-<td style="text-align: right;">92.439</td>
+<td style="text-align: right;">91.518</td>
+<td style="text-align: right;">90.720</td>
+<td style="text-align: right;">92.400</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Germany</td>
 <td style="text-align: right;">99.611</td>
-<td style="text-align: right;">99.609</td>
-<td style="text-align: right;">98.738</td>
-<td style="text-align: right;">100.477</td>
+<td style="text-align: right;">99.594</td>
+<td style="text-align: right;">98.754</td>
+<td style="text-align: right;">100.468</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Italy</td>
 <td style="text-align: right;">132.880</td>
-<td style="text-align: right;">132.892</td>
-<td style="text-align: right;">131.839</td>
-<td style="text-align: right;">133.873</td>
+<td style="text-align: right;">132.872</td>
+<td style="text-align: right;">131.851</td>
+<td style="text-align: right;">133.843</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Japan</td>
 <td style="text-align: right;">17.563</td>
-<td style="text-align: right;">17.559</td>
-<td style="text-align: right;">17.235</td>
-<td style="text-align: right;">17.913</td>
+<td style="text-align: right;">17.570</td>
+<td style="text-align: right;">17.204</td>
+<td style="text-align: right;">17.939</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Moldova</td>
 <td style="text-align: right;">8.135</td>
-<td style="text-align: right;">8.130</td>
-<td style="text-align: right;">7.895</td>
-<td style="text-align: right;">8.378</td>
+<td style="text-align: right;">8.131</td>
+<td style="text-align: right;">7.891</td>
+<td style="text-align: right;">8.375</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Netherlands</td>
 <td style="text-align: right;">19.048</td>
-<td style="text-align: right;">19.048</td>
-<td style="text-align: right;">18.671</td>
-<td style="text-align: right;">19.439</td>
+<td style="text-align: right;">19.040</td>
+<td style="text-align: right;">18.643</td>
+<td style="text-align: right;">19.463</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Portugal</td>
 <td style="text-align: right;">18.417</td>
-<td style="text-align: right;">18.421</td>
-<td style="text-align: right;">18.061</td>
-<td style="text-align: right;">18.777</td>
+<td style="text-align: right;">18.412</td>
+<td style="text-align: right;">18.028</td>
+<td style="text-align: right;">18.802</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Spain</td>
 <td style="text-align: right;">87.758</td>
-<td style="text-align: right;">87.743</td>
-<td style="text-align: right;">86.877</td>
-<td style="text-align: right;">88.573</td>
+<td style="text-align: right;">87.757</td>
+<td style="text-align: right;">86.987</td>
+<td style="text-align: right;">88.541</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Switzerland</td>
 <td style="text-align: right;">11.080</td>
-<td style="text-align: right;">11.077</td>
-<td style="text-align: right;">10.798</td>
-<td style="text-align: right;">11.360</td>
+<td style="text-align: right;">11.087</td>
+<td style="text-align: right;">10.812</td>
+<td style="text-align: right;">11.376</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Ukraine</td>
 <td style="text-align: right;">80.908</td>
-<td style="text-align: right;">80.891</td>
-<td style="text-align: right;">80.129</td>
-<td style="text-align: right;">81.698</td>
+<td style="text-align: right;">80.905</td>
+<td style="text-align: right;">80.120</td>
+<td style="text-align: right;">81.667</td>
 </tr>
 </tbody>
 </table>
@@ -3097,39 +3119,39 @@ mortalidade previstas em todas as idades:</p>
 <td style="text-align: right;">6</td>
 <td style="text-align: right;">22</td>
 <td style="text-align: right;">13</td>
-<td style="text-align: right;">31</td>
+<td style="text-align: right;">32</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Moldova</td>
 <td style="text-align: left;">20-39</td>
 <td style="text-align: right;">115</td>
-<td style="text-align: right;">155</td>
-<td style="text-align: right;">130</td>
-<td style="text-align: right;">182</td>
+<td style="text-align: right;">154</td>
+<td style="text-align: right;">129</td>
+<td style="text-align: right;">179</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Moldova</td>
 <td style="text-align: left;">40-59</td>
 <td style="text-align: right;">1.350</td>
-<td style="text-align: right;">895</td>
-<td style="text-align: right;">836</td>
-<td style="text-align: right;">958</td>
+<td style="text-align: right;">894</td>
+<td style="text-align: right;">834</td>
+<td style="text-align: right;">955</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Moldova</td>
 <td style="text-align: left;">60-79</td>
 <td style="text-align: right;">5.402</td>
-<td style="text-align: right;">4.132</td>
-<td style="text-align: right;">3.986</td>
-<td style="text-align: right;">4.287</td>
+<td style="text-align: right;">4.133</td>
+<td style="text-align: right;">3.982</td>
+<td style="text-align: right;">4.285</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Moldova</td>
 <td style="text-align: left;">80+</td>
 <td style="text-align: right;">1.262</td>
-<td style="text-align: right;">2.926</td>
-<td style="text-align: right;">2.804</td>
-<td style="text-align: right;">3.047</td>
+<td style="text-align: right;">2.928</td>
+<td style="text-align: right;">2.801</td>
+<td style="text-align: right;">3.059</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Japan</td>
@@ -3137,39 +3159,39 @@ mortalidade previstas em todas as idades:</p>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">15</td>
 <td style="text-align: right;">8</td>
-<td style="text-align: right;">23</td>
+<td style="text-align: right;">22</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Japan</td>
 <td style="text-align: left;">20-39</td>
 <td style="text-align: right;">107</td>
 <td style="text-align: right;">117</td>
-<td style="text-align: right;">95</td>
+<td style="text-align: right;">96</td>
 <td style="text-align: right;">139</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Japan</td>
 <td style="text-align: left;">40-59</td>
 <td style="text-align: right;">1.101</td>
-<td style="text-align: right;">923</td>
-<td style="text-align: right;">864</td>
-<td style="text-align: right;">982</td>
+<td style="text-align: right;">924</td>
+<td style="text-align: right;">863</td>
+<td style="text-align: right;">985</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Japan</td>
 <td style="text-align: left;">60-79</td>
 <td style="text-align: right;">5.786</td>
-<td style="text-align: right;">5.133</td>
-<td style="text-align: right;">4.976</td>
+<td style="text-align: right;">5.135</td>
+<td style="text-align: right;">4.968</td>
 <td style="text-align: right;">5.296</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Japan</td>
 <td style="text-align: left;">80+</td>
 <td style="text-align: right;">10.566</td>
-<td style="text-align: right;">11.372</td>
-<td style="text-align: right;">11.117</td>
-<td style="text-align: right;">11.622</td>
+<td style="text-align: right;">11.379</td>
+<td style="text-align: right;">11.111</td>
+<td style="text-align: right;">11.644</td>
 </tr>
 </tbody>
 </table>
@@ -3177,33 +3199,13 @@ mortalidade previstas em todas as idades:</p>
 <h4 id="para-pensar">Para pensar:</h4>
 <ul>
 <li><p>Cada país tem agora a sua própria reta, e as retas acompanham os
-dados muito melhor do que a curva única dos modelos anteriores. Isso é
+dados muito melhor do que a reta única dos modelos anteriores. Isso é
 o que o efeito de país resolve: as diferenças consistentes entre os
 países.</p></li>
-<li><p>Os intervalos da distribuição preditiva dos totais são estreitos. Por
-quê? Lembre do tamanho das populações e da relação entre a média e a
-variância na Poisson.</p></li>
-<li><p>A média prevista do total de cada país é praticamente igual ao total
-observado. Isso não é sinal de que o modelo descreve bem os dados. É
-uma propriedade do modelo Poisson com função de ligação logarítmica:
-quando há um intercepto para cada país, as estimativas que maximizam a
-verossimilhança fazem a soma dos valores previstos de cada país ser
-igual à soma dos observados. Com dados tão informativos, a posterior
-fica muito próxima dessas estimativas. Os erros de cada faixa etária
-se compensam na soma: o que o modelo prevê a mais em algumas faixas,
-prevê a menos em outras. Para avaliar o ajuste, precisamos olhar as
-faixas etárias, como no gráfico e na última tabela.</p></li>
 <li><p>Na tabela por faixa etária, quantos valores observados estão dentro
 do intervalo de 95% da distribuição preditiva? Em que faixas o modelo
 prevê óbitos a mais, e em quais prevê a menos? Os desvios seguem o
 mesmo padrão nos dois países?</p></li>
-<li><p>No gráfico, em quase todos os países a taxa da faixa mais jovem fica
-abaixo da reta, e em alguns países, como a Moldávia e a Ucrânia, os
-pontos formam uma curva menos inclinada que a prevista. O que isso
-sugere sobre a suposição de que a relação é log-linear, com a mesma
-inclinação em todos os países? Ainda resta sobredispersão, que um
-modelo com efeito aleatório também na inclinação poderia acomodar em
-parte.</p></li>
 <li><p>Compare a largura do intervalo de <span class="math inline">\(\beta_1\)</span> com a dos modelos
 anteriores. Com essa sobredispersão restante, você confia nessa
 precisão?</p></li>
@@ -3247,7 +3249,7 @@ um intercepto estimado. Mas o modelo descreve a distribuição de
 interceptos, como uma <span class="math inline">\(\text{Normal}(\bar{\beta}_0,
 \sigma_P)\)</span>. Supondo que o Brasil também faz parte desta distribuição,
 o seu intercepto é um sorteio dessa distribuição.</p>
-<p>Então, para obter a posterior do número de óbitos no Brasil, fazemos o
+<p>Então, para obter a posterior do número de óbitos no Brasil a partir do modelo ajustado, fazemos o
 seguinte, para cada amostra <span class="math inline">\(s\)</span> da posterior:</p>
 <ol type="1">
 <li><p>Sorteamos um intercepto para o Brasil,
@@ -3332,7 +3334,7 @@ código daquele tutorial:</p>
 <span>        <span class="va">b1</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span>         <span class="co"># aumento do log da taxa por década</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    data <span class="op">=</span> <span class="va">dados</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, b1 <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span>    init <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, b1 <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">m2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
@@ -3343,7 +3345,7 @@ código daquele tutorial:</p>
 <span>        <span class="va">phi</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    data <span class="op">=</span> <span class="va">dados</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, b1 <span class="op">=</span> <span class="fl">1</span>, phi <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+<span>    init <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">4.6</span>, b1 <span class="op">=</span> <span class="fl">1</span>, phi <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre>
 </div>
 </div>
 <p>E calcule a distribuição preditiva do total de óbitos no Brasil para
@@ -3375,10 +3377,10 @@ um total maior ou igual ao observado, segundo cada modelo:</p>
 </div>
 <table>
 <colgroup>
-<col style="width: 42%" />
+<col style="width: 41%" />
 <col style="width: 10%" />
 <col style="width: 10%" />
-<col style="width: 10%" />
+<col style="width: 12%" />
 <col style="width: 26%" />
 </colgroup>
 <thead>
@@ -3393,31 +3395,31 @@ um total maior ou igual ao observado, segundo cada modelo:</p>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">Poisson</td>
-<td style="text-align: right;">122.461</td>
-<td style="text-align: right;">121.718</td>
-<td style="text-align: right;">123.197</td>
+<td style="text-align: right;">122.448</td>
+<td style="text-align: right;">121.696</td>
+<td style="text-align: right;">123.190</td>
 <td style="text-align: right;">0,000</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Gama-Poisson</td>
-<td style="text-align: right;">184.054</td>
-<td style="text-align: right;">64.215</td>
-<td style="text-align: right;">430.379</td>
+<td style="text-align: right;">185.597</td>
+<td style="text-align: right;">66.471</td>
+<td style="text-align: right;">415.839</td>
 <td style="text-align: right;">0,003</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Poisson hierárquico: país típico</td>
-<td style="text-align: right;">137.108</td>
-<td style="text-align: right;">77.796</td>
-<td style="text-align: right;">226.451</td>
+<td style="text-align: right;">138.192</td>
+<td style="text-align: right;">77.061</td>
+<td style="text-align: right;">221.382</td>
 <td style="text-align: right;">0,000</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Poisson hierárquico: novo país</td>
-<td style="text-align: right;">229.595</td>
-<td style="text-align: right;">18.390</td>
-<td style="text-align: right;">928.491</td>
-<td style="text-align: right;">0,055</td>
+<td style="text-align: right;">230.626</td>
+<td style="text-align: right;">16.357</td>
+<td style="text-align: right;">1.101.885</td>
+<td style="text-align: right;">0,070</td>
 </tr>
 </tbody>
 </table>
@@ -3465,50 +3467,297 @@ sugere que isso é verdade? Como você mudaria o modelo para incluir
 diferenças entre países também na inclinação?</p></li>
 </ul>
 <h1 id="um-próximo-passo-uma-inclinação-para-cada-país">Um próximo passo: uma inclinação para cada país</h1>
+<h2 id="por-que-inclinações-variáveis">Por que inclinações variáveis</h2>
 <p>A posterior do número de óbitos previstos por faixa etária mostra que
-os desvios não têm o mesmo tamanho em todos os países. Na Moldávia, o
+os desvios não têm o mesmo tamanho em todos os países. Na Moldávia, por exemplo, o
 modelo prevê mais que o dobro dos óbitos observados acima dos 80 anos,
 e cerca de 30% a menos entre 40 e 79 anos. No Japão, os desvios vão
 nos mesmos sentidos, mas são muito menores. Em outras palavras, a taxa
 da Moldávia aumenta com a idade bem mais devagar do que prevê a
-inclinação comum a todos os países. Isso indica que os países diferem
+inclinação comum a todos os países. Isso sugere que as retas dos países diferem
 não só na altura da relação entre a taxa e a idade, mas também na sua
 inclinação.</p>
-<p>Um próximo passo seria permitir que cada país tenha a sua própria
-inclinação, também vinda de uma distribuição normal que descreve a
-variação entre os países:</p>
+<p>Podemos então permitir que cada país tenha a sua própria inclinação,
+assim como fizemos com os interceptos. Mas o intercepto e a inclinação
+de um país não precisam ser independentes. No gráfico das taxas por
+país, os países com as maiores taxas aos 50 anos, como a Moldávia e a
+Ucrânia, parecem ter também as curvas menos inclinadas. Se isso for
+verdade, saber o intercepto de um país diz algo sobre a sua inclinação.
+Um modelo que estima essa <strong>correlação</strong> usa essa informação: cada país
+“empresta” dos outros informação sobre o par (intercepto, inclinação),
+e não apenas sobre cada um deles separadamente.</p>
+<h2 id="especificação-1">Especificação</h2>
+<p>Em vez de duas distribuições normais, uma para os interceptos e outra
+para as inclinações, o par de coeficientes de cada país vem de uma
+<strong>distribuição normal bivariada</strong>:</p>
 <p><span class="math display">\[
 \begin{aligned}
 Y_{ij} &amp;\sim \text{Poisson}(\lambda_{ij}) \\
 \ln \lambda_{ij} &amp;= \ln P_{ij} + \beta_{0j} + \beta_{1j} \, d_i \\
-\beta_{0j} &amp;\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\
-\beta_{1j} &amp;\sim \text{Normal}(\bar{\beta}_1, \, \sigma_I) \\
-\bar{\beta}_0 &amp;\sim \text{Normal}(\ln 100, \, 2) \\
-\bar{\beta}_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\
-\sigma_P &amp;\sim \text{Exponencial}(1) \\
-\sigma_I &amp;\sim \text{Exponencial}(2)
+\begin{pmatrix} \beta_{0j} \\ \beta_{1j} \end{pmatrix} &amp;\sim
+\text{MVNormal}\left( \begin{pmatrix} \bar\beta_0 \\ \bar\beta_1 \end{pmatrix}, \, \mathbf{S} \right) \\
+\bar\beta_0 &amp;\sim \text{Normal}(\ln 100, \, 2) \\
+\bar\beta_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\
+\mathbf{S} &amp;= \begin{pmatrix} \sigma_P &amp; 0 \\ 0 &amp; \sigma_I \end{pmatrix}
+\mathbf{R} \begin{pmatrix} \sigma_P &amp; 0 \\ 0 &amp; \sigma_I \end{pmatrix} \\
+\sigma_P, \, \sigma_I &amp;\sim \text{Exponencial}(1) \\
+\mathbf{R} &amp;\sim \text{LKJcorr}(2)
 \end{aligned}
 \]</span></p>
-<p>Agora <span class="math inline">\(\bar{\beta}_1\)</span> é a inclinação de um país típico, e <span class="math inline">\(\sigma_I\)</span>, o
-desvio-padrão das inclinações entre os países. A distribuição a priori
-<span class="math inline">\(\text{Exponencial}(2)\)</span> tem média 0,5: diferenças de inclinação desse
-tamanho já são grandes, pois um país com inclinação 0,5 acima da média
-teria uma taxa <span class="math inline">\(e^{0{,}5 \times 4} \approx 7\)</span> vezes maior aos 90 anos do
-que aos 50, em relação ao país típico.</p>
-<p><strong>Experimente:</strong> ajuste este modelo com a função <code>ulam()</code>. Basta trocar
-<code>b1</code> por <code>b1[pais]</code> no preditor linear e acrescentar as linhas da
-distribuição das inclinações e das distribuições a priori de
-<code>b1_media</code> e <code>sigma_incl</code>. Não esqueça de indicar os valores iniciais
-das novas variáveis em <code>start</code> (por exemplo, <code>b1 = rep(1, length(paises))</code>,
-<code>b1_media = 1</code> e <code>sigma_incl = 0.5</code>). Depois, refaça o gráfico e as
-tabelas desta seção. Os desvios por faixa etária diminuíram? Como ficou
-a previsão para o Brasil? E o que muda no cálculo dessa previsão, agora
-que o Brasil precisa de um intercepto <strong>e</strong> de uma inclinação sorteados?</p>
-<p>Neste modelo, o intercepto e a inclinação de cada país são sorteados de
-forma independente. Um passo além seria permitir que eles sejam
-correlacionados, por exemplo, que países com mortalidade mais alta aos
-50 anos tenham um aumento menor com a idade. Esse tipo de modelo é
-tratado no capítulo 14 de McElreath (2020).</p>
+<ul>
+<li><p><span class="math inline">\(\bar\beta_0\)</span> e <span class="math inline">\(\bar\beta_1\)</span> são o intercepto e a inclinação de um
+<strong>país típico</strong>, e formam o vetor de médias da normal bivariada. As
+distribuições a priori são as mesmas do modelo de interceptos.</p></li>
+<li><p><span class="math inline">\(\mathbf{S}\)</span> é a <strong>matriz de covariâncias</strong> da normal bivariada. Ela é
+construída a partir dos desvios-padrão dos interceptos ( <span class="math inline">\(\sigma_P\)</span> ) e
+das inclinações ( <span class="math inline">\(\sigma_I\)</span> ) entre os países, e da <strong>matriz de
+correlação</strong> entre os dois <span class="math inline">\(\mathbf{R}\)</span>. Fazendo a multiplicação, obtemos:</p></li>
+</ul>
+<p><span class="math display">\[
+\mathbf{R} = \begin{pmatrix} 1 &amp; \rho \\ \rho &amp; 1 \end{pmatrix}, \qquad
+\mathbf{S} = \begin{pmatrix} \sigma_P^2 &amp; \rho \, \sigma_P \sigma_I \\
+\rho \, \sigma_P \sigma_I &amp; \sigma_I^2 \end{pmatrix}
+\]</span></p>
+<p>em que <span class="math inline">\(\rho\)</span> é a correlação entre os interceptos e as inclinações dos
+países. Escrever <span class="math inline">\(\mathbf{S}\)</span> dessa forma permite definir distribuições
+a priori separadas para os desvios-padrão e para a correlação, que são
+mais fáceis de interpretar que as covariâncias.</p>
+<ul>
+<li><p>A distribuição a priori <span class="math inline">\(\text{LKJcorr}(\eta)\)</span> é uma distribuição de
+matrizes de correlação. Com <span class="math inline">\(\eta = 1\)</span>, todas as correlações entre <span class="math inline">\(-1\)</span>
+e <span class="math inline">\(1\)</span> são igualmente plausíveis. Com <span class="math inline">\(\eta &gt; 1\)</span>, correlações extremas
+ficam menos plausíveis. No caso de duas variáveis, a densidade da
+priori de <span class="math inline">\(\rho\)</span> é proporcional a <span class="math inline">\((1 - \rho^2)^{\eta - 1}\)</span>. Com
+<span class="math inline">\(\eta = 2\)</span>, ela é uma parábola com máximo em zero, que vai a zero em
+<span class="math inline">\(\rho = \pm 1\)</span>.</p></li>
+<li><p>Usamos a mesma priori <span class="math inline">\(\text{Exponencial}(1)\)</span> para os dois
+desvios-padrão. Para <span class="math inline">\(\sigma_I\)</span>, ela é pouco informativa: diferenças
+de inclinação de 0,5 entre um país e o país típico já são grandes, pois
+implicam uma taxa <span class="math inline">\(e^{0{,}5 \times 4} \approx 7\)</span> vezes maior ou menor
+aos 90 anos do que aos 50, em relação ao país típico.</p></li>
+</ul>
+<h2 id="ajuste-1">Ajuste</h2>
+<p>Na função <code>ulam()</code>, a normal bivariada é indicada com <code>multi_normal()</code>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">m4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/ulam.html">ulam</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">alist</a></span><span class="op">(</span></span>
+<span>        <span class="va">obitos</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html">dpois</a></span><span class="op">(</span><span class="va">lambda</span><span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">lambda</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">log_pop</span> <span class="op">+</span> <span class="va">b0</span><span class="op">[</span><span class="va">pais</span><span class="op">]</span> <span class="op">+</span> <span class="va">b1</span><span class="op">[</span><span class="va">pais</span><span class="op">]</span> <span class="op">*</span> <span class="va">idade_d</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">b0</span>, <span class="va">b1</span><span class="op">)</span><span class="op">[</span><span class="va">pais</span><span class="op">]</span> <span class="op">~</span> <span class="fu">multi_normal</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">b0_media</span>, <span class="va">b1_media</span><span class="op">)</span>, <span class="va">Rho</span>, <span class="va">sigma_pais</span><span class="op">)</span>,</span>
+<span>        <span class="va">b0_media</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">4.6</span>, <span class="fl">2</span><span class="op">)</span>,       <span class="co"># 4,6 é aproximadamente ln(100)</span></span>
+<span>        <span class="va">b1_media</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">dnorm</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span>,       <span class="co"># aumento do log da taxa por década</span></span>
+<span>        <span class="va">sigma_pais</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html">dexp</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>        <span class="va">Rho</span> <span class="op">~</span> <span class="fu">lkj_corr</span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    data <span class="op">=</span> <span class="va">dados</span>, chains <span class="op">=</span> <span class="fl">4</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<ul>
+<li><p><code>c(b0, b1)[pais]</code> indica que há um par (intercepto, inclinação) para
+cada país.</p></li>
+<li><p><code>multi_normal(c(b0_media, b1_media), Rho, sigma_pais)</code> é a normal
+bivariada, com o vetor de médias <code>c(b0_media, b1_media)</code>, a matriz de
+correlação <code>Rho</code> e o vetor de desvios-padrão <code>sigma_pais</code>. O primeiro
+elemento de <code>sigma_pais</code> é <span class="math inline">\(\sigma_P\)</span>, e o segundo, <span class="math inline">\(\sigma_I\)</span>. A linha
+<code>sigma_pais ~ dexp(1)</code> dá a mesma priori aos dois.</p></li>
+<li><p><code>lkj_corr(2)</code> é a priori <span class="math inline">\(\text{LKJcorr}(2)\)</span> da matriz de correlação.</p></li>
+</ul>
+<p>Neste modelo, as cadeias convergem mesmo sem indicar valores iniciais.
+Como no modelo de interceptos, usamos a parametrização centrada, pois
+cada país tem milhares de óbitos e os dados determinam com precisão o
+intercepto e a inclinação de cada país. Quando há pouca informação por
+grupo, existe uma versão não-centrada deste modelo, que usa a
+decomposição de Cholesky da matriz de correlação (McElreath 2020, seção
+14.1.3).</p>
+<h2 id="resultados">Resultados</h2>
+<p>Confira a convergência e as estimativas dos parâmetros da distribuição
+dos países. Com <code>depth = 3</code>, a função <code>precis()</code> mostra também os
+elementos da matriz <code>Rho</code>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/precis.html">precis</a></span><span class="op">(</span><span class="va">m4</span>, depth <span class="op">=</span> <span class="fl">3</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;b0_media&quot;</span>, <span class="st">&quot;b1_media&quot;</span>, <span class="st">&quot;sigma_pais&quot;</span>, <span class="st">&quot;Rho&quot;</span><span class="op">)</span>,</span>
+<span>       prob <span class="op">=</span> <span class="fl">0.95</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>O elemento <code>Rho[1,2]</code> é a correlação <span class="math inline">\(\rho\)</span> entre os interceptos e as
+inclinações. No nosso ajuste, a média da sua posterior ficou em torno de
+<span class="math inline">\(-0{,}45\)</span>, com um intervalo de 95% que vai de cerca de <span class="math inline">\(-0{,}75\)</span> até um
+pouco acima de zero. Ou seja, os países com mortalidade mais alta aos 50 anos tendem
+a ter um aumento menor da mortalidade com a idade. Mas com apenas 13
+países a estimativa é bastante incerta.</p>
+<p>Compare a posterior de <code>Rho[1,2]</code> com a sua distribuição a priori.
+Para isso, podemos simular a priori com a função <code>rlkjcorr()</code> do pacote
+<em>rethinking</em>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">post4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/extract.samples.html">extract.samples</a></span><span class="op">(</span><span class="va">m4</span><span class="op">)</span></span>
+<span><span class="va">R.priori</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/dlkjcorr.html">rlkjcorr</a></span><span class="op">(</span><span class="fl">1e4</span>, K <span class="op">=</span> <span class="fl">2</span>, eta <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/dens.html">dens</a></span><span class="op">(</span><span class="va">R.priori</span><span class="op">[</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">]</span>, xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, lty <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">&quot;Correlação entre interceptos e inclinações&quot;</span>, ylab <span class="op">=</span> <span class="st">&quot;Densidade&quot;</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/dens.html">dens</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">Rho</span><span class="op">[</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">]</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, col <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html">legend</a></span><span class="op">(</span><span class="st">&quot;topleft&quot;</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Priori&quot;</span>, <span class="st">&quot;Posterior&quot;</span><span class="op">)</span>, lty <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span>, col <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span>,</span>
+<span>       bty <span class="op">=</span> <span class="st">&quot;n&quot;</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Os desvios-padrão dos interceptos e das inclinações entre os países
+estão em <code>sigma_pais</code>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## sigma_P: quantas vezes a taxa aos 50 anos de um país 1 d.p. acima da</span></span>
+<span><span class="co">## média é maior que a de um país típico</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html">quantile</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">sigma_pais</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## sigma_I: desvio-padrão das inclinações entre países (log da taxa por década)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html">quantile</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">sigma_pais</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Um gráfico ajuda a ver a distribuição conjunta. Vamos desenhar as curvas
+de nível da normal bivariada com as médias das posteriores dos seus
+parâmetros, e os pontos com as médias das posteriores do intercepto e da
+inclinação de cada país:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="co">## Médias das posteriores dos parâmetros da normal bivariada</span></span>
+<span><span class="va">mu</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b0_media</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b1_media</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">sigmas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colMeans</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">sigma_pais</span><span class="op">)</span></span>
+<span><span class="va">rho</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">Rho</span><span class="op">[</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">S.medio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html">diag</a></span><span class="op">(</span><span class="va">sigmas</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">rho</span>, <span class="va">rho</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html">diag</a></span><span class="op">(</span><span class="va">sigmas</span><span class="op">)</span></span>
+<span><span class="co">## Médias das posteriores do intercepto e da inclinação de cada país</span></span>
+<span><span class="va">coef.paises</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span>pais <span class="op">=</span> <span class="va">paises</span>,</span>
+<span>                          b0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colMeans</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b0</span><span class="op">)</span>, b1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colMeans</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## Densidade da normal bivariada numa grade de valores</span></span>
+<span><span class="va">grade.coef</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html">expand.grid</a></span><span class="op">(</span></span>
+<span>    b0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="va">mu</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">3</span> <span class="op">*</span> <span class="va">sigmas</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="va">mu</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="fl">3</span> <span class="op">*</span> <span class="va">sigmas</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>    b1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="va">mu</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">-</span> <span class="fl">3</span> <span class="op">*</span> <span class="va">sigmas</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="va">mu</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fl">3</span> <span class="op">*</span> <span class="va">sigmas</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">grade.coef</span><span class="op">$</span><span class="va">dens</span> <span class="op">&lt;-</span> <span class="fu">mvtnorm</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/mvtnorm/man/Mvnorm.html">dmvnorm</a></span><span class="op">(</span><span class="va">grade.coef</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;b0&quot;</span>, <span class="st">&quot;b1&quot;</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>                                     mean <span class="op">=</span> <span class="va">mu</span>, sigma <span class="op">=</span> <span class="va">S.medio</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">grade.coef</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">b0</span>, <span class="va">b1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_contour.html">geom_contour</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>z <span class="op">=</span> <span class="va">dens</span><span class="op">)</span>, bins <span class="op">=</span> <span class="fl">8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">coef.paises</span>, color <span class="op">=</span> <span class="st">&quot;red&quot;</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_text.html">geom_text</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">coef.paises</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>label <span class="op">=</span> <span class="va">pais</span><span class="op">)</span>, size <span class="op">=</span> <span class="fl">3</span>, vjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Intercepto (ln da taxa aos 50 anos)&quot;</span>,</span>
+<span>         y <span class="op">=</span> <span class="st">&quot;Inclinação (aumento do ln da taxa por década)&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_classic</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>E as previsões para os países usados no ajuste, agora com um intercepto
+e uma inclinação para cada país. Podemos usar a mesma grade de valores
+que usamos para o modelo de interceptos:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">taxa.post4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/link.html">link</a></span><span class="op">(</span><span class="va">m4</span>, data <span class="op">=</span> <span class="va">grade.lista</span><span class="op">)</span></span>
+<span><span class="va">previstos4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span>idade.meio <span class="op">=</span> <span class="va">grade</span><span class="op">$</span><span class="va">idade.meio</span>,</span>
+<span>                         pais <span class="op">=</span> <span class="va">paises</span><span class="op">[</span><span class="va">grade</span><span class="op">$</span><span class="va">pais</span><span class="op">]</span>,</span>
+<span>                         media <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">colMeans</a></span><span class="op">(</span><span class="va">taxa.post4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span><span class="op">(</span><span class="va">obitos</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span><span class="va">idade.meio</span>, <span class="va">taxa</span>, color <span class="op">=</span> <span class="va">pais</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">previstos4</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">media</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html">scale_y_log10</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">&quot;Idade (ponto médio da faixa, anos)&quot;</span>,</span>
+<span>         y <span class="op">=</span> <span class="st">&quot;Óbitos por 100 mil habitantes (escala log)&quot;</span>, color <span class="op">=</span> <span class="st">&quot;País&quot;</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_classic</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h2 id="quantos-óbitos-o-brasil-teria-1">Quantos óbitos o Brasil teria?</h2>
+<p>O Brasil não está entre os países usados no ajuste, e por isso não tem
+um intercepto nem uma inclinação estimados. Mas o modelo descreve a
+distribuição conjunta de interceptos e inclinações dos países, como uma
+<span class="math inline">\(\text{MVNormal}\left( (\bar\beta_0, \bar\beta_1), \, \mathbf{S} \right)\)</span>.
+Supondo que o Brasil também faz parte desta distribuição, o seu
+intercepto e a sua inclinação são um sorteio dessa distribuição. Para
+cada amostra <span class="math inline">\(s\)</span> da posterior:</p>
+<ol type="1">
+<li><p>Sorteamos um intercepto e uma inclinação para o Brasil,
+<span class="math inline">\((\beta_{0,\text{BR}}, \beta_{1,\text{BR}}) \sim \text{MVNormal}\left( (\bar\beta_{0,s}, \bar\beta_{1,s}), \, \mathbf{S}_s \right)\)</span>,
+em que <span class="math inline">\(\mathbf{S}_s\)</span> é a matriz de covariâncias calculada com
+<span class="math inline">\(\sigma_{P,s}\)</span>, <span class="math inline">\(\sigma_{I,s}\)</span> e <span class="math inline">\(\mathbf{R}_s\)</span>.</p></li>
+<li><p>Calculamos o número esperado de óbitos em cada faixa etária <span class="math inline">\(i\)</span>:
+<span class="math inline">\(\lambda_{i} = P_{i} \, e^{\beta_{0,\text{BR}} + \beta_{1,\text{BR}} \, d_i}\)</span>.</p></li>
+<li><p>Sorteamos o número de óbitos em cada faixa de uma
+<span class="math inline">\(\text{Poisson}(\lambda_i)\)</span> e somamos as faixas.</p></li>
+</ol>
+<p>O par (intercepto, inclinação) é sorteado <strong>uma vez</strong> por amostra da
+posterior, e vale para todas as faixas etárias. Para sortear de uma
+normal bivariada, usamos a função <code>mvrnorm()</code> do pacote <em>MASS</em>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">S</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b0_media</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="co">## 1. Um intercepto e uma inclinação sorteados para o Brasil em cada amostra</span></span>
+<span><span class="va">coef.br</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq_len</a></span><span class="op">(</span><span class="va">S</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">S.s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html">diag</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">sigma_pais</span><span class="op">[</span><span class="va">s</span>, <span class="op">]</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html">%*%</a></span> <span class="va">post4</span><span class="op">$</span><span class="va">Rho</span><span class="op">[</span><span class="va">s</span>, , <span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html">%*%</a></span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/diag.html">diag</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">sigma_pais</span><span class="op">[</span><span class="va">s</span>, <span class="op">]</span><span class="op">)</span></span>
+<span>    <span class="fu">MASS</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/MASS/man/mvrnorm.html">mvrnorm</a></span><span class="op">(</span><span class="fl">1</span>, mu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b0_media</span><span class="op">[</span><span class="va">s</span><span class="op">]</span>, <span class="va">post4</span><span class="op">$</span><span class="va">b1_media</span><span class="op">[</span><span class="va">s</span><span class="op">]</span><span class="op">)</span>, Sigma <span class="op">=</span> <span class="va">S.s</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## 2. Óbitos esperados em cada faixa etária: amostras (linhas) x faixas (colunas)</span></span>
+<span><span class="va">lambda.br4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">pop.br80</span><span class="op">)</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span></span>
+<span>    <span class="va">pop.br80</span><span class="op">$</span><span class="va">pop</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">/</span> <span class="fl">1e5</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">coef.br</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">coef.br</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">pop.br80</span><span class="op">$</span><span class="va">idade.meio</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">-</span> <span class="fl">50</span><span class="op">)</span> <span class="op">/</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## 3. Óbitos sorteados de uma Poisson em cada faixa, e o total</span></span>
+<span><span class="va">total.sim4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">rowSums</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html">rpois</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">lambda.br4</span><span class="op">)</span>, <span class="va">lambda.br4</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">S</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">total.sim4</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/HPDI.html">PI</a></span><span class="op">(</span><span class="va">total.sim4</span>, prob <span class="op">=</span> <span class="fl">0.95</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">total.sim4</span> <span class="op">&gt;</span> <span class="va">obitos.br</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Obtivemos a posterior que responde à pergunta “quantos óbitos teria
+<strong>um país qualquer</strong> dessa população de países, com a pirâmide etária do
+Brasil?”. A posterior para o <strong>país típico</strong> com a pirâmide etária do
+Brasil é obtida da mesma forma, mas com o intercepto e a inclinação
+fixos nas médias da normal bivariada, <span class="math inline">\(\bar\beta_{0,s}\)</span> e
+<span class="math inline">\(\bar\beta_{1,s}\)</span>, em cada amostra <span class="math inline">\(s\)</span>:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">lambda.tipico4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">pop.br80</span><span class="op">)</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span></span>
+<span>    <span class="va">pop.br80</span><span class="op">$</span><span class="va">pop</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">/</span> <span class="fl">1e5</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span><span class="op">(</span><span class="va">post4</span><span class="op">$</span><span class="va">b0_media</span> <span class="op">+</span> <span class="va">post4</span><span class="op">$</span><span class="va">b1_media</span> <span class="op">*</span> <span class="op">(</span><span class="va">pop.br80</span><span class="op">$</span><span class="va">idade.meio</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">-</span> <span class="fl">50</span><span class="op">)</span> <span class="op">/</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">total.tipico4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html">rowSums</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html">rpois</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">lambda.tipico4</span><span class="op">)</span>, <span class="va">lambda.tipico4</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">S</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/HPDI.html">PI</a></span><span class="op">(</span><span class="va">total.tipico4</span>, prob <span class="op">=</span> <span class="fl">0.95</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">total.tipico4</span> <span class="op">&gt;</span> <span class="va">obitos.br</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>As duas distribuições são muito diferentes. Como os valores do país
+qualquer variam em ordens de grandeza, usamos a escala logarítmica no
+eixo x:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/dens.html">dens</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log10</a></span><span class="op">(</span><span class="va">total.tipico4</span><span class="op">)</span>, xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html">range</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log10</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="va">total.sim4</span>, <span class="va">obitos.br</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">&quot;Total de óbitos no Brasil (log10)&quot;</span>,</span>
+<span>     ylab <span class="op">=</span> <span class="st">&quot;Densidade posterior&quot;</span>, col <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/rethinking/man/dens.html">dens</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log10</a></span><span class="op">(</span><span class="va">total.sim4</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, col <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log10</a></span><span class="op">(</span><span class="va">obitos.br</span><span class="op">)</span>, col <span class="op">=</span> <span class="fl">3</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html">legend</a></span><span class="op">(</span><span class="st">&quot;topright&quot;</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Típico&quot;</span>, <span class="st">&quot;Qualquer&quot;</span>, <span class="st">&quot;Observado&quot;</span><span class="op">)</span>, col <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
+<span>       lwd <span class="op">=</span> <span class="fl">2</span>, bty <span class="op">=</span> <span class="st">&quot;n&quot;</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<p>Por fim, acrescente os dois novos modelos à tabela de comparação:</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span><span class="va">comparacao</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html">rbind</a></span><span class="op">(</span><span class="va">comparacao</span>,</span>
+<span>    <span class="st">&quot;Interceptos e inclinações: país típico&quot;</span> <span class="op">=</span> <span class="fu">resume</span><span class="op">(</span><span class="va">total.tipico4</span><span class="op">)</span>,</span>
+<span>    <span class="st">&quot;Interceptos e inclinações: novo país&quot;</span> <span class="op">=</span> <span class="fu">resume</span><span class="op">(</span><span class="va">total.sim4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html">kable</a></span><span class="op">(</span><span class="va">comparacao</span>, digits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Média&quot;</span>, <span class="st">&quot;2,5%&quot;</span>, <span class="st">&quot;97,5%&quot;</span>, <span class="st">&quot;P(total ≥ observado)&quot;</span><span class="op">)</span>,</span>
+<span>      format.args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>big.mark <span class="op">=</span> <span class="st">&quot;.&quot;</span>, decimal.mark <span class="op">=</span> <span class="st">&quot;,&quot;</span><span class="op">)</span><span class="op">)</span></span></code></pre>
+</div>
+</div>
+<h3 id="para-pensar-2">Para pensar</h3>
+<ul>
+<li><p>As retas do novo modelo acompanham os dados melhor que as do modelo de
+interceptos? Refaça a tabela de óbitos observados e previstos por
+faixa etária, usando <code>sim(m4)</code> no lugar de <code>sim(m3)</code>. Os desvios
+diminuíram?</p></li>
+<li><p>Por que o intervalo da previsão para um país qualquer ficou mais largo
+que no modelo de interceptos? Lembre que agora a pirâmide etária do
+Brasil, mais jovem que a dos países do ajuste, interage com a incerteza
+sobre a inclinação.</p></li>
+<li><p>O que significa uma correlação negativa entre interceptos e
+inclinações? Como ela afeta os pares (intercepto, inclinação) sorteados
+para o Brasil?</p></li>
+<li><p>O intervalo de 95% da correlação é largo e chega perto de zero. Por
+quê? Quantas observações temos para estimar essa correlação?</p></li>
+<li><p>Os modelos hierárquicos tratam o Brasil como mais um país sorteado da
+mesma população de onde vieram os outros países. Essa suposição é
+razoável?</p></li>
+</ul>
 <h1 id="fontes-dos-dados-e-referências">Fontes dos dados e referências</h1>
 <ul>
 <li><p>Brasil, Ministério da Saúde (2021). Painel de casos de doença pelo
@@ -3522,7 +3771,7 @@ international data. <em>Scientific Data</em> 9, 93.
 <li><p>IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
 Panorama do Censo 2022, <a href="https://censo2022.ibge.gov.br/panorama/" class="uri">https://censo2022.ibge.gov.br/panorama/</a>.</p></li>
 <li><p>McElreath, R. (2020). <em>Statistical Rethinking: A Bayesian Course
-with Examples in R and Stan</em>. 2nd ed. CRC Press. Capítulos 12 e 13.</p></li>
+with Examples in R and Stan</em>. 2nd ed. CRC Press. Capítulos 12 a 14.</p></li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->
