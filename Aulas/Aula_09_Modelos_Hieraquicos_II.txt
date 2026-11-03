@@ -1,0 +1,146 @@
+Roteiro para os slides da aula de modelos hierárquicos
+Estilos e layout como do rmdanexado
+
+1 - Título: Modelos hierárquicos parte 2. Slide abertura como do Rmd anexado
+
+1b - Modelos hierárquicos ou multinivel
+Coluna da esquerda com as definições (verificars e stão corretas:
+* Frequentista: modelos que postulam uma distribuição de probabilidades para pelo menos um de seus parâmetros
+* Bayesianos: modelos que têm pelo menos um parâmetro de uma prior que também tem uma prior (hiperparâmetros)
+
+2 - Slide de seção com título: um modelo binomial hierárquico
+
+3 - Moedas justas caem do mesmo lado?
+Slide apresentando um resumo do experimento de Bartos et al, incluindo a motivação de testar a hipotese de Diaconis, Holmes, and Montgomery (DHM; 2007) e um resumo da metodologia
+
+4 - Delinemaneto experimental
+Slide apresentando os dados que vamos usar: n de lancamento em que e a moeda caiu no mesmo lado inicial, com identificacao da pessoa que lançou. Incluir resumo numerico dos dados com: Numero de moedas, numero de pessoas e lançamentos por pessoa (média, máximo e mínimo).
+
+5 - Modelo binomial agregado (pooling)
+Especificacao de um modelo binomial agregado (pooling) em que a variavel resposta é n de lancamento do mesmo lado (same side). Use como prior do logito uma distribuição centrada no valor DHM (p=0,51) e que abarque entre p=0,25 e p=0,75 em 95% da distribuição, aproximadamente. Na coluna direita a especificação em latex na notação de McEralreth. na coluna da esquerda a especificação da fórmula do modelo para ajuste no pacote rethinking
+
+6 - Modelo binomial sem agregação
+Especificação do modelo binomial com efeito fixo de pessoa (no pooling). Na coluna direita a especificação em latex na notação de McEralreth. na coluna da esquerda a especificação da fórmula do modelo para ajuste no pacote rethinking
+
+7 - Modelo binomial com agregação parcial (hierárquico)
+Especificação do modelo binomial hierárquico (partial pooling), com efeito aleatório de pessoa. Na coluna direita a especificação em latex na notação de McEralreth. na coluna da esquerda a especificação da fórmula do modelo para ajuste no pacote rethinking
+
+8 - Um gráfico análogo com o do painel superior da figura 1 do artigo (https://ar5iv.labs.arxiv.org/html/2310.04153): no exico x o índice da pessoa, ordenadas da que teve menor para maior valor estimado de p de dar o mesmo lado. O eico y é a probabilidade da moeda cair do mesmo lado. Inclua cuma faixa horizontal ciza no intervalo 95% da estimativa do modelo agregado. Inclua também  e um ponto e uma barra de IC 95% para a estimativa de cada pessoa pelo modelo no pooling e partial pooling
+
+9 - Um slide de resumo:
+Agregado (no pooling). sub-ajuste -> não considera estrutura de dependência entre as observações (clusters ou agregados)
+No pooling: sobre-ajuste -> obtem estimativas de cada pessoa (cluster) independetemente das outras pessoas. Os resultados de uma pessoa não informam nada ao modelo sobre os resultados que a outra pode obter
+Partial pooling -> estimativas intermediárias entre sub e sobre ajuste. Equivale a uma distribuição a priori regularizadora, construída com a informação sobre a variação entre clusters (pessoas)
+
+7 - Slide com coluna da direita com um grafico de densidade probabilistica da estimativa de probabilidade de cair do mesmo lado para o modelo agrupado e para o partial pooling, assim, como as priors em pontilhadas. Incluir uma linha vertical com o valor esperado pelo modelo HDM (p=0,51). Na coluna da esquerda, que modelos hierárquico obtém melhores estimativas de médias de clusters (no caso pessoas).
+
+8 - Mais de um tipo de agrupamento. Especificação de um novo modelo hierarquico com efeito da pessoa e também da moeda: coluna da esquerda com a especificação em latex, na da direita da formula para ajustar no rethinking
+
+9 - Resultados do novo modelo: Gráficos de densidade com as posteriores das estimativas dos desvio-padrão entre pessoas e entre moedas, com as densidades das priors em linhas pontilhadas.
+
+10 - Quantidades derivadas. Slides com o comando para incluir a figura Bartos_fig2A.png (que terei no meu diretorio) centrada no slides, e no cnato inferior direito a referência Bartos et al. (2025) com o link para https://ar5iv.labs.arxiv.org/html/2310.04153
+
+12 - Slide de nova seção com título "Modelos com inclinações variáveis"
+
+13 - Taxa de mortalidade por COVID
+Na coluna da direita, o segundo grafico do tutorial em anexo. que tem o código
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_point(size = 2) +
+    geom_line() +
+    scale_y_log10() +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_classic()
+Na coluna da esquerda, um texto em bullets com um resumo dos dados usados (Caporalli et al. 2022)
+
+16 - O fantasma da pseudoreplicação
+Coluna esquerda: código para incluir a figura Hurlbert1984.png (já tenho no meu diretório). Abaixo dela, a sentença "Google Acadêmico: 11256 citações"
+E na abaixo alinhado á esquerda o texto Hurlbert (1984) com link para https://www.jstor.org/stable/1942661
+Coluna direita: primeiro gráfico do tutorial, mas com linha de regressão Poisson acrescida
+ggplot(obitos, aes(idade.meio, taxa)) +
+    geom_point(size = 2) +
+    scale_y_log10() +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)") +
+    theme_classic()
+
+15 - Modelo hierárquico de interceptos
+Coluna da esquerda: Especificação do modelo:
+\begin{aligned}
+Y_{ij} &\sim \text{Poisson}(\lambda_{ij}) \\
+\ln \lambda_{ij} &= \ln P_{ij} + \beta_{0j} + \beta_1 \, d_i \\
+\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\
+\beta_{0j} &\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\
+\bar{\beta}_0 &\sim \text{Normal}(\ln 100, \, 2) \\
+\sigma_P &\sim \text{Exponencial}(1)
+\end{aligned}
+Coluna da esquerda: bullet list com a definição dos parametros:
+\ln P_{ij} : offset
+\beta_1 : inclinação do aumento no ln da taxa de mortalidade com a idade
+\beta_{0j} : intercepto de cada país (ln da taxa de mortalidade aos 50 anos)
+\bar{\beta}_0: ln da taxa esperada de mortalidade aos 50 anos (país típico)
+\sigma_P: desvio-padrão do ln da  taxa esperada de mortalidade aos 50 anos
+
+16 - Posteriores dos interceptos
+Direita: 100 curvas normais com parâmetros \bar{\beta}_0 e \sigma_P tomados da posterior do modelo com título "ditribuições dos interceptos"
+Esquerda: Forest plot com média e desvio-padrão das posteriores das taxas de mortalidade aos 50 anos em cada país, com um ponto de outra cor indicando o valor observado. Com título "Intervalos das taxas de mortalidade dos países na amostra"
+
+17 - Preditores lineares
+Grafico do tutorial da seção "Previsões para os países usados no ajuste" gerado por este codigo:
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_line(data = previstos3, aes(y = media)) +
+    geom_point(size = 2) +
+    scale_y_log10() +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_classic()
+
+18 - Modelo hiráquico de interceptos e inclinaçoes
+Esquerda: especificação do modelo com inclinações e interceptos correlacionados, com prior de uma normal bivariada
+Direita: Grafico de intercepto x inclinação com curvas de nível (contour) da normal obtida com as medias das posteriores de seus parâmetros, com os pontos que são as médias dos pares intercepto/inclinação de cada país.
+
+19 - Ajuste com o rethinking
+código do ajuste do modelo no rethinking
+
+20 - Preditores lineares
+Grafico equivalente ao item 17, com as retas do preditores lineares obtidos com as médias das posteriores de cada país
+
+21 - Quantidades derivadas
+Com o seguinte texto:
+* O Brasil não está entre os países usados no ajuste, e por isso não tem
+um intercepto estimado.
+* O modelo descreve a distribuição conjunta de
+interceptos e inclinações, como uma $incluir aqui a notação do modelo$.
+* Supondo que o Brasil também faz parte desta distribuição,
+o seu intercepto e inclianção são um sorteio dessa distribuição.
+
+### Cálculo da posterior:
+(Obs: reproduzo aqui os passos para o modelo apenas de intercepto. Ajuste a descirção para o modelo de interceptos e inclinaçẽos correlacionados):
+1. Sorteamos um intercepto e uma inclinação para o Brasil,
+   $\beta_{0,\text{BR}} \sim \text{Normal}(\bar{\beta}_{0,s}, \, \sigma_{P,s})$. 
+   
+2. Calculamos o número esperado de óbitos em cada faixa etária $i$:
+   $\lambda_{i} = P_{i} \, e^{\beta_{0,\text{BR}} + \beta_{1,s} \, d_i}$. (i
+
+3. Sorteamos o número de óbitos em cada faixa de uma
+   $\text{Poisson}(\lambda_i)$ e somamos as faixas.
+
+22. Quantidades derivadas
+Com o seguinte texto:
+
+Obtivemos a posterior que responde à pergunta "quantos óbitos teria um país qualquer dessa população de países, com a pirâmide etária do Brasil?”.
+
+Outra posteriro derivada possível é a de país típico com pirâmide etária do Brasil. Para isos temos que:
+
+(Incluir aqui os passos análogos ao slide anterior, mas para os cálculos de uma posterior que com inclinação e interceptos fixos na média da posterior da normal bivariada de interceptos e inclinações)
+
+23. Distribuições posteriores das duas quantidades
+
+Gráfico de densidade das posteriores de total de óbitos definidas nos slides 21 e 23, obtidas do ajuste do modelo. Acrescente também uma linha com o valor registrado de óbitos no Brasil. Análogo ao código que está no tutorial:
+dens(total.tipico, xlim = range(c(total.sim3, obitos.br)),
+     xlab = "Total de óbitos no Brasil",
+     ylab = "Densidade posterior", col=1)
+dens(total.sim3, add=TRUE, col=2)
+abline(v = obitos.br, col = 3, lwd = 2)
+legend("topright", legend = c("Típico", "Qualquer", "Observado"), col = 1:3, lwd = 2, bty = "n")
+

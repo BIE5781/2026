@@ -1,0 +1,485 @@
+---
+class: inverse, center, middle
+
+# Modelos com inclinações variáveis
+
+```{r dados-covid}
+## Dados do tutorial: óbitos por COVID-19 por faixa etária em países com
+## boa vigilância, e população brasileira (Censo 2022).
+## Os arquivos são baixados do repositório da disciplina na primeira
+## compilação, e depois lidos do diretório local.
+repo <- "https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/"
+baixa <- function(arq) {
+    if (!file.exists(arq)) download.file(paste0(repo, arq), arq, mode = "wb")
+    readRDS(arq)
+}
+obitos <- baixa("obitos_covid_paises_selecionados.rds")
+pop.br <- baixa("pop_brasileira_censo_2022.rds")
+obitos.br <- 614186   # óbitos no Brasil até a semana epidemiológica 47 de 2021
+
+## Lista de dados para o rethinking, como no tutorial
+dados <- list(
+    obitos  = obitos$obitos,
+    log_pop = log(obitos$pop.e5),
+    idade_d = (obitos$idade.meio - 50) / 10,   # décadas a partir dos 50 anos
+    pais    = as.integer(factor(obitos$pais))
+)
+paises <- levels(factor(obitos$pais))
+```
+
+```{r m1-covid, eval = FALSE, include = FALSE}
+## Modelo Poisson sem efeito de país (tutorial sobre GLMs).
+## Valores iniciais passados com init: o argumento start do ulam()
+## falha com listas de vários parâmetros nas versões recentes do rethinking
+m1 <- ulam(
+    alist(
+        obitos ~ dpois(lambda),
+        log(lambda) <- log_pop + b0 + b1 * idade_d,
+        b0 ~ dnorm(4.6, 2),
+        b1 ~ dnorm(1, 0.5)
+    ),
+    data = dados, chains = 4, cores = 4,
+    init = function() list(b0 = 4.6, b1 = 1))
+```
+
+```{r m3-covid, eval = FALSE, include = FALSE}
+## Modelo hierárquico de interceptos (tutorial 09_glmm)
+m3 <- ulam(
+    alist(
+        obitos ~ dpois(lambda),
+        log(lambda) <- log_pop + b0[pais] + b1 * idade_d,
+        b0[pais] ~ dnorm(b0_media, sigma_pais),
+        b0_media ~ dnorm(4.6, 2),
+        b1 ~ dnorm(1, 0.5),
+        sigma_pais ~ dexp(1)
+    ),
+    data = dados, chains = 4, cores = 4,
+    init = function() list(b0 = rep(4.6, length(paises)), b0_media = 4.6,
+                           b1 = 1, sigma_pais = 1))
+```
+
+```{r ajustes-covid, include = FALSE}
+ajustes.covid <- ajusta_ou_le("posteriores_covid.rds",
+                              c("m1-covid", "m3-covid", "m4-covid"),
+                              c("m1", "m3", "m4"),
+                              "obitos_covid_paises_selecionados.rds")
+post1 <- ajustes.covid$post$m1
+post3 <- ajustes.covid$post$m3
+post4 <- ajustes.covid$post$m4
+S <- length(post3$b1)
+```
+
+```{r previsoes-covid}
+cores.paises <- setNames(hcl.colors(length(paises), "Dark 3"), paises)
+idade.grade <- seq(10, 90, length.out = 50)
+d.grade <- (idade.grade - 50) / 10
+
+## Modelo Poisson sem país: média da posterior da taxa
+previsto1 <- data.frame(idade.meio = idade.grade,
+                        media = sapply(d.grade, function(d) mean(exp(post1$b0 + post1$b1 * d))))
+
+## Modelo de interceptos: média da posterior da taxa de cada país
+previstos3 <- do.call(rbind, lapply(seq_along(paises), function(j)
+    data.frame(pais = paises[j], idade.meio = idade.grade,
+               media = sapply(d.grade, function(d)
+                   mean(exp(post3$b0[, j] + post3$b1 * d))))))
+
+## Taxa aos 50 anos de cada país: posterior (modelo de interceptos) e observada
+taxa50 <- data.frame(pais = paises,
+                     media = colMeans(exp(post3$b0)),
+                     dp = apply(exp(post3$b0), 2, sd),
+                     observada = sapply(paises, function(p)
+                         obitos$taxa[obitos$pais == p & obitos$idade.meio == 50]))
+taxa50$pais <- factor(taxa50$pais, levels = taxa50$pais[order(taxa50$media)])
+
+## 100 distribuições de interceptos tomadas da posterior
+set.seed(42)
+amostras <- sample(S, 100)
+b0.grade <- seq(min(post3$b0_media) - 3 * max(post3$sigma_pais),
+                max(post3$b0_media) + 3 * max(post3$sigma_pais), length.out = 200)
+curvas <- do.call(rbind, lapply(amostras, function(s)
+    data.frame(amostra = s, b0 = b0.grade,
+               dens = dnorm(b0.grade, post3$b0_media[s], post3$sigma_pais[s]))))
+
+## Modelo de interceptos e inclinações: retas com as médias das posteriores
+b0.4 <- colMeans(post4$b0)
+b1.4 <- colMeans(post4$b1)
+previstos4 <- do.call(rbind, lapply(seq_along(paises), function(j)
+    data.frame(pais = paises[j], idade.meio = idade.grade,
+               media = exp(b0.4[j] + b1.4[j] * d.grade))))
+
+## Normal bivariada com as médias das posteriores de seus parâmetros
+mu4 <- c(mean(post4$b0_media), mean(post4$b1_media))
+sig4 <- colMeans(post4$sigma_pais)
+rho4 <- mean(post4$Rho[, 1, 2])
+Sigma4 <- diag(sig4) %*% matrix(c(1, rho4, rho4, 1), 2) %*% diag(sig4)
+grade2 <- expand.grid(b0 = seq(mu4[1] - 3 * sig4[1], mu4[1] + 3 * sig4[1], length.out = 150),
+                      b1 = seq(mu4[2] - 3 * sig4[2], mu4[2] + 3 * sig4[2], length.out = 150))
+dens2 <- function(x, mu, Sig) {
+    Si <- solve(Sig); dx <- sweep(as.matrix(x), 2, mu)
+    exp(-0.5 * rowSums((dx %*% Si) * dx)) / (2 * pi * sqrt(det(Sig)))
+}
+grade2$dens <- dens2(grade2[, c("b0", "b1")], mu4, Sigma4)
+
+## População brasileira, com uma única classe para 80 anos ou mais
+pop.br80 <- pop.br |>
+    mutate(acima80 = idade.meio > 80,
+           classe = ifelse(acima80, "80 anos ou mais", as.character(idade)),
+           idade.meio = ifelse(acima80, 90, idade.meio)) |>
+    group_by(classe, idade.meio) |>
+    summarise(pop = sum(pop), .groups = "drop") |>
+    arrange(idade.meio)
+d.br <- (pop.br80$idade.meio - 50) / 10
+P.br <- pop.br80$pop / 1e5
+
+## Total de óbitos do Brasil, dados um intercepto e uma inclinação por amostra
+total_br <- function(b0, b1) {
+    lambda <- sapply(seq_along(d.br), function(i) P.br[i] * exp(b0 + b1 * d.br[i]))
+    rowSums(matrix(rpois(length(lambda), lambda), nrow = length(b0)))
+}
+set.seed(42)
+## Brasil como um país qualquer: intercepto e inclinação sorteados da normal bivariada
+z1 <- rnorm(S); z2 <- rnorm(S)
+rho.s <- post4$Rho[, 1, 2]
+b0.br <- post4$b0_media + post4$sigma_pais[, 1] * z1
+b1.br <- post4$b1_media + post4$sigma_pais[, 2] * (rho.s * z1 + sqrt(1 - rho.s^2) * z2)
+total.qualquer <- total_br(b0.br, b1.br)
+## Brasil como o país típico: intercepto e inclinação nas médias da normal bivariada
+total.tipico <- total_br(post4$b0_media, post4$b1_media)
+
+## Mediana e intervalo de 95% de uma posterior, para o texto
+med_ic <- function(x, d = 2)
+    paste0(fmt(median(x), d), " [", fmt(quantile(x, 0.025), d), "; ",
+           fmt(quantile(x, 0.975), d), "]")
+```
+
+---
+
+## Taxa de mortalidade por COVID-19
+
+.pull-left[
+
+* Dados da base *The Demography of COVID-19 Deaths* (INED; Caporali et
+  al. 2022): óbitos acumulados por COVID-19 por sexo e idade, de fontes
+  oficiais documentadas e com controle de qualidade.
+
+* Selecionamos `r length(paises)` países com boa vigilância
+  epidemiológica, e `r nlevels(obitos$idade)` faixas etárias (de
+  `r levels(obitos$idade)[1]` a `r tail(levels(obitos$idade), 1)` anos).
+
+* Total de `r fmt(sum(obitos$obitos))` óbitos.
+
+* Com a população de cada faixa etária, calculamos a **taxa** de óbitos
+  por 100 mil habitantes.
+]
+
+.pull-right[
+```{r grafico-com-pais, fig.width = 6, fig.asp = 0.95, out.width = "100%"}
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_point(size = 2) +
+    geom_line() +
+    scale_y_log10() +
+    scale_colour_manual(values = cores.paises) +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_Publication(16) +
+    theme(legend.position = "right", legend.direction = "vertical",
+          legend.text = element_text(size = 10),
+          legend.key.size = unit(0.4, "cm"))
+```
+]
+
+---
+
+## O fantasma da pseudorreplicação
+
+.pull-left[
+.center[
+```{r hurlbert, out.width = "55%"}
+knitr::include_graphics("Hurlbert1984.png")
+```
+
+Google Acadêmico: 11256 citações
+]
+
+[Hurlbert (1984)](https://www.jstor.org/stable/1942661)
+]
+
+.pull-right[
+```{r grafico-sem-pais, fig.width = 6, fig.asp = 0.95, out.width = "100%"}
+ggplot(obitos, aes(idade.meio, taxa)) +
+    geom_point(size = 2) +
+    geom_line(data = previsto1, aes(y = media), colour = "#dc322f", linewidth = 1) +
+    scale_y_log10() +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)") +
+    theme_Publication(16)
+```
+.right[.f6[Linha: regressão Poisson, sem efeito de país.]]
+]
+
+---
+
+## Modelo hierárquico de interceptos
+
+.pull-left[
+
+<br>
+
+$$\begin{aligned}
+Y_{ij} &\sim \text{Poisson}(\lambda_{ij}) \\[0.5em]
+\ln \lambda_{ij} &= \ln P_{ij} + \beta_{0j} + \beta_1 \, d_i \\[0.5em]
+\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\[0.5em]
+\beta_{0j} &\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\[0.5em]
+\bar{\beta}_0 &\sim \text{Normal}(\ln 100, \, 2) \\[0.5em]
+\sigma_P &\sim \text{Exponencial}(1)
+\end{aligned}$$
+
+.f6[
+$Y_{ij}$: óbitos na faixa etária $i$ do país $j$; $d_i$: idade em décadas a partir dos 50 anos.
+]
+]
+
+.pull-right[
+
+* $\ln P_{ij}$: *offset* (log da população da faixa, em 100 mil habitantes).
+
+* $\beta_1$: inclinação do aumento no ln da taxa de mortalidade com a
+  idade.
+
+* $\beta_{0j}$: intercepto de cada país (ln da taxa de mortalidade aos
+  50 anos).
+
+* $\bar{\beta}_0$: ln da taxa esperada de mortalidade aos 50 anos (país
+  típico).
+
+* $\sigma_P$: desvio-padrão do ln da taxa esperada de mortalidade aos 50
+  anos.
+]
+
+---
+
+## Posteriores dos interceptos
+
+.pull-left[
+```{r grafico-forest, fig.width = 6, fig.asp = 0.95, out.width = "85%"}
+ggplot(taxa50, aes(y = pais)) +
+    geom_pointrange(aes(x = media, xmin = media - 2 * dp, xmax = media + 2 * dp,
+                        colour = "Estimada"), size = 0.5) +
+    geom_point(aes(x = observada, colour = "Observada"), size = 3) +
+    scale_x_log10() +
+    scale_colour_manual(values = c("Estimada" = "#268bd2", "Observada" = "#dc322f"),
+                        name = NULL) +
+    labs(x = "Óbitos por 100 mil hab. aos 50 anos", y = NULL,
+         title = "Intervalos das taxas de mortalidade\ndos países na amostra") +
+    theme_Publication(16) +
+    theme(legend.key.size = unit(0.6, "cm"))
+```
+.f6[
+Estimada: média ± 2 desvios-padrão da posterior de $e^{\beta_{0j}}$. Observada: taxa da faixa de 40 a 59 anos.
+]
+]
+
+.pull-right[
+```{r grafico-curvas-interceptos, fig.width = 6, fig.asp = 0.95, out.width = "85%"}
+ggplot(curvas, aes(b0, dens, group = amostra)) +
+    geom_line(colour = "#268bd2", alpha = 0.25) +
+    geom_rug(data = data.frame(b0 = colMeans(post3$b0)), aes(b0), inherit.aes = FALSE,
+             colour = "#dc322f", linewidth = 1) +
+    labs(x = expression(beta[0] ~ "(ln da taxa aos 50 anos)"), y = "Densidade",
+         title = "Distribuições dos interceptos") +
+    theme_Publication(16)
+```
+.f6[
+Normais com $\bar\beta_0$ e $\sigma_P$ de 100 amostras da posterior. Marcas: médias dos $\beta_{0j}$.
+]
+]
+
+---
+
+## Preditores lineares
+
+```{r grafico-previstos3, fig.width = 12, fig.asp = 0.45, out.width = "88%"}
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_line(data = previstos3, aes(y = media)) +
+    geom_point(size = 2) +
+    scale_y_log10() +
+    scale_colour_manual(values = cores.paises) +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_Publication(16) +
+    theme(legend.position = "right", legend.direction = "vertical",
+          legend.text = element_text(size = 12),
+          legend.key.size = unit(0.5, "cm"))
+```
+
+.right[.f6[Modelo hierárquico de interceptos. Linhas: média da posterior da taxa de cada país.]]
+
+---
+
+## Modelo hierárquico de interceptos e inclinações
+
+.pull-left[
+$$\begin{aligned}
+Y_{ij} &\sim \text{Poisson}(\lambda_{ij}) \\[0.2em]
+\ln \lambda_{ij} &= \ln P_{ij} + \beta_{0j} + \beta_{1j} \, d_i \\[0.2em]
+\begin{pmatrix} \beta_{0j} \\ \beta_{1j} \end{pmatrix} &\sim
+\text{MVNormal}\left( \begin{pmatrix} \bar\beta_0 \\ \bar\beta_1 \end{pmatrix}, \, \mathbf{S} \right) \\[0.2em]
+\mathbf{S} &= \begin{pmatrix} \sigma_P & 0 \\ 0 & \sigma_I \end{pmatrix}
+\mathbf{R} \begin{pmatrix} \sigma_P & 0 \\ 0 & \sigma_I \end{pmatrix} \\[0.2em]
+\bar\beta_0 &\sim \text{Normal}(\ln 100, \, 2) \\[0.2em]
+\bar\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\[0.2em]
+\sigma_P, \, \sigma_I &\sim \text{Exponencial}(1), \quad \mathbf{R} \sim \text{LKJcorr}(2)
+\end{aligned}$$
+
+]
+
+.pull-right[
+```{r grafico-bivariada, fig.width = 6, fig.asp = 0.95, out.width = "100%"}
+ggplot(grade2, aes(b0, b1)) +
+    geom_contour(aes(z = dens), colour = "#268bd2", bins = 8) +
+    geom_point(data = data.frame(b0 = b0.4, b1 = b1.4), colour = "#dc322f", size = 3) +
+    labs(x = expression("Intercepto (" * beta[0] * ")"),
+         y = expression("Inclinação (" * beta[1] * ")")) +
+    theme_Publication(16)
+```
+.f6[Curvas de nível: normal bivariada com as médias das posteriores de seus parâmetros. Pontos: médias das posteriores de cada país.]
+]
+
+---
+
+## Ajuste com o rethinking
+
+.pull-left[
+```{r m4-covid, eval = FALSE, echo = TRUE}
+m4 <- ulam(
+    alist(
+        obitos ~ dpois(lambda),
+        log(lambda) <- log_pop +
+            b0[pais] +
+            b1[pais] * idade_d,
+        c(b0, b1)[pais] ~ multi_normal(
+            c(b0_media, b1_media),
+            Rho, sigma_pais),
+        b0_media ~ dnorm(4.6, 2),
+        b1_media ~ dnorm(1, 0.5),
+        sigma_pais ~ dexp(1),
+        Rho ~ lkj_corr(2)
+    ),
+    data = dados,
+    chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+* `c(b0, b1)[pais]`: um par (intercepto, inclinação) para cada país.
+
+* `multi_normal(...)`: normal bivariada, com vetor de médias
+  `c(b0_media, b1_media)`, matriz de correlação `Rho` e vetor de
+  desvios-padrão `sigma_pais` ( $\sigma_P$ e $\sigma_I$ ).
+
+* `lkj_corr(2)`: priori da matriz de correlação, que torna correlações
+  extremas pouco plausíveis.
+
+* Correlação estimada entre interceptos e inclinações:
+  `r med_ic(post4$Rho[, 1, 2])` (mediana e intervalo de 95%).
+]
+
+---
+
+## Preditores lineares
+
+```{r grafico-previstos4, fig.width = 12, fig.asp = 0.45, out.width = "88%"}
+ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
+    geom_line(data = previstos4, aes(y = media)) +
+    geom_point(size = 2) +
+    scale_y_log10() +
+    scale_colour_manual(values = cores.paises) +
+    labs(x = "Idade (ponto médio da faixa, anos)",
+         y = "Óbitos por 100 mil habitantes (escala log)", color = "País") +
+    theme_Publication(16) +
+    theme(legend.position = "right", legend.direction = "vertical",
+          legend.text = element_text(size = 12),
+          legend.key.size = unit(0.5, "cm"))
+```
+
+.right[.f6[Modelo de interceptos e inclinações. Linhas: retas com as médias das posteriores de cada país.]]
+
+---
+
+## Quantidades derivadas
+
+.pull-left[
+
+* O Brasil não está entre os países usados no ajuste, e por isso não tem
+  um intercepto nem uma inclinação estimados.
+
+* O modelo descreve a distribuição conjunta de interceptos e
+  inclinações, como uma
+  $\text{MVNormal}\left( (\bar\beta_0, \bar\beta_1), \, \mathbf{S} \right)$.
+
+* Supondo que o Brasil também faz parte desta distribuição, o seu
+  intercepto e a sua inclinação são um sorteio dessa distribuição.
+]
+
+.pull-right[
+
+**Cálculo da posterior**: para cada amostra $s$ da posterior,
+
+1. Sorteamos um intercepto e uma inclinação para o Brasil:
+   $(\beta_{0,\text{BR}}, \beta_{1,\text{BR}}) \sim \text{MVNormal}(\boldsymbol\mu_s, \mathbf{S}_s)$,
+   com $\boldsymbol\mu_s = (\bar\beta_{0,s}, \bar\beta_{1,s})$.
+
+2. Calculamos o número esperado de óbitos em cada faixa etária $i$:
+   $\lambda_{i} = P_{i} \, e^{\beta_{0,\text{BR}} + \beta_{1,\text{BR}} \, d_i}$.
+
+3. Sorteamos o número de óbitos em cada faixa de uma
+   $\text{Poisson}(\lambda_i)$ e somamos as faixas.
+]
+
+---
+
+## Quantidades derivadas
+
+Obtivemos a posterior que responde à pergunta "quantos óbitos teria **um
+país qualquer** dessa população de países, com a pirâmide etária do
+Brasil?".
+
+Outra posterior derivada possível é a do **país típico** com a pirâmide
+etária do Brasil. Para isso, para cada amostra $s$ da posterior:
+
+1. Usamos o intercepto e a inclinação do país típico, que são as médias
+   da normal bivariada: $\beta_{0,\text{BR}} = \bar\beta_{0,s}$ e
+   $\beta_{1,\text{BR}} = \bar\beta_{1,s}$.
+
+2. Calculamos o número esperado de óbitos em cada faixa etária $i$:
+   $\lambda_{i} = P_{i} \, e^{\bar\beta_{0,s} + \bar\beta_{1,s} \, d_i}$.
+
+3. Sorteamos o número de óbitos em cada faixa de uma
+   $\text{Poisson}(\lambda_i)$ e somamos as faixas.
+
+---
+
+## Distribuições posteriores das duas quantidades
+
+```{r grafico-brasil, fig.width = 10, fig.asp = 0.5, out.width = "85%"}
+totais.br <- rbind(data.frame(previsao = "Típico", total = total.tipico),
+                   data.frame(previsao = "Qualquer", total = total.qualquer))
+totais.br$previsao <- factor(totais.br$previsao, levels = c("Típico", "Qualquer"))
+ggplot(totais.br, aes(total)) +
+    geom_density(aes(colour = previsao, fill = previsao), alpha = 0.25, linewidth = 1) +
+    geom_vline(aes(xintercept = obitos.br, linetype = "Observado"),
+               colour = "#859900", linewidth = 1) +
+    scale_x_log10(labels = function(x) fmt(x)) +
+    scale_colour_manual(values = c("Típico" = "#586e75", "Qualquer" = "#dc322f"),
+                        name = NULL) +
+    scale_fill_manual(values = c("Típico" = "#586e75", "Qualquer" = "#dc322f"),
+                      name = NULL) +
+    scale_linetype_manual(values = c("Observado" = "dashed"), name = NULL) +
+    labs(x = "Total de óbitos no Brasil", y = "Densidade posterior") +
+    theme_Publication(18) +
+    theme(legend.key.size = unit(0.6, "cm"))
+```
+
+.right[.f6[Óbitos registrados no Brasil: `r fmt(obitos.br)`. Eixo x em escala logarítmica.]]

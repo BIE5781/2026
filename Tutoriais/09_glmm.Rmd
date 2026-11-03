@@ -118,9 +118,9 @@ $$
 \begin{aligned}
 Y_{ij} &\sim \text{Poisson}(\lambda_{ij}) \\
 \ln \lambda_{ij} &= \ln P_{ij} + \beta_{0j} + \beta_1 \, d_i \\
+\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\
 \beta_{0j} &\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\
 \bar{\beta}_0 &\sim \text{Normal}(\ln 100, \, 2) \\
-\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\
 \sigma_P &\sim \text{Exponencial}(1)
 \end{aligned}
 $$
