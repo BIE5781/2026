@@ -1023,7 +1023,7 @@ ggplot(obitos, aes(idade.meio, taxa, color = pais)) +
 * Supondo que o Brasil também faz parte desta distribuição, o seu
   intercepto e a sua inclinação são um sorteio dessa distribuição.
 ]
-
+--
 .pull-right[
 
 **Cálculo da posterior**: para cada amostra $s$ da posterior,
@@ -1051,7 +1051,7 @@ Outra posterior derivada possível é a do **país típico** com a pirâmide
 etária do Brasil. 
 
 Neste caso,  para cada amostra $s$ da posterior:
-
+--
 1. Usamos o intercepto e a inclinação do país típico, que são as médias
    da normal bivariada: $\beta_{0,\text{BR}} = \bar\beta_{0,s}$ e
    $\beta_{1,\text{BR}} = \bar\beta_{1,s}$.
