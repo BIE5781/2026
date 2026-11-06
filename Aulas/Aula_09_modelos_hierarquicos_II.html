@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelos hierárquicos parte 2</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI (Paulo Inácio Prado)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelos hierárquicos parte 2
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI (Paulo Inácio Prado)
+]
+.date[
+### 04 de novembro de 2026
+]
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+## Modelos hierárquicos ou multinível
+
+.pull-left[
+### Frequentistas
+* Modelos que postulam uma distribuição de
+probabilidades para pelo menos um de seus parâmetros (os **efeitos
+aleatórios**). 
+* Os parâmetros desta distribuição (p.ex., sua variância)
+são estimados a partir dos dados.
+
+### Bayesianos
+* Modelos em que pelo menos um parâmetro de uma
+distribuição *a priori* também tem uma distribuição *a priori*.
+* Os parâmetros da priori são os **hiperparâmetros**.
+* As prioris dos hiperparâmetros são as **hiperprioris**.
+]
+
+.pull-right[
+
+&lt;br&gt;
+
+`$$\begin{aligned}
+y_i &amp;\sim \text{Binomial}(N_i, \, p_i) \\[0.5em]
+\text{logit}(p_i) &amp;= \alpha_{\text{PESSOA}[i]} \\[0.5em]
+\alpha_j &amp;\sim \text{Normal}(\bar\alpha, \, \sigma) \leftarrow \text{priori} \\[0.5em]
+\bar\alpha &amp;\sim \text{Normal}(0{,}04; \, 0{,}56) \leftarrow \text{hiperpriori} \\[0.5em]
+\sigma &amp;\sim \text{Exponencial}(1) &amp; &amp; \leftarrow \text{hiperpriori}
+\end{aligned}$$`
+
+Hiperparâmetros: `\(\bar\alpha\)` e `\(\sigma\)`.
+]
+
+---
+class: inverse, center, middle
+
+# Um modelo binomial hierárquico
+
+---
+
+## Moedas justas caem do mesmo lado?
+
+.pull-left[
+
+**Motivação**
+
+* O modelo físico padrão do lançamento de moedas prevê que uma moeda
+  justa cai em cara ou coroa com probabilidade 0,5.
+
+* Diaconis, Holmes &amp; Montgomery (DHM; 2007) propuseram que, ao lançar a
+  moeda, as pessoas introduzem uma pequena **precessão** (oscilação do
+  eixo de rotação).
+
+* Com isso a moeda passa mais tempo no ar com a face inicial para cima,
+  e tende a cair **do mesmo lado em que começou**.
+
+* DHM previram: P(mesmo lado) `\(\approx\)` **0,51**.
+]
+
+.pull-right[
+.center[
+
+&lt;img src="DHC_fig2.png" alt="" width="85%" /&gt;
+]
+]
+
+---
+
+## Delineamento experimental
+
+.pull-left[
+**Metodologia** (Bartoš et al. 2025)
+
+* 48 pessoas lançaram 44 tipos de moedas, num total de 350.757 lançamentos.
+
+* Coleta em trabalhos de conclusão de curso, "maratonas" presenciais e
+  voluntários recrutados pela internet.
+
+* **Resposta**: número de lançamentos que caíram do mesmo lado em que
+  começaram ( `\(S\)` ), em `\(N\)` lançamentos de cada pessoa.
+
+* Cada pessoa lançou uma ou mais moedas; vamos começar ignorando as
+  moedas.
+
+
+]
+
+.pull-right[
+
+|                                            |                     |
+|:-------------------------------------------|--------------------:|
+|Pessoas                                     |                   48|
+|Moedas (moeda x valor)                      |                   44|
+|Lançamentos (total)                         |              350.757|
+|Lançamentos por pessoa: média (mín. - máx.) | 7.307 (701 - 20.100)|
+
+.right[.f6[Fonte: Tabela 1 de Bartoš et al. (2025).]]
+]
+
+---
+
+## Modelo binomial agregado (*pooling*)
+
+.pull-left[
+
+&lt;br&gt;
+
+
+``` r
+&gt; m.agr &lt;- ulam(
++     alist(
++         S ~ dbinom(N, p),
++         logit(p) &lt;- a,
++         a ~ dnorm(0.04, 0.56)
++     ),
++     data = dl, chains = 4, cores = 4)
+```
+
+&lt;br&gt;
+
+.f6[`dl`: lista com os vetores `S` (n de lançamentos do mesmo lado), `N`
+(n de lançamentos) e `pessoa` (índice da pessoa, de 1 a 48).]
+]
+
+.pull-right[
+
+`$$\begin{aligned}
+S_i &amp;\sim \text{Binomial}(N_i, \, p) \\[0.5em]
+\text{logit}(p) &amp;= \alpha \\[0.5em]
+\alpha &amp;\sim \text{Normal}(0{,}04; \, 0{,}56)
+\end{aligned}$$`
+
+* Uma única probabilidade `\(p\)` para todos os lançamentos, que são
+  supostos **independentes**.
+
+* Priori centrada no valor previsto por DHM: `\(\text{logit}(0{,}51) = 0{,}04\)`.
+
+* 95% da priori entre `\(p = 0{,}25\)` e `\(p = 0{,}75\)`: `\(\text{logit}(0{,}75) / 1{,}96 = 0{,}56\)`.
+]
+
+---
+
+## Modelo binomial sem agregação (*no pooling*)
+
+.pull-left[
+
+&lt;br&gt;
+
+
+``` r
+&gt; m.sem &lt;- ulam(
++     alist(
++         S ~ dbinom(N, p),
++         logit(p) &lt;- a[pessoa],
++         a[pessoa] ~ dnorm(0.04, 0.56)
++     ),
++     data = dl, chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+`$$\begin{aligned}
+S_i &amp;\sim \text{Binomial}(N_i, \, p_i) \\[0.5em]
+\text{logit}(p_i) &amp;= \alpha_{\text{PESSOA}[i]} \\[0.5em]
+\alpha_j &amp;\sim \text{Normal}(0{,}04; \, 0{,}56) \\[0.5em]
+&amp; \quad j = 1, \ldots, 48
+\end{aligned}$$`
+
+* Uma probabilidade para cada pessoa (**efeito fixo** de pessoa).
+
+* A mesma priori, **fixa**, para todas as pessoas.
+]
+
+---
+
+## Modelo binomial com agregação parcial (hierárquico)
+
+.pull-left[
+
+&lt;br&gt;
+
+
+``` r
+&gt; m.hier &lt;- ulam(
++     alist(
++         S ~ dbinom(N, p),
++         logit(p) &lt;- a[pessoa],
++         a[pessoa] ~ dnorm(abar, sigma),
++         abar ~ dnorm(0.04, 0.56),
++         sigma ~ dexp(1)
++     ),
++     data = dl, chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+`$$\begin{aligned}
+S_i &amp;\sim \text{Binomial}(N_i, \, p_i) \\[0.5em]
+\text{logit}(p_i) &amp;= \alpha_{\text{PESSOA}[i]} \\[0.5em]
+\alpha_j &amp;\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.5em]
+\bar\alpha &amp;\sim \text{Normal}(0{,}04; \, 0{,}56) \\[0.5em]
+\sigma &amp;\sim \text{Exponencial}(1)
+\end{aligned}$$`
+
+* Uma probabilidade para cada pessoa (**efeito aleatório** de pessoa).
+
+* A priori dos `\(\alpha_j\)` tem parâmetros estimados a partir dos dados:
+  `\(\bar\alpha\)` (média) e `\(\sigma\)` (variação entre pessoas).
+]
+
+---
+
+## Estimativas por pessoa
+
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-pessoas-1.png" alt="" width="92%" /&gt;
+
+.right[.f6[Pontos e barras: média e intervalo de 95% da posterior de cada pessoa. Faixa cinza: intervalo de 95% do modelo agregado. Linha pontilhada: P = 0,5.]]
+
+---
+
+## Resumo
+
+&lt;br&gt;
+
+* **Agregação total** (*pooling*): **subajuste** `\(\rightarrow\)` não
+  considera a estrutura de dependência entre as observações (*clusters*
+  ou agregados).
+
+&lt;br&gt;
+
+* **Sem agregação** (*no pooling*): **sobreajuste** `\(\rightarrow\)` obtém
+  as estimativas de cada pessoa (*cluster*) independentemente das outras
+  pessoas. Os resultados de uma pessoa não informam nada ao modelo sobre
+  os resultados que outra pode obter.
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Agregação parcial** (*partial pooling*) `\(\rightarrow\)` estimativas
+intermediárias entre o sub e o sobreajuste. Equivale a uma distribuição
+*a priori* regularizadora, construída com a informação sobre a variação
+entre *clusters* (pessoas).
+]
+
+---
+
+## Melhores estimativas das médias
+
+.pull-left[
+
+* **Agregados**: a estimativa de cada pessoa usa também a informação das
+  outras. Estimativas com menos dados são puxadas para a média
+  (*shrinkage*), e erram menos ao prever novos lançamentos.
+
+* **Média geral**: o modelo agregado trata os 350.757
+  lançamentos como independentes, e superestima a precisão. O
+  hierárquico incorpora a variação entre agregados (pessoas): seu intervalo de
+  credibilidade é cerca de 3 vezes mais largo.
+
+* O modelos hierárquico estima a média da **população de pessoas**, e permite
+  prever os resultados de uma **nova pessoa**.
+]
+
+.pull-right[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-medias-1.png" alt="" width="90%" /&gt;
+.right[.f6[Linha pontilhada: priori (a mesma nos dois modelos). Linha tracejada: valor previsto por DHM. Eixo y em escala de raiz quadrada.]]
+]
+
+---
+
+## Mais de um tipo de agrupamento
+
+.pull-left[
+
+`$$\begin{aligned}
+S_i &amp;\sim \text{Binomial}(N_i, \, p_i) \\[0.5em]
+\text{logit}(p_i) &amp;= \alpha_{\text{PESSOA}[i]} + \gamma_{\text{MOEDA}[i]} \\[0.5em]
+\alpha_j &amp;\sim \text{Normal}(\bar\alpha, \, \sigma_\alpha) \\[0.5em]
+\gamma_k &amp;\sim \text{Normal}(0, \, \sigma_\gamma) \\[0.5em]
+\bar\alpha &amp;\sim \text{Normal}(0{,}04; \, 0{,}56) \\[0.5em]
+\sigma_\alpha, \, \sigma_\gamma &amp;\sim \text{Exponencial}(1)
+\end{aligned}$$`
+
+* Cada linha dos dados ( `\(i\)` ) é uma combinação de pessoa e moeda.
+
+* `\(\sigma_\alpha\)`: variação entre pessoas; `\(\sigma_\gamma\)`: variação
+  entre moedas.
+]
+
+.pull-right[
+
+&lt;br&gt;
+
+
+``` r
+&gt; m.pm &lt;- ulam(
++     alist(
++         S ~ dbinom(N, p),
++         logit(p) &lt;- abar +
++             z_a[pessoa] * sigma_a +
++             z_g[moeda] * sigma_g,
++         z_a[pessoa] ~ dnorm(0, 1),
++         z_g[moeda] ~ dnorm(0, 1),
++         abar ~ dnorm(0.04, 0.56),
++         c(sigma_a, sigma_g) ~ dexp(1)
++     ),
++     data = dl.pm,
++     chains = 4, cores = 4)
+```
+
+.f6[`dl.pm`: lista com `S`, `N`, e os índices `pessoa` e `moeda` de cada combinação.
+
+Parametrização **não centrada**: `\(\alpha_j = \bar\alpha + z_{\alpha,j} \, \sigma_\alpha\)` e `\(\gamma_k = z_{\gamma,k} \, \sigma_\gamma\)`, com `\(z \sim \text{Normal}(0, 1)\)`. Mesmo modelo, com amostragem mais eficiente quando um `\(\sigma\)` é próximo de zero.]
+]
+
+---
+
+## Variação entre pessoas e entre moedas
+
+
+
+
+
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-sigmas-1.png" alt="" width="85%" /&gt;
+
+.right[.f6[Linha pontilhada: priori Exponencial(1), a mesma para os dois desvios-padrão. Eixo y em escala de raiz quadrada.]]
+
+---
+
+## Quantidades derivadas
+
+.center[
+&lt;img src="Bartos_fig2A.png" alt="" width="65%" /&gt;
+]
+Proporção de caras obtidas por cada pessoa e seus ICs e as estimativas como uma quantidade derivada do modelo hierárquico. 
+
+.absolute.bottom-2.right-2[.f6[[Bartoš et al. (2025)](https://ar5iv.labs.arxiv.org/html/2310.04153)]]
+
+
+---
+
+class: inverse, center, middle
+
+# Modelos com inclinações variáveis
+
+
+
+
+
+
+
+
+
+
+
+---
+
+## Taxa de mortalidade por COVID-19
+
+.pull-left[
+
+* Dados da base *The Demography of COVID-19 Deaths* (INED; Caporali et
+  al. 2022): óbitos acumulados por COVID-19 por sexo e idade, de fontes
+  oficiais documentadas e com controle de qualidade.
+
+* Seleção de 13 países com boa vigilância
+  epidemiológica, e 5 faixas etárias (de
+  0-19 a 80+ anos).
+
+* Total de 697.635 óbitos.
+
+* Com a população de cada faixa etária, calculamos a **taxa** de óbitos
+  por 100 mil habitantes.
+]
+
+.pull-right[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-com-pais-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## O fantasma da pseudorreplicação
+
+.pull-left[
+.center[
+&lt;img src="Hurlbert1984.png" alt="" width="75%" /&gt;
+
+Google Acadêmico: 11256 citações
+]
+
+[Hurlbert (1984)](https://www.jstor.org/stable/1942661)
+]
+
+.pull-right[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-sem-pais-1.png" alt="" width="100%" /&gt;
+.right[.f6[Linha: regressão Poisson, sem efeito de país.]]
+]
+
+---
+
+## Modelo hierárquico de interceptos
+
+.pull-left[
+
+&lt;br&gt;
+
+`$$\begin{aligned}
+Y_{ij} &amp;\sim \text{Poisson}(\lambda_{ij}) \\[0.5em]
+\ln \lambda_{ij} &amp;= \ln P_{ij} + \beta_{0j} + \beta_1 \, d_i \\[0.5em]
+\beta_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\[0.5em]
+\beta_{0j} &amp;\sim \text{Normal}(\bar{\beta}_0, \, \sigma_P) \\[0.5em]
+\bar{\beta}_0 &amp;\sim \text{Normal}(\ln 100, \, 2) \\[0.5em]
+\sigma_P &amp;\sim \text{Exponencial}(1)
+\end{aligned}$$`
+
+.f6[
+`\(Y_{ij}\)`: óbitos na faixa etária `\(i\)` do país `\(j\)`; `\(d_i\)`: idade em décadas a partir dos 50 anos.
+]
+]
+
+.pull-right[
+
+* `\(\ln P_{ij}\)`: *offset* (log da população da faixa, em 100 mil habitantes).
+
+* `\(\beta_1\)`: inclinação do aumento no ln da taxa de mortalidade com a
+  idade.
+
+* `\(\beta_{0j}\)`: intercepto de cada país (ln da taxa de mortalidade aos
+  50 anos).
+
+* `\(\bar{\beta}_0\)`: ln da taxa esperada de mortalidade aos 50 anos (país
+  típico).
+
+* `\(\sigma_P\)`: desvio-padrão do ln da taxa esperada de mortalidade aos 50
+  anos.
+]
+
+---
+
+## Posteriores dos interceptos
+
+.pull-left[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-forest-1.png" alt="" width="85%" /&gt;
+.f6[
+Estimada: média ± 2 desvios-padrão da posterior de `\(e^{\beta_{0j}}\)`. Observada: taxa da faixa de 40 a 59 anos.
+]
+]
+
+.pull-right[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-curvas-interceptos-1.png" alt="" width="85%" /&gt;
+.f6[
+Normais com `\(\bar\beta_0\)` e `\(\sigma_P\)` de 100 amostras da posterior. Marcas: médias dos `\(\beta_{0j}\)`.
+]
+]
+
+---
+
+## Preditores lineares
+
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-previstos3-1.png" alt="" width="88%" /&gt;
+
+.right[.f6[Modelo hierárquico de interceptos. Linhas: média da posterior da taxa de cada país.]]
+
+---
+
+## Modelo hierárquico de interceptos e inclinações
+
+.pull-left[
+`$$\begin{aligned}
+Y_{ij} &amp;\sim \text{Poisson}(\lambda_{ij}) \\[0.2em]
+\ln \lambda_{ij} &amp;= \ln P_{ij} + \beta_{0j} + \beta_{1j} \, d_i \\[0.2em]
+\begin{pmatrix} \beta_{0j} \\ \beta_{1j} \end{pmatrix} &amp;\sim
+\text{MVNormal}\left( \begin{pmatrix} \bar\beta_0 \\ \bar\beta_1 \end{pmatrix}, \, \mathbf{S} \right) \\[0.2em]
+\bar\beta_0 &amp;\sim \text{Normal}(\ln 100, \, 2) \\[0.2em]
+\bar\beta_1 &amp;\sim \text{Normal}(1, \, 0{,}5) \\[0.2em]
+\mathbf{S} &amp;= \begin{pmatrix} \sigma_P &amp; 0 \\ 0 &amp; \sigma_I \end{pmatrix}
+\mathbf{R} \begin{pmatrix} \sigma_P &amp; 0 \\ 0 &amp; \sigma_I \end{pmatrix} \\[0.2em]
+\sigma_P, \, \sigma_I &amp;\sim \text{Exponencial}(1)\\[0.2em]
+\mathbf{R} &amp;\sim \text{LKJcorr}(2)
+\end{aligned}$$`
+
+]
+
+.pull-right[
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-bivariada-1.png" alt="" width="100%" /&gt;
+.f6[Curvas de nível: normal bivariada com as médias das posteriores de seus parâmetros. Pontos: médias das posteriores de interceptos e inclinações de cada país.]
+]
+
+---
+
+## Ajuste com o rethinking
+
+.pull-left[
+
+``` r
+&gt; m4 &lt;- ulam(
++     alist(
++         obitos ~ dpois(lambda),
++         log(lambda) &lt;- log_pop +
++             b0[pais] +
++             b1[pais] * idade_d,
++         c(b0, b1)[pais] ~ multi_normal(
++             c(b0_media, b1_media),
++             Rho, sigma_pais),
++         b0_media ~ dnorm(4.6, 2),
++         b1_media ~ dnorm(1, 0.5),
++         sigma_pais ~ dexp(1),
++         Rho ~ lkj_corr(2)
++     ),
++     data = dados,
++     chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+* `c(b0, b1)[pais]`: um par (intercepto, inclinação) para cada país.
+
+* `multi_normal(...)`: normal bivariada, com vetor de médias
+  `c(b0_media, b1_media)`, matriz de correlação `Rho` e vetor de
+  desvios-padrão `sigma_pais` ( `\(\sigma_P\)` e `\(\sigma_I\)` ).
+
+* `lkj_corr(2)`: priori da matriz de correlação, que torna correlações
+  extremas pouco plausíveis.
+
+]
+
+---
+
+## Preditores lineares
+
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-previstos4-1.png" alt="" width="88%" /&gt;
+
+.right[.f6[Modelo de interceptos e inclinações. Linhas: retas com as médias das posteriores de cada país.]]
+
+---
+
+## Quantidades derivadas
+
+.pull-left[
+
+* O Brasil não está entre os países usados no ajuste, e por isso não tem
+  um intercepto nem uma inclinação estimados.
+
+* O modelo descreve a distribuição conjunta de interceptos e
+  inclinações, como uma
+  `\(\text{MVNormal}\left( (\bar\beta_0, \bar\beta_1), \, \mathbf{S} \right)\)`.
+
+* Supondo que o Brasil também faz parte desta distribuição, o seu
+  intercepto e a sua inclinação são um sorteio dessa distribuição.
+]
+--
+.pull-right[
+
+**Cálculo da posterior**: para cada amostra `\(s\)` da posterior,
+
+1. Sorteamos um intercepto e uma inclinação para o Brasil:
+   `\((\beta_{0,\text{BR}}, \beta_{1,\text{BR}}) \sim \text{MVNormal}(\boldsymbol\mu_s, \mathbf{S}_s)\)`,
+   com `\(\boldsymbol\mu_s = (\bar\beta_{0,s}, \bar\beta_{1,s})\)`.
+
+2. Calculamos o número esperado de óbitos em cada faixa etária `\(i\)`:
+   `\(\lambda_{i} = P_{i} \, e^{\beta_{0,\text{BR}} + \beta_{1,\text{BR}} \, d_i}\)`.
+
+3. Sorteamos o número de óbitos em cada faixa de uma
+   `\(\text{Poisson}(\lambda_i)\)` e somamos as faixas.
+]
+
+---
+
+## Quantidades derivadas
+
+A posterior descrita no slide anterior responde à pergunta "quantos óbitos teria **um
+país qualquer** dessa população de países, com a pirâmide etária do
+Brasil?".
+
+Outra posterior derivada possível é a do **país típico** com a pirâmide
+etária do Brasil. 
+
+Neste caso,  para cada amostra `\(s\)` da posterior:
+--
+1. Usamos o intercepto e a inclinação do país típico, que são as médias
+   da normal bivariada: `\(\beta_{0,\text{BR}} = \bar\beta_{0,s}\)` e
+   `\(\beta_{1,\text{BR}} = \bar\beta_{1,s}\)`.
+
+2. Calculamos o número esperado de óbitos em cada faixa etária `\(i\)`:
+   `\(\lambda_{i} = P_{i} \, e^{\bar\beta_{0,s} + \bar\beta_{1,s} \, d_i}\)`.
+
+3. Sorteamos o número de óbitos em cada faixa de uma
+   `\(\text{Poisson}(\lambda_i)\)` e somamos as faixas.
+
+---
+
+## Distribuições posteriores das duas quantidades
+
+&lt;img src="Aula_09_modelos_hierarquicos_II_files/figure-html/grafico-brasil-1.png" alt="" width="85%" /&gt;
+
+.right[.f6[Óbitos registrados no Brasil: 614.186. Eixo x em escala logarítmica.]]
+
+---
+
+## Referências
+
+* Bartoš, F. et al. (2025). Fair coins tend to land on the same side
+  they started: Evidence from 350,757 flips. *Journal of the American
+  Statistical Association*, 120(552), 2118–2127.
+  [doi:10.1080/01621459.2025.2516210](https://doi.org/10.1080/01621459.2025.2516210)
+
+* Diaconis, P., Holmes, S. &amp; Montgomery, R. (2007). Dynamical bias in
+  the coin toss. *SIAM Review*, 49(2), 211–235.
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with
+  Examples in R and Stan*. 2ª ed. CRC Press.
+
+* Dados: [osf.io/pxu6r](https://osf.io/pxu6r/)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -271,3 +271,15 @@ table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
 }
 
 
+
+
+/* Extra CSS */
+.pull-left > :first-child, .pull-right > :first-child {
+  margin-top: 0;
+}
+.destaque {
+  color: #dc322f;
+  font-size: 3em;
+  font-weight: bold;
+  text-align: center;
+}

@@ -1,5 +1,5 @@
 ---
-title: "Modelos lienares Poisson e Binomial negativa com *offset*"
+title: "Modelos lineares generalizados Poisson e binomial negativo com *offset*"
 author:
  - "Paulo Inácio Prado"
 date: "2026-10-20"
@@ -49,14 +49,15 @@ hospitais e se incluem casos suspeitos ou só os confirmados. Essas
 diferenças afetam a comparação entre países, e os autores recomendam
 comparar apenas fontes com critérios semelhantes.
 
-Usaremos 11 países do hemisfério Norte, todos com séries longas e faixas
+Usaremos países do hemisfério Norte, todos com séries longas e faixas
 etárias compatíveis entre si, e os óbitos acumulados **desde o início
 da pandemia até 27 de novembro de 2021**[^datas]. A base também traz a
 população de cada país por faixa etária, que vamos precisar mais adiante.
 
 Os dados brutos estão disponíveis no
 [site do INED](https://dc-covid.site.ined.fr/en/) e numa
-[cópia no figshare](https://doi.org/10.6084/m9.figshare.c.5807027), e já estão processados para este tutorial. basta carregá-los:
+[cópia no figshare](https://doi.org/10.6084/m9.figshare.c.5807027), e já
+estão processados para este tutorial. Basta carregá-los:
 
 ```{r dados, eval=TRUE}
 library(dplyr)
@@ -66,7 +67,8 @@ repo <- "https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/"
 obitos <- readRDS(gzcon(url(paste0(repo, "obitos_covid_paises_selecionados.rds"))))
 ```
 
-Cada linha é uma faixa etária de um país, com o número de óbitos
+Os dados incluem `r length(unique(obitos$pais))` países. Cada linha é
+uma faixa etária de um país, com o número de óbitos
 (`obitos`), a população (`pop`), a população em unidades de 100 mil
 habitantes (`pop.e5`), a taxa de óbitos por 100 mil habitantes (`taxa`)
 e o ponto médio da faixa etária (`idade.meio`)[^meio]:
@@ -81,7 +83,7 @@ Vamos começar pelo total de óbitos de cada país. Para comparação,
 acrescentamos o total do Brasil no mesmo período: 614.186 óbitos,
 segundo o painel do Ministério da Saúde (Brasil, 2021). Vamos guardar
 este valor e também carregar os dados demográficos do país para uso
-neste tutorial
+neste tutorial:
 
 ```{r obitos-br, eval=TRUE}
 ## Guarde o total de obitos no Brasil neste objeto
@@ -102,7 +104,8 @@ kable(tab, col.names = c("País", "Óbitos"),
       format.args = list(big.mark = ".", decimal.mark=","))
 ```
 
-O Brasil teve mais óbitos que todos esses países, isso quer dizer que a pandemia foi mais grave aqui?
+O Brasil teve mais óbitos que todos esses países. Isso quer dizer que a
+pandemia foi mais grave aqui?
 
 # Por que os totais não são comparáveis
 
@@ -141,7 +144,7 @@ separá-los, vamos ajustar um modelo da **taxa de mortalidade por
 habitante em função da idade**, tratando os países como réplicas desse
 processo. O gráfico abaixo mostra essas taxas para cada país:
 
-```{r grafico-taxas, fig.asp=0.7, echo=FALSE}
+```{r grafico-taxas, fig.asp=0.7, echo=TRUE, eval=TRUE}
 ggplot(obitos, aes(idade, taxa, group = pais, color = pais)) +
     geom_point() +
     geom_line() +
@@ -151,15 +154,15 @@ ggplot(obitos, aes(idade, taxa, group = pais, color = pais)) +
 ```
 
 Em todos os países, a mortalidade aumenta com a idade, e de forma muito
-acelerada nas faixas mais velhas. O gráfico mostra outra característica importante dos dados.
-Nas faixas etárias em que a mortalidade média é baixa, os países ficam
+acelerada nas faixas mais velhas. O gráfico mostra outra
+característica importante dos dados. Nas faixas etárias em que a mortalidade média é baixa, os países ficam
 próximos entre si. Nas faixas em que a mortalidade média é alta, os
 países se espalham muito mais. Ou seja, **a variação aumenta com a
 média**.
 
 Isso é esperado para contagens de eventos, e é uma das razões para usar
 a distribuição de Poisson para descrever o número de óbitos: na Poisson,
-a variância é igual à média. Um modelo Gaussiano, ao contrário, supõe a
+a variância é igual à média. Um modelo gaussiano, ao contrário, supõe a
 mesma variância para todas as médias.
 
 ### Taxas na escala logarítmica
@@ -167,7 +170,7 @@ mesma variância para todas as médias.
 Agora vamos ver as mesmas taxas em escala logarítmica, em função do
 ponto médio de cada faixa etária:
 
-```{r grafico-taxas-log, fig.asp=0.7}
+```{r grafico-taxas-log, fig.asp=0.7, eval=TRUE}
 ggplot(obitos, aes(idade.meio, taxa, group = pais, color = pais)) +
     geom_point() +
     geom_line() +
@@ -178,11 +181,10 @@ ggplot(obitos, aes(idade.meio, taxa, group = pais, color = pais)) +
 ```
 
 Em escala logarítmica, a relação entre a taxa e a idade parece ser
-linear. Isso implica em a um aumento exponencial da mortalidade com a
-idade[^gompertz].  Ess é outra razão para usar um modelo
-Poisson. Neste modelo é comum usar uma **função de ligação
-logarítmica**, que relaciona o logaritmo da média esperada a um
-preditor linear.
+linear. Isso implica um aumento exponencial da mortalidade com a
+idade[^gompertz]. Essa é outra razão para usar um modelo Poisson. Neste
+modelo, é comum usar uma **função de ligação logarítmica**, que
+relaciona o logaritmo do valor esperado a um preditor linear.
 
 Confira: no gráfico em escala log, a inclinação das relações
 log-lineares parece semelhante entre os países? E o intercepto?
@@ -191,29 +193,30 @@ log-lineares parece semelhante entre os países? E o intercepto?
 
 ## Offset: modelando contagens por pessoa exposta
 
-A distribuição Poisson tem um único parâmetro $\lambda$, que é o
-número médio de eventos $\mu$ por unidade de observação $\tau$. A
-funçãod e ligação relacion o logaritmo do parâmetro com um preditor
-linear:
+A distribuição de Poisson tem um único parâmetro, $\lambda$, que é o
+número esperado de eventos. Quando as observações diferem na
+**exposição**, aqui o tamanho da população $P_i$, o número esperado de
+óbitos é o produto da taxa de mortalidade $\tau_i$ pela população:
 
-$$ \ln \lambda_i = \ln \frac{\mu_i}{\tau_i} = \sum \beta_j X_{ij} $$
+$$\lambda_i = P_i \, \tau_i$$
 
-Como o logaritmo de uma divisão é uma diferença, o preditor linear pode ser escrito como:
+O que queremos descrever com o preditor linear é a taxa, e não o número
+de óbitos. Com a função de ligação logarítmica:
 
-$$\begin{aligned}
-\ln \mu_i - \ln \tau_i & = \sum \beta_j X_{ij} \\[0.5em]
-\ln \mu_i  & = \ln \tau_i + \sum \beta_j X_{ij}
-\end{aligned}
-$$
+$$\ln \tau_i = \sum_j \beta_j X_{ij}$$
 
-Em nosso modelo, o logaritmo da taxa é o que queremos descrever com o
-preditor linear.  Já o logaritmo da população é um termo conhecido,
-que entra no preditor **sem coeficiente** a ser estimado (ou, o que dá
-no mesmo, com coeficiente fixo em 1). Um termo assim é chamado de
-**offset**. Ele ajusta o número esperado de óbitos ao tamanho da
-população, de modo que os coeficientes do modelo descrevem a taxa por
-habitante. Em epidemiologia e outras áreas o **offset** também é
-chamado **exposição** ou **população em risco**.
+Como o logaritmo de um produto é uma soma, $\ln \lambda_i = \ln P_i +
+\ln \tau_i$, e o modelo para o número esperado de óbitos fica:
+
+$$\ln \lambda_i = \ln P_i + \sum_j \beta_j X_{ij}$$
+
+O logaritmo da população é um termo conhecido, que entra no preditor
+**sem coeficiente** a ser estimado (ou, o que dá no mesmo, com
+coeficiente fixo em 1). Um termo assim é chamado de **offset**. Ele
+ajusta o número esperado de óbitos ao tamanho da população, de modo que
+os coeficientes do modelo descrevem a taxa por habitante. Em
+epidemiologia e em outras áreas, a variável do *offset* também é chamada
+de **exposição** ou **população em risco**.
 
 Usaremos a população em unidades de 100 mil habitantes (`pop.e5`).
 Assim, a taxa $\tau_i$ fica expressa em óbitos por 100 mil habitantes,
@@ -226,47 +229,59 @@ Nosso modelo é:
 $$
 \begin{aligned}
 Y_i &\sim \text{Poisson}(\lambda_i) \\
-\ln \lambda_i &= \ln P_i + \beta_0 + \beta_1 \, (x_i - 50) \\
+\ln \lambda_i &= \ln P_i + \beta_0 + \beta_1 \, d_i \\
 \beta_0 &\sim \text{Normal}(\ln 100, \, 2) \\
-\beta_1 &\sim \text{Normal}(0{,}1, \, 0{,}05)
+\beta_1 &\sim \text{Normal}(1, \, 0{,}5)
 \end{aligned}
 $$
 
-em que $Y_i$ é o número de óbitos na faixa etária $i$ de um país, $P_i$
-é a população dessa faixa (em 100 mil habitantes) e $x_i$ é o ponto
-médio da faixa etária, em anos.
+em que $Y_i$ é o número de óbitos na observação $i$ (uma faixa etária
+de um país), $P_i$ é a população dessa faixa (em 100 mil habitantes) e
+$d_i = (x_i - 50)/10$ é a idade em **décadas** a partir dos 50 anos,
+sendo $x_i$ o ponto médio da faixa etária, em anos.
 
 Subtraímos 50 da idade para que o intercepto tenha uma interpretação
 útil: $\beta_0$ é o logaritmo da taxa de mortalidade aos 50 anos. Sem
-isso, $\beta_0$ seria a taxa a 0 anos, uma extrapolação muito além dos
-dados. Centrar a preditora também diminui a correlação entre as
-estimativas de $\beta_0$ e $\beta_1$, o que facilita o ajuste.
+isso, $\beta_0$ seria o logaritmo da taxa aos 0 anos, uma extrapolação
+muito além dos dados. Centrar a preditora também diminui a correlação
+entre as estimativas de $\beta_0$ e $\beta_1$, o que facilita o ajuste.
+
+Dividimos por 10 para medir a idade em décadas. Assim, $\beta_1$ é o
+aumento do logaritmo da taxa a cada década, uma unidade mais fácil de
+interpretar do que um ano. Há também uma razão prática: com a idade em
+anos, $\beta_1$ seria estimado com uma precisão muito maior que
+$\beta_0$, e parâmetros em escalas muito diferentes dificultam o
+trabalho do algoritmo de amostragem. Voltaremos a isso no tutorial
+sobre modelos generalizados hierárquicos.
 
 ## Escolhendo as distribuições a priori
 
-Como definimos as distribuição a priori de nosso modelo? Como sempre, é uma escolha que deve considerar o que os
-parâmetros significam na escala da taxa.
+Como definimos as distribuições a priori do nosso modelo? Como sempre,
+é uma escolha que deve considerar o que os parâmetros significam na
+escala da taxa.
 
 * **Intercepto ($\beta_0$):** $e^{\beta_0}$ é a taxa de óbitos por 100
-  mil habitantes aos 50 anos. A taxa total de mortalidade varia de
-  cerca de 150 a 1500 por 100.000 habitantes por ano
-  (https://en.wikipedia.org/wiki/List_of_countries_by_mortality_rate). Assim,
-  é razoável que a mortalidade por um única doença, mas em uma faixa
-  etária mais avançada esteja também neste intervalo.  A
+  mil habitantes aos 50 anos. A taxa de mortalidade por todas as causas
+  varia de cerca de 150 a 1.500 óbitos por 100 mil habitantes por ano
+  entre os países
+  (<https://en.wikipedia.org/wiki/List_of_countries_by_mortality_rate>).
+  Assim, é razoável supor que a mortalidade por uma única doença, numa
+  faixa etária intermediária, esteja na mesma ordem de grandeza ou
+  abaixo dela. A
   distribuição $\text{Normal}(\ln 100, 2)$ é centrada em 100 óbitos
   por 100 mil habitantes, e 95% da sua probabilidade fica entre
   $e^{4{,}6 - 4} \approx 2$ e $e^{4{,}6 + 4} \approx 5.400$ óbitos por
   100 mil habitantes.
 
 * **Inclinação ($\beta_1$):** $e^{\beta_1}$ é o quanto a taxa se
-  multiplica a cada ano a mais de idade, e $e^{10\beta_1}$, a cada
-  década. Sabemos que a mortalidade aumenta com a idade, e que a
-  mortalidade por todas as causas em humanos adultos dobra a cada 8 anos,
-  aproximadamente (lei de Gompertz), o que corresponde a
-  $\beta_1 \approx \ln 2 / 8 \approx 0{,}09$. A distribuição
-  $\text{Normal}(0{,}1, 0{,}05)$ deixa 95% da probabilidade entre 0 e
-  0,2, ou seja, entre nenhum aumento e um aumento de cerca de 7 vezes a
-  cada década.
+  multiplica a cada década a mais de idade. Sabemos que a mortalidade
+  aumenta com a idade, e que a mortalidade por todas as causas em
+  humanos adultos dobra a cada 8 anos, aproximadamente (lei de
+  Gompertz). Isso corresponde a um aumento de $2^{10/8} \approx 2{,}4$
+  vezes por década, ou $\beta_1 \approx 10 \ln 2 / 8 \approx 0{,}87$. A
+  distribuição $\text{Normal}(1, 0{,}5)$ deixa 95% da probabilidade
+  entre 0 e 2, ou seja, entre nenhum aumento e um aumento de cerca de
+  $e^2 \approx 7$ vezes a cada década.
 
 Uma forma de verificar se essas distribuições fazem sentido é simular
 as curvas de mortalidade que elas implicam, antes de olhar para os
@@ -276,13 +291,13 @@ dados:
 set.seed(42)
 n <- 100
 b0 <- rnorm(n, log(100), 2)
-b1 <- rnorm(n, 0.1, 0.05)
+b1 <- rnorm(n, 1, 0.5)
 idades <- seq(0, 100, length.out = 50)
 
 plot(NULL, xlim = c(0, 100), ylim = c(1e-3, 1e6), log = "y",
      xlab = "Idade (anos)", ylab = "Óbitos por 100 mil habitantes (escala log)")
 for (i in 1:n)
-    lines(idades, exp(b0[i] + b1[i] * (idades - 50)),
+    lines(idades, exp(b0[i] + b1[i] * (idades - 50) / 10),
           col = adjustcolor("black", alpha.f = 0.2))
 abline(h = 1e5, col = "red", lty = 2)   # limite: toda a população morre
 ```
@@ -303,7 +318,7 @@ que a mortalidade diminuísse com a idade?
 Vamos ajustar o modelo com a função `ulam()` do pacote *rethinking*,
 que usa amostragem de Monte Carlo via cadeias de Markov (MCMC), com o
 programa Stan[^stan]. Primeiro, preparamos os dados numa lista, com o
-logaritmo da população e a idade centrada:
+logaritmo da população e a idade em décadas a partir dos 50 anos:
 
 ```{r dados-modelo}
 library(rethinking)
@@ -311,22 +326,27 @@ library(rethinking)
 dados <- list(
     obitos  = obitos$obitos,
     log_pop = log(obitos$pop.e5),
-    idade_c = obitos$idade.meio - 50
+    idade_d = (obitos$idade.meio - 50) / 10   # décadas a partir dos 50 anos
 )
 ```
 
-Na especificação do modelo, o offset `log_pop` entra no preditor linear
-sem coeficiente:
+Na especificação do modelo, o *offset* `log_pop` entra no preditor
+linear sem coeficiente. Indicamos também os valores iniciais das
+cadeias com o argumento `start`: os centros das distribuições a priori.
+Isso evita que as cadeias comecem em valores que prevejam números de
+óbitos muito distantes dos observados (veremos mais sobre isso no
+tutorial sobre modelos generalizados hierárquicos):
 
 ```{r ajuste, cache=TRUE, results='hide'}
 m1 <- ulam(
     alist(
         obitos ~ dpois(lambda),
-        log(lambda) <- log_pop + b0 + b1 * idade_c,
+        log(lambda) <- log_pop + b0 + b1 * idade_d,
         b0 ~ dnorm(4.6, 2),        # 4,6 é aproximadamente ln(100)
-        b1 ~ dnorm(0.1, 0.05)
+        b1 ~ dnorm(1, 0.5)         # aumento do log da taxa por década
     ),
-    data = dados, chains = 4, cores = 4)
+    data = dados, chains = 4, cores = 4,
+    start = list(b0 = 4.6, b1 = 1))
 ```
 
 Confira os valores de `rhat` (devem estar muito próximos de 1) e de
@@ -344,24 +364,24 @@ post <- extract.samples(m1)
 ## Taxa de óbitos por 100 mil habitantes aos 50 anos
 quantile(exp(post$b0), c(0.025, 0.5, 0.975))
 ## Quantas vezes a taxa aumenta a cada década de idade
-quantile(exp(10 * post$b1), c(0.025, 0.5, 0.975))
+quantile(exp(post$b1), c(0.025, 0.5, 0.975))
 ```
 
 ## Posterior das taxas previstas
 
 Agora vamos usar o modelo ajustado para obter a distribuição posterior
 da taxa de mortalidade em cada idade. A função `link()` calcula o valor
-de $\lambda$ para cada amostra da posterior. 
+de $\lambda$ para cada amostra da posterior.
 
-Para isso precisamos criar um *dataframe* com os valores para os quais
-queremos fazer as previsões.  Este *dataframe* terá os valores das
-idades centradas pareados com o valor $\ln P = 0$, ou seja, uma
-população de 100 mil habitantes[^1].   Dessa forma,
-o $\lambda$ calculado será exatamente a taxa por 100 mil habitantes.
+Para isso, precisamos criar uma lista com os valores para os quais
+queremos fazer as previsões. Essa lista terá as idades, em décadas a
+partir dos 50 anos, pareadas com o valor $\ln P = 0$, ou seja, uma
+população de 100 mil habitantes[^1]. Dessa forma, o $\lambda$ calculado
+será exatamente a taxa por 100 mil habitantes.
 
 ```{r previstos}
 idade.grade <- seq(10, 90, length.out = 100)
-grade <- list(idade_c = idade.grade - 50,
+grade <- list(idade_d = (idade.grade - 50) / 10,
               log_pop = rep(0, length(idade.grade)))   # população de 100 mil
 
 taxa.post <- link(m1, data = grade)    # amostras (linhas) x idades (colunas)
@@ -372,7 +392,7 @@ previstos <- data.frame(idade.meio = idade.grade,
                         sup = IC[2, ])
 ```
 
-E agora façao um gráfico com a curva do valor esperado da taxa:
+E agora faça um gráfico com a curva do valor esperado da taxa:
 
 ```{r grafico-previstos, fig.asp=0.7}
 ggplot(obitos, aes(idade.meio, taxa)) +
@@ -387,9 +407,9 @@ ggplot(obitos, aes(idade.meio, taxa)) +
 ```
 
 O código para gerar o gráfico inclui uma faixa cinza para mostrar o
-intervalo de 95% da posterior da taxa média.  Ela é tão estreita que
+intervalo de 95% da posterior da taxa média. Ela é tão estreita que
 mal aparece. Por quê? Quantos óbitos há nos dados, e o que isso
-implica para a incerteza sobre os dois parâmetros?  A faixa inclui a
+implica para a incerteza sobre os dois parâmetros? A faixa inclui a
 variação entre os países?
 
 ## Posterior das previsões com a variação da Poisson
@@ -499,12 +519,12 @@ não afetam o total.
 
 ## Posterior do número esperado de óbitos
 
-Para cada faixa etária brasileira, o número esperado de óbitos pelo modelo é
-$\lambda_i = P_i \, \tau_i$. Agora usamos a população verdadeira de
-cada faixa no offset:
+Para cada faixa etária brasileira, o número esperado de óbitos pelo
+modelo é $\lambda_i = P_i \, \tau_i$. Agora usamos a população
+verdadeira de cada faixa no *offset*:
 
 ```{r previsao-br}
-dados.br <- list(idade_c = pop.br80$idade.meio - 50,
+dados.br <- list(idade_d = (pop.br80$idade.meio - 50) / 10,
                  log_pop = log(pop.br80$pop / 1e5))
 
 lambda.br <- link(m1, data = dados.br)   # óbitos esperados: amostras x faixas
@@ -557,7 +577,7 @@ legend("top", legend = "Observado", col = "red", lwd = 2, bty = "n")
 ## Para discutir
 
 * O modelo responde a uma pergunta contrafactual: quantos óbitos o
-  Brasil teria com a mortalidade média por idade desses 11 países.
+  Brasil teria com a mortalidade média por idade desses países.
   Que diferenças entre o Brasil e esses países poderiam explicar a
   diferença entre o previsto e o observado? Pense, por exemplo, na
   dinâmica das ondas da epidemia, no início da vacinação, no sistema de
@@ -602,9 +622,9 @@ $\beta_1$ são os mesmos do modelo anterior. Só mudam a distribuição dos
 $$
 \begin{aligned}
 Y_i &\sim \text{Gama-Poisson}(\lambda_i, \, \phi) \\
-\ln \lambda_i &= \ln P_i + \beta_0 + \beta_1 \, (x_i - 50) \\
+\ln \lambda_i &= \ln P_i + \beta_0 + \beta_1 \, d_i \\
 \beta_0 &\sim \text{Normal}(\ln 100, \, 2) \\
-\beta_1 &\sim \text{Normal}(0{,}1, \, 0{,}05) \\
+\beta_1 &\sim \text{Normal}(1, \, 0{,}5) \\
 \phi &\sim \text{Exponencial}(1)
 \end{aligned}
 $$
@@ -620,12 +640,13 @@ No *rethinking*, a distribuição gama-Poisson é a `dgampois()`:
 m2 <- ulam(
     alist(
         obitos ~ dgampois(lambda, phi),
-        log(lambda) <- log_pop + b0 + b1 * idade_c,
+        log(lambda) <- log_pop + b0 + b1 * idade_d,
         b0 ~ dnorm(4.6, 2),
-        b1 ~ dnorm(0.1, 0.05),
+        b1 ~ dnorm(1, 0.5),
         phi ~ dexp(1)
     ),
-    data = dados, chains = 4, cores = 4)
+    data = dados, chains = 4, cores = 4,
+    start = list(b0 = 4.6, b1 = 1, phi = 1))
 ```
 
 Compare as estimativas de $\beta_0$ e $\beta_1$ nos dois modelos. As
@@ -673,9 +694,9 @@ ggplot(obitos, aes(idade.meio, taxa)) +
 
 Compare este gráfico com o do modelo Poisson. Para entender a
 diferença, é preciso distinguir duas taxas. A primeira é a **taxa
-média prevista pelo modelo** por 100 mil habitantes, $\tau =
-e^{\beta_0 + \beta_1 (x - 50)}$. Ou seja, o valor do preditor
-linear, sem o offset. A faixa cinza mostra apenas a incerteza deste
+média prevista pelo modelo** por 100 mil habitantes,
+$\tau = e^{\beta_0 + \beta_1 d}$, ou seja, a exponencial do preditor
+linear, sem o *offset*. A faixa cinza mostra apenas a incerteza deste
 valor devido à incerteza dos parâmetros.
 
 A segunda é o número previsto de óbitos por 100 mil habitantes. Esta
@@ -719,10 +740,11 @@ legend("topright", legend = c("Binomial negativa", "Poisson", "Observado"),
        col = c("blue", "grey40", "red"), lwd = c(1, 1, 2), bty = "n")
 ```
 
-Podemos também verificar qual a probabilidade de um número de óbitos maior ou igual ao observado, de acordo com a posterior dos total previsto de óbitos:
+Podemos também calcular a probabilidade de um número de óbitos maior ou
+igual ao observado, de acordo com a distribuição preditiva posterior do
+total de óbitos:
 
-
-```{r }
+```{r prob-observado}
 mean(total.sim2>=obitos.br)
 ```
 
@@ -734,19 +756,19 @@ mean(total.sim2>=obitos.br)
 
 * Neste modelo, a variação em torno da média é sorteada de forma
   independente para cada linha da tabela de dados, pois fizemos a
-  suposição de que as observações são independentes.  Por isso, em cada
-  réplica da simulação dos previstos, cada observação é simulada
-  adicionando-se ou subtraindo uma valor sortedo de uma binomial
-  negativa à média. Assim, para o cálculo do total de óbitos para o
-  Brasil cada uma das faixas etárias recebe o seu próprio desvio em
-  relação à curva média, e esses desvios tendem a se compensar quando
-  somamos as faixas. No entanto o gráfico em escala logarítmica mostra
+  suposição de que as observações são independentes. Por isso, em cada
+  réplica da simulação, o número de óbitos de cada observação é sorteado
+  de uma binomial negativa, independentemente das demais. Assim, no
+  cálculo do total de óbitos do Brasil, cada faixa etária recebe o seu
+  próprio desvio em relação à curva média, e esses desvios tendem a se
+  compensar quando somamos as faixas. No entanto, o gráfico em escala
+  logarítmica mostra
   que os países com mortalidade alta numa faixa etária tendem a ter
   mortalidade alta em todas as faixas. Ou seja, os desvios em relação
   à taxa média geral são similares para cada país. Um modelo
   hierárquico pode levar isso em consideração.
 
-	
+
 
 # Fontes dos dados e referências
 
@@ -761,10 +783,10 @@ mean(total.sim2>=obitos.br)
   <https://doi.org/10.1038/s41597-022-01191-y>. Dados: INED,
   *The Demography of COVID-19 Deaths*, <https://dc-covid.site.ined.fr/en/>;
   cópia de dezembro de 2021 no figshare:
-  <https://doi.org/10.6084/m9.figshare.c.5807027>. Processados para este tutorial com [este script]((https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ined.R))
+  <https://doi.org/10.6084/m9.figshare.c.5807027>. Processados para este tutorial com [este script](https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ined.R).
 
 * IBGE (2023). Censo Demográfico 2022: população por idade e sexo.
-  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>. Processados para este tutorial com [este script]((https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ibge.R))
+  Panorama do Censo 2022, <https://censo2022.ibge.gov.br/panorama/>. Processados para este tutorial com [este script](https://raw.githubusercontent.com/BIE5781/2026/main/Tutoriais/prepara_dados_ibge.R).
 
 * McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
   with Examples in R and Stan*. 2nd ed. CRC Press.
@@ -787,7 +809,7 @@ mean(total.sim2>=obitos.br)
 [^stan]: Para usar a função `ulam()`, é preciso instalar o Stan e o
     pacote *cmdstanr*. Veja as instruções na
     [página do pacote rethinking](https://github.com/rmcelreath/rethinking).
-	
-[^1]: A variável de tamanho
-populacional é o logaritmo do tamanho em unidades de 100 mil
-pessoas. Uma unidade nesta escala corresponde a 100 mil, e o logaritmo de um é zero.
+
+[^1]: A variável do *offset* é o logaritmo da população em unidades de
+    100 mil pessoas. Uma população de 100 mil corresponde a uma unidade
+    nessa escala, e o logaritmo de 1 é zero.
