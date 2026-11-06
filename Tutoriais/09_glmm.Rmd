@@ -760,7 +760,7 @@ e não apenas sobre cada um deles separadamente.
 
 Em vez de duas distribuições normais, uma para os interceptos e outra
 para as inclinações, o par de coeficientes de cada país vem de uma
-**distribuição normal bivariada**:
+**distribuição normal bivariada**[^1]:
 
 $$
 \begin{aligned}
@@ -1062,3 +1062,5 @@ kable(comparacao, digits = c(0, 0, 0, 3),
 
 * McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
   with Examples in R and Stan*. 2nd ed. CRC Press. Capítulos 12 a 14.
+
+[^1]: Para explorar uma distribuição normal bivariada, carregue o pacote `shiny` no R execute o comando `runGitHub("ShinyApps", "BIE5781", subdir = "Bivariate_normal")`
