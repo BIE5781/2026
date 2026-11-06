@@ -725,14 +725,14 @@ interceptos e inclinações parcialmente agrupados é o melhor.
 
 O modelo hierárquico (*partial pooling*) que ajustamos cria uma
 relação potencialmente problemática entre o valor da média e do desvio-padrão das distribuições
-de intercepto e inclinação. Quando o valor do desvio-padrão é muito baixo, isso limite fortemente os valores possíveis desses parâmetros. 
+de intercepto e inclinação. Quando o valor do desvio-padrão é muito baixo, isso limita fortemente os valores possíveis desses parâmetros. 
 Isso em geral cria problemas de divergência do amostrador. Por isso, você deve ter recebido um alerta
 de uma ou mais amostras divergentes. Este é um problema sério e não deve ser ignorado. Para mais detalhes sobre como 
 verificar e lidar com questões computacionais no ajuste dos modelos, veja: [https://betanalpha.github.io/assets/case_studies/rstan_workflow.html](https://betanalpha.github.io/assets/case_studies/rstan_workflow.html).
 
-Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto de inclinação são expressos como 
+Um truque para resolver este problema é chamado de modelo não-centrado. Nele os parâmetros de intercepto e de inclinação são expressos como 
 
-$$\theta = a_0 + z \times \sigma$$
+$$\theta = \alpha_0 + z \cdot \sigma$$
 
 Ou seja, um parâmetro $\alpha_0$ (representando a média) mais a variável normal padronizada multiplicada
 pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente ao modelo original mas computacionalmente mais estável, fica:
@@ -740,12 +740,12 @@ pelo parâmetro de desvio-padrão. O novo modelo, que é exatamente equivalente 
 $$
 \begin{aligned}
 	y_i &\sim \text{Normal}(\mu_i, \sigma) \\
-	\mu_i &= \alpha_0 + \alpha_z{\text{site[i]}} \cdot \sigma_\alpha + (\beta_0+ \beta_z{\text{site[i]}} \cdot \sigma_\beta) \, \cdot x_i \\
+	\mu_i &= \alpha_0 + \alpha_{z,\text{site[i]}} \cdot \sigma_\alpha + (\beta_0 + \beta_{z,\text{site[i]}} \cdot \sigma_\beta) \cdot x_i \\
 	\alpha_0 & \sim \text{Normal}(0,2) \\
 	\beta_0 & \sim \text{Log-normal}(0,0.7) \\
 	\sigma & \sim \text{Exponential}(1)\\
-	\alpha_z{\text{site}} & \sim \text{Normal}(0,1)\\
-	\beta_z{\text{site}} &  \sim \text{Normal}(0,1)\\
+	\alpha_{z,\text{site}} & \sim \text{Normal}(0,1)\\
+	\beta_{z,\text{site}} &  \sim \text{Normal}(0,1)\\
 	\sigma_\alpha & \sim \text{Exponential}(1)\\
 	\sigma_\beta & \sim \text{Exponential}(0.25)\\
 	\end{aligned}
@@ -777,7 +777,7 @@ m2b <- ulam(
 Veja que agora não há problemas de divergência do
 amostrador. Inspecione as posteriores dos parâmetros e experimente
 adicionar as retas estimadas pelo modelo não centralizado ao gráfico,
-adaptandos os códigos da primeira seção do tutorial.
+adaptando os códigos da primeira seção do tutorial.
 
 
 # Referências

@@ -2,7 +2,7 @@
 title: "Inferência causal I"
 subtitle: "Conectando modelos científicos e estatísticos"
 author: "Diogo Melo"
-date: "19 de outubro de 2026"
+date: "16 de novembro de 2026"
 output:
   xaringan::moon_reader:
     lib_dir: libs
