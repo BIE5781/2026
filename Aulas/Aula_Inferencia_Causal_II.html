@@ -56,19 +56,19 @@ class: center, middle, inverse, title-slide
 .pull-left[
 - O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
 - O modelo causal pode ser representado por um DAG, que representa um conjunto de hipóteses sobre as independências condicionais entre as variáveis.
-- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
+- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **cadeias** (pipes), **bifurcações** (forks) e **colisores** (colliders).
 - Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
 ]
 .pull-right[
-**Pipe**
+**Cadeia (pipe)**
 
 &lt;img src="figures/DAGS/pipe.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
-**Fork**
+**Bifurcação (fork)**
 
 &lt;img src="figures/DAGS/fork.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
-**Collider**
+**Colisor (collider)**
 
 &lt;img src="figures/DAGS/colider.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 ]
@@ -155,7 +155,7 @@ $$
 - Para estimar um efeito causal usando um modelo estatístico, precisamos encontrar um conjunto de variáveis `\(Z\)` que podemos controlar, de forma que o efeito causal de `\(do(X)\)` sobre `\(Y\)` seja igual ao efeito estatístico de `\(X\)` sobre `\(Y\)` controlando por `\(Z\)`.
 .center[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-    `\(p(y | do(x)) = p(y | x, z)\)`
+    `\(p(y \mid do(x)) = \sum_z p(y \mid x, z)\, p(z)\)`
     ]]
 
 - Em quais condições existe um conjunto de variáveis `\(Z\)` que podemos controlar para estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
@@ -171,7 +171,7 @@ $$
 
 .pull-left[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
+**Caminhos que contêm cadeias ou bifurcações não controladas ficam abertos.**]
 
 - *X* → *Z* → *Y*
     - lm(y ~ x) : aberto
@@ -186,7 +186,7 @@ $$
 
 .pull-right[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
+**Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
 
 - *X* → *Z* ← *Y*
     - lm(y ~ x) : fechado
@@ -244,9 +244,9 @@ Ferramentas automatizadas:
 ]
 --
 .pull-right[
-- Variáveis que são pipes e forks **bloqueiam** caminhos quando incluídas nos modelos.
+- Variáveis no meio de cadeias e bifurcações **bloqueiam** caminhos quando incluídas nos modelos.
 
-- Variáveis que são colliders **abrem** caminhos quando incluídas nos modelos.
+- Variáveis que são colisores **abrem** caminhos quando incluídas nos modelos.
 ]
 
 ---
@@ -426,13 +426,13 @@ No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo 
 
 
 .pull-left[
-- A situação é mais grave ainda quando existe um fork entre `\(X\)` e `\(Y\)` e incluímos uma variável de controle que é um pai de `\(X\)` que não afeta `\(Y\)`.
+- A situação é mais grave ainda quando existe uma bifurcação entre `\(X\)` e `\(Y\)` e incluímos uma variável de controle que é um pai de `\(X\)` que não afeta `\(Y\)`.
 
 - Nesse caso, a inclusão de `\(Z\)` no modelo é catastrófica.
 
 - A inclusão de `\(Z\)`:
   -  remove a variância de `\(X\)` que seria preditora de `\(Y\)` diretamente, e, portanto
-  -  amplifica o efeito da variância de `\(X\)` que é causada por `\(u\)`, aumentando o viés da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
+  -  amplifica o efeito da variância de `\(X\)` que é causada por `\(U\)`, aumentando o viés da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
 ]
 .pull-right[
 &lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figure-dag-bias-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
@@ -449,7 +449,7 @@ No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo 
 
 ## Bons controles
 
-- **Confundidores** (forks): causas comuns de `\(X\)` e `\(Y\)`. Incluí-los fecha caminhos não causais pela porta dos fundos.
+- **Confundidores** (bifurcações): causas comuns de `\(X\)` e `\(Y\)`. Incluí-los fecha caminhos não causais pela porta dos fundos.
 
 - **Variáveis no caminho de uma porta dos fundos**: mesmo quando o confundidor não é observado, condicionar em outra variável ao longo do caminho (ex.: `\(U \to Z \to X\)`) já o fecha.
 

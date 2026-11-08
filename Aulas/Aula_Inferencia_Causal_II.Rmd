@@ -249,23 +249,23 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
 .pull-left[
 - O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
 - O modelo causal pode ser representado por um DAG, que representa um conjunto de hipóteses sobre as independências condicionais entre as variáveis.
-- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
+- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **cadeias** (pipes), **bifurcações** (forks) e **colisores** (colliders).
 - Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
 ]
 .pull-right[
-**Pipe**
+**Cadeia (pipe)**
 
 ```{r figura-caminho, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
 knitr::include_graphics("figures/DAGS/pipe.svg")
 ```
 
-**Fork**
+**Bifurcação (fork)**
 
 ```{r figura-bifurcacao, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
 knitr::include_graphics("figures/DAGS/fork.svg")
 ```
 
-**Collider**
+**Colisor (collider)**
 
 ```{r figura-colisor, echo=FALSE, eval=TRUE, out.width="90%", fig.align="center"}
 knitr::include_graphics("figures/DAGS/colider.svg")
@@ -394,7 +394,7 @@ side_labels = c(x1 = "Estação", x2 = "Regador\nligado", x3 = "Chuva", x4 = "Um
 - Para estimar um efeito causal usando um modelo estatístico, precisamos encontrar um conjunto de variáveis $Z$ que podemos controlar, de forma que o efeito causal de $do(X)$ sobre $Y$ seja igual ao efeito estatístico de $X$ sobre $Y$ controlando por $Z$.
 .center[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-    $p(y | do(x)) = p(y | x, z)$
+    $p(y \mid do(x)) = \sum_z p(y \mid x, z)\, p(z)$
     ]]
 
 - Em quais condições existe um conjunto de variáveis $Z$ que podemos controlar para estimar o efeito causal de $X$ sobre $Y$?
@@ -430,7 +430,7 @@ plot_dag("dag {
 
 .pull-left[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
+**Caminhos que contêm cadeias ou bifurcações não controladas ficam abertos.**]
 
 - *X* → *Z* → *Y*
     - lm(y ~ x) : aberto
@@ -445,7 +445,7 @@ plot_dag("dag {
 
 .pull-right[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
+**Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
 
 - *X* → *Z* ← *Y*
     - lm(y ~ x) : fechado
@@ -525,9 +525,9 @@ plot_dag(dag_caminhos, labels = rotulos_caminhos)
 ]
 --
 .pull-right[
-- Variáveis que são pipes e forks **bloqueiam** caminhos quando incluídas nos modelos.
+- Variáveis no meio de cadeias e bifurcações **bloqueiam** caminhos quando incluídas nos modelos.
 
-- Variáveis que são colliders **abrem** caminhos quando incluídas nos modelos.
+- Variáveis que são colisores **abrem** caminhos quando incluídas nos modelos.
 ]
 
 ---
@@ -788,13 +788,13 @@ plot_dag("dag {
 
 
 .pull-left[
-- A situação é mais grave ainda quando existe um fork entre $X$ e $Y$ e incluímos uma variável de controle que é um pai de $X$ que não afeta $Y$.
+- A situação é mais grave ainda quando existe uma bifurcação entre $X$ e $Y$ e incluímos uma variável de controle que é um pai de $X$ que não afeta $Y$.
 
 - Nesse caso, a inclusão de $Z$ no modelo é catastrófica.
 
 - A inclusão de $Z$:
   -  remove a variância de $X$ que seria preditora de $Y$ diretamente, e, portanto
-  -  amplifica o efeito da variância de $X$ que é causada por $u$, aumentando o viés da estimativa do efeito de $X$ sobre $Y$.
+  -  amplifica o efeito da variância de $X$ que é causada por $U$, aumentando o viés da estimativa do efeito de $X$ sobre $Y$.
 ]
 .pull-right[
 ```{r figure-dag-bias, echo=FALSE, eval=TRUE, out.width="100%", fig.align="center", fig.height=4, dpi=300, dev="png", dev.args=list(bg="transparent")}
@@ -807,7 +807,7 @@ plot_dag("dag {
   u -> y
   u -> x
   z -> x
-}", labels = c(x = "$X$", y = "$Y$", z = "$Z$"))
+}", labels = c(x = "$X$", y = "$Y$", z = "$Z$", u = "$U$"))
 ```
 > Não inclua $Z$ nesse caso (MESMO)!
 ]
@@ -822,7 +822,7 @@ plot_dag("dag {
 
 ## Bons controles
 
-- **Confundidores** (forks): causas comuns de $X$ e $Y$. Incluí-los fecha caminhos não causais pela porta dos fundos.
+- **Confundidores** (bifurcações): causas comuns de $X$ e $Y$. Incluí-los fecha caminhos não causais pela porta dos fundos.
 
 - **Variáveis no caminho de uma porta dos fundos**: mesmo quando o confundidor não é observado, condicionar em outra variável ao longo do caminho (ex.: $U \to Z \to X$) já o fecha.
 
