@@ -592,8 +592,8 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 ## HIV e acidente vascular cerebral
 
-```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, fig.width=11, fig.height=5, out.width="85%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
-plot_dag("dag {
+```{r dag-hiv-avc, include=FALSE, eval=TRUE}
+dag_hiv_avc <- "dag {
   T [pos=\"0,2\"]
   I [pos=\"0,0\"]
   H [pos=\"1.2,1\"]
@@ -604,8 +604,72 @@ plot_dag("dag {
   T -> A
   I -> A
   H -> A
-}", labels = c(H = "HIV"), label_size = 9, side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC"))
+}"
 ```
+
+```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, fig.width=11, fig.height=5, out.width="85%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag(dag_hiv_avc, labels = c(H = "HIV"), label_size = 9, side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC"))
+```
+
+---
+
+## HIV e AVC: um modelo para cada efeito
+
+.pull-left[
+- **Efeito do HIV**: fechar as portas dos fundos por Tabagismo e Idade.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: fechar a porta dos fundos por Idade, sem incluir o HIV (mediador).
+    - `lm(AVC ~ Tabagismo + Idade)`
+
+- **Efeito da Idade**: não há portas dos fundos; HIV e Tabagismo são mediadores.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+```{r figura-dag-hiv-avc-modelos, echo=FALSE, eval=TRUE, fig.width=11, fig.height=5, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag(dag_hiv_avc, labels = c(H = "HIV"), label_size = 9, side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC"))
+```
+
+No modelo completo, só o coeficiente do HIV estima um efeito total. Os coeficientes de Tabagismo e Idade não estimam efeitos causais.
+]
+
+---
+
+## HIV e AVC: um confundidor não observado
+
+.pull-left[
+- **Efeito do HIV**: continua estimável. Condicionar no Tabagismo também fecha HIV ← Tabagismo ← Álcool → AVC.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: **não é mais estimável**. A porta dos fundos Tabagismo ← Álcool → AVC só seria fechada medindo o álcool.
+
+- **Efeito da Idade**: continua estimável. O caminho Idade → Tabagismo ← Álcool → AVC está fechado, pois o Tabagismo é um colisor.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+```{r figura-dag-hiv-avc-alcool, echo=FALSE, eval=TRUE, fig.width=11, fig.height=6, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  T [pos=\"0,2\"]
+  I [pos=\"0,0\"]
+  H [pos=\"1.2,1\"]
+  A [pos=\"3,1\"]
+  U [latent, pos=\"2.2,2.6\"]
+  I -> T
+  I -> H
+  T -> H
+  T -> A
+  I -> A
+  H -> A
+  U -> T
+  U -> A
+}", labels = c(H = "HIV"), label_size = 9,
+side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC", U = "Álcool"))
+```
+
+No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo ← Álcool → AVC: o coeficiente da Idade fica enviesado até como efeito direto.
+]
 
 ---
 

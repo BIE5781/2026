@@ -294,7 +294,50 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 ## HIV e acidente vascular cerebral
 
+
+
 &lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## HIV e AVC: um modelo para cada efeito
+
+.pull-left[
+- **Efeito do HIV**: fechar as portas dos fundos por Tabagismo e Idade.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: fechar a porta dos fundos por Idade, sem incluir o HIV (mediador).
+    - `lm(AVC ~ Tabagismo + Idade)`
+
+- **Efeito da Idade**: não há portas dos fundos; HIV e Tabagismo são mediadores.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-modelos-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+No modelo completo, só o coeficiente do HIV estima um efeito total. Os coeficientes de Tabagismo e Idade não estimam efeitos causais.
+]
+
+---
+
+## HIV e AVC: um confundidor não observado
+
+.pull-left[
+- **Efeito do HIV**: continua estimável. Condicionar no Tabagismo também fecha HIV ← Tabagismo ← Álcool → AVC.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: **não é mais estimável**. A porta dos fundos Tabagismo ← Álcool → AVC só seria fechada medindo o álcool.
+
+- **Efeito da Idade**: continua estimável. O caminho Idade → Tabagismo ← Álcool → AVC está fechado, pois o Tabagismo é um colisor.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-alcool-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo ← Álcool → AVC: o coeficiente da Idade fica enviesado até como efeito direto.
+]
 
 ---
 
