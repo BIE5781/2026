@@ -49,6 +49,9 @@ xaringanExtra::use_tile_view()
 .pull-left-70  { float: left;  width: 64%; }
 .pull-right-30 { float: right; width: 32%; }
 .pull-left-70 > :first-child, .pull-right-30 > :first-child { margin-top: 0; }
+.pull-left-40  { float: left;  width: 40%; }
+.pull-right-60 { float: right; width: 58%; }
+.pull-left-40 > :first-child, .pull-right-60 > :first-child { margin-top: 0; }
 ```
 
 ```{r funcao-plot-dag, include=FALSE, eval=TRUE}
@@ -311,7 +314,7 @@ plot_dag("dag {
 
 ## Representando intervenções
 
-.pull-left[
+.pull-left-40[
 
 - Vamos imaginar uma intervenção na variável "regador" ($x_2$), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação $do(x_2)$, que remove todas as setas que entram em $x_2$.
 
@@ -326,14 +329,14 @@ x_5 &= \mathcal{f}(x_4, u_5)
 $$
 
 ]
-.pull-right[
+.pull-right-60[
 ```{r figura-dag-xy-condicionado-chuva, echo=FALSE, eval=TRUE, fig.height = 7, fig.width=10, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
 plot_dag("dag {
   x5 [pos=\"0,0\"]
-  x4 [pos=\"0,1\"]
-  x3 [pos=\"-1,2\"]
-  x2 [pos=\"1,2\"]
-  x1 [pos=\"0,3\"]
+  x4 [pos=\"0,1.6\"]
+  x3 [pos=\"-1.6,3.2\"]
+  x2 [pos=\"1.6,3.2\"]
+  x1 [pos=\"0,4.8\"]
   x1 -> x2
   x1 -> x3
   x3 -> x4
@@ -348,7 +351,7 @@ side_labels = c(x1 = "Estação", x2 = "Regador", x3 = "Chuva", x4 = "Umidade do
 
 ## Representando intervenções
 
-.pull-left[
+.pull-left-40[
 
 - Vamos imaginar uma intervenção na variável "regador" ($x_2$), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação $do(x_2)$, que remove todas as setas que entram em $x_2$.
 
@@ -363,20 +366,20 @@ x_5 &= \mathcal{f}(x_4, u_5)
 $$
 
 ]
-.pull-right[
+.pull-right-60[
 ```{r figura-dag-xy-condicionado-chuva-x2, echo=FALSE, eval=TRUE, fig.height = 7, fig.width=10, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
 plot_dag("dag {
   x5 [pos=\"0,0\"]
-  x4 [pos=\"0,1\"]
-  x3 [pos=\"-1,2\"]
-  x2 [pos=\"1,2\"]
-  x1 [pos=\"0,3\"]
+  x4 [pos=\"0,1.6\"]
+  x3 [pos=\"-1.6,3.2\"]
+  x2 [pos=\"1.6,3.2\"]
+  x1 [pos=\"0,4.8\"]
   x1 -> x3
   x3 -> x4
   x2 -> x4
   x4 -> x5
 }", labels = c(x1 = "$x_1$", x2 = "$x_2^*$", x3 = "$x_3$", x4 = "$x_4$", x5 = "$x_5$"),
-side_labels = c(x1 = "Estação", x2 = "Regador Ligado", x3 = "Chuva", x4 = "Umidade do solo", x5 = "Crescimento da planta"))
+side_labels = c(x1 = "Estação", x2 = "Regador\nligado", x3 = "Chuva", x4 = "Umidade do solo", x5 = "Crescimento da planta"))
 ```
 ] 
 
@@ -475,6 +478,7 @@ knitr::include_graphics("figures/DAGS/paths_dag.png")
 
 .pull-left[
     - Descendentes de $X$ não podem ser incluídos como variáveis de controle (nenhuma variável pós-tratamento).
+    
     - Todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$ devem ser bloqueados. 
 ]
 --
@@ -482,6 +486,36 @@ knitr::include_graphics("figures/DAGS/paths_dag.png")
 - Variáveis que são Pipes e forks **bloqueiam** caminhos quando incluídas nos modelos.
 
 - Variáveis que são Colliders **abrem** caminhos quando incluídas nos modelos.
+]
+
+---
+
+## Critério da porta da frente (Front-door criterion)
+
+.pull-left[
+- E quando a porta dos fundos não pode ser fechada (confundidor não observado)?
+
+- Se todo o efeito de $X$ em $Y$ passa por um mediador $M$ sem confundimento, podemos estimar o efeito em duas partes:
+  - $X \to M$: sem porta dos fundos aberta (o caminho por $U$ passa pelo colisor $Y$).
+  - $M \to Y$: a porta dos fundos $M \leftarrow X \leftarrow U \to Y$ é fechada condicionando em $X$.
+
+- Em modelos lineares, o efeito de $X$ em $Y$ é o produto $\beta_{XM} \times \beta_{MY}$.
+]
+.pull-right[
+```{r figura-dag-porta-frente, echo=FALSE, eval=TRUE, fig.width=10, fig.height=5, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  X [pos=\"0,0\"]
+  M [pos=\"1.5,0\"]
+  Y [pos=\"3,0\"]
+  U [latent, pos=\"1.5,1.3\"]
+  X -> M
+  M -> Y
+  U -> X
+  U -> Y
+}", side_labels = c(X = "Tabagismo", Y = "Câncer", U = "Genótipo"))
+```
+
+$M$: depósito de alcatrão nos pulmões. Se as suposições do DAG valerem, o efeito do tabagismo pode ser estimado mesmo que o genótipo proposto por Fisher (Aula I) não seja observado.
 ]
 
 ---
@@ -516,8 +550,19 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 ## HIV e acidente vascular cerebral
 
-```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, out.width="40%", fig.align="center"}
-knitr::include_graphics("figures/DAGS/hiv_stroke.svg")
+```{r figura-dag-hiv-avc, echo=FALSE, eval=TRUE, fig.width=11, fig.height=5, out.width="85%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  T [pos=\"0,2\"]
+  I [pos=\"0,0\"]
+  H [pos=\"1.2,1\"]
+  A [pos=\"3,1\"]
+  I -> T
+  I -> H
+  T -> H
+  T -> A
+  I -> A
+  H -> A
+}", labels = c(H = "HIV"), label_size = 9, side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC"))
 ```
 
 ---
@@ -613,23 +658,40 @@ plot_dag("dag {
 
 ## Bons controles
 
-- Bloqueiam caminhos não causais.
-- Melhoram a precisão.
-- Permitem inferências causais.
+- **Confundidores** (forks): causas comuns de $X$ e $Y$. Incluí-los fecha caminhos não causais pela porta dos fundos.
+
+- **Variáveis no caminho de uma porta dos fundos**: mesmo quando o confundidor não é observado, condicionar em outra variável ao longo do caminho (ex.: $U \to Z \to X$) já o fecha.
+
+- **Causas de $Y$ que não afetam $X$**: não mudam a estimativa, mas aumentam a precisão, pois explicam parte da variação de $Y$.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt4[
+Um bom conjunto de controles satisfaz o critério da porta dos fundos: bloqueia todos os caminhos não causais entre $X$ e $Y$, sem incluir descendentes de $X$.
+]
 
 ---
 
 ## Maus controles
 
-- Bloqueiam caminhos causais (condicionando em mediadores).
-- Abrem caminhos não causais (abrindo colisores).
-- Reduzem a precisão.
-- Impedem inferências causais.
+- **Mediadores e outros descendentes de $X$** (variáveis pós-tratamento): bloqueiam total ou parcialmente o caminho causal e subestimam o efeito total.
+
+- **Colisores e seus descendentes**: abrem caminhos não causais e criam associações espúrias, inclusive quando a amostra é selecionada com base no colisor.
+
+- **Causas de $X$ que não afetam $Y$**: reduzem a precisão e, se houver confundimento não observado, amplificam o viés.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt4[
+Nenhum critério estatístico (AIC, p-valor, $R^2$) distingue bons de maus controles. A escolha depende do modelo causal, e não dos dados.
+]
+
+Para um catálogo completo, veja Cinelli, Forney e Pearl (2024).
 
 ---
 
 ## Referências
 
+- Cinelli, C., Forney, A. e Pearl, J. (2024). “A crash course in good and bad controls.” *Sociological Methods & Research*, 53(3), 1071–1104.
+- McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with Examples in R and Stan*, 2ª ed. CRC Press.
+- Pearl, J. (1995). “Causal diagrams for empirical research.” *Biometrika*, 82(4), 669–688.
 - Pearl, J. (2011). “Invited commentary: understanding bias amplification.” *American Journal of Epidemiology*, 174(11), 1223–1227.
 - Pearl, J., Glymour, M. e Jewell, N. P. (2016). *Causal Inference in Statistics: A Primer*. Wiley.
+- Textor, J., van der Zander, B., Gilthorpe, M. S., Liśkiewicz, M. e Ellison, G. T. H. (2016). “Robust causal inference using directed acyclic graphs: the R package ‘dagitty’.” *International Journal of Epidemiology*, 45(6), 1887–1894.
 - Westreich, D. e Greenland, S. (2013). “The Table 2 fallacy: presenting and interpreting confounder and modifier coefficients.” *American Journal of Epidemiology*, 177(4), 292–298.

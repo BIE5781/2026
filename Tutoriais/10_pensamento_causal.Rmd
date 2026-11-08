@@ -424,6 +424,71 @@ paths(dag1, from = "X", to = "Y")
 adjustmentSets(dag1, exposure = "X", outcome = "Y")
 ```
 
+## Implicações testáveis
+
+Não é possível provar que um DAG está correto, mas é possível refutá-lo. Todo DAG implica um conjunto de independências condicionais entre as variáveis, que podemos comparar com os dados. O dagitty lista essas independências:
+
+```{r, eval=FALSE }
+impliedConditionalIndependencies(dag1)
+```
+
+O resultado `A _||_ X | Z` significa que, segundo o DAG, A e X são independentes quando condicionamos em Z: todo caminho entre A e X passa por Z. Se o DAG estiver correto, o coeficiente de A em `lm(X ~ Z + A)` deve ser próximo de zero. Vamos simular dados compatíveis com o DAG e testar:
+
+```{r, eval=FALSE }
+set.seed(11)
+N = 500
+A = rnorm(N)
+Z = rnorm(N, A)
+X = rnorm(N, Z)
+Y = rnorm(N, X + Z + A)
+dados = data.frame(X, Y, Z, A)
+
+summary(lm(X ~ Z + A))  # coeficiente de A deve ser ~0
+localTests(dag1, dados) # o dagitty testa todas as implicações de uma vez
+```
+
+__Exercício__: Simule novos dados em que A também afeta X diretamente (`X = rnorm(N, Z + A)`) e repita o teste com o `dag1`. O que acontece? O que isso diz sobre o DAG?
+
+Note que passar nesses testes não prova que o DAG está correto: vários DAGs diferentes podem implicar as mesmas independências, e alguns DAGs (como o fork em que Z afeta X e Y e X também afeta Y) não implicam nenhuma independência testável.
+
+__Questão__: Liste as independências condicionais implicadas pelos outros três DAGs acima. Se você tivesse dados das quatro variáveis, conseguiria distinguir entre os quatro DAGs?
+
+# Extra: o critério da porta da frente
+
+Quando há um confundidor não observado entre X e Y, nenhum conjunto de covariáveis satisfaz o critério da porta dos fundos. Mas, em alguns casos, ainda é possível estimar o efeito de X em Y usando um mediador. Esse é o **critério da porta da frente**:
+
+```{r dag-porta-frente, echo=FALSE, eval=TRUE}
+dag_plot('dag { X [pos="0,0"] M [pos="1,0"] Y [pos="2,0"] U [latent,pos="1,0.8"]
+             X -> M -> Y  U -> X  U -> Y }', rotulos = c(M = "s")) |>
+  dag_salva("figs/porta_frente.png")
+```
+
+O critério exige que (1) todo o efeito de X em Y passe pelo mediador M, (2) não haja caminho de porta dos fundos aberto entre X e M, e (3) todos os caminhos de porta dos fundos entre M e Y sejam bloqueados por X. Neste DAG, podemos estimar o efeito em duas partes:
+
+- **X → M**: o único outro caminho entre X e M é X ← U → Y ← M, que contém um colisor (Y) e está fechado. Então `lm(M ~ X)` estima o efeito de X em M.
+- **M → Y**: o caminho M ← X ← U → Y é uma porta dos fundos, que é bloqueada condicionando em X. Então `lm(Y ~ M + X)` estima o efeito de M em Y.
+
+Em um modelo linear, o efeito de X em Y é o produto dos dois efeitos:
+
+```{r, eval=FALSE }
+set.seed(10)
+N = 1000
+U = rnorm(N)
+X = rnorm(N, U)
+M = rnorm(N, X)
+Y = rnorm(N, M + U) # efeito verdadeiro de X em Y é 1 x 1 = 1
+
+lm(Y ~ X) |> coef() # Enviesado por U
+
+b_xm = coef(lm(M ~ X))["X"]     # efeito de X em M
+b_my = coef(lm(Y ~ M + X))["M"] # efeito de M em Y, controlando por X
+b_xm * b_my                     # efeito de X em Y
+```
+
+__Questão__: Qual é o coeficiente de X em `lm(Y ~ M + X)`? Ele tem alguma interpretação causal? (Lembre da falácia da tabela 2.)
+
+__Questão__: O exemplo clássico da porta da frente é o efeito do tabagismo (X) no câncer de pulmão (Y), mediado pelo depósito de alcatrão nos pulmões (M), com um genótipo não observado (U) afetando tabagismo e câncer, como na hipótese de Fisher. Quais suposições desse DAG você acha mais difíceis de defender?
+
 # Extra: variáveis instrumentais
 
 Na seção sobre amplificação de viés, vimos que incluir Z como covariável piora a estimativa do efeito de X em Y. Como U não é observado, nenhum conjunto de covariáveis satisfaz o critério da porta dos fundos nesse DAG. Mas Z ainda carrega informação útil: Z altera X sem passar por U. Uma variável com essas propriedades é chamada de **variável instrumental**.
