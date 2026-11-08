@@ -30,7 +30,7 @@ class: center, middle, inverse, title-slide
 ### Diogo Melo
 ]
 .date[
-### 16 de novembro de 2026
+### 6 de novembro de 2026
 ]
 
 ---
@@ -288,9 +288,10 @@ O ponto azul indica o valor verdadeiro (`\(0.5\)`).
 $$
 `\begin{aligned}
 y &amp;\sim \mathrm{Normal}(\mu, \sigma) \\
-\mu &amp;= a + \beta_{x}x + \beta_{z}z \\
+\mu &amp;= \alpha + \beta_{x}x + \beta_{z}z \\
 \alpha &amp;\sim \mathrm{Normal}(0, 5) \\
-\beta_{x}, \beta_{z} &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{x} &amp;\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{z} &amp;\sim \mathrm{Normal}(0, 5) \\
 \sigma &amp;\sim \mathrm{Exponential}(1)
 \end{aligned}`
 $$
@@ -304,7 +305,7 @@ m2 &lt;- quap(
     mu &lt;- a + bx * x + bz * z,
     a ~ dnorm(0, 5),
     bx ~ dnorm(0, 0.3),
-    bz ~ dnorm(0,0.3),
+    bz ~ dnorm(0, 5),
     sigma ~ dexp(1)
   ),
   data = list(y = y, x = x, z = z)
@@ -314,10 +315,10 @@ precis(m2) |&gt; round(2)
 
 ```
       mean   sd 5.5% 94.5%
-a     1.16 0.12 0.97  1.35
-bx    0.56 0.07 0.45  0.66
-bz    1.62 0.14 1.40  1.85
-sigma 0.99 0.05 0.91  1.07
+a     1.09 0.12 0.90  1.28
+bx    0.48 0.07 0.38  0.59
+bz    2.05 0.15 1.81  2.30
+sigma 0.97 0.05 0.90  1.05
 ```
 ]
 
@@ -664,7 +665,7 @@ c(Q_baixa = 70 - (0.1 * 60 + 0.7 * 65) / 0.8,
  5.625000 -5.555556 
 ```
 
-Em `\(Q\)` baixa, o controle também inclui quem melhoraria com a intervenção; em `\(Q\)` alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamentocomparam grupos distintos.
+Em `\(Q\)` baixa, o controle também inclui quem melhoraria com a intervenção; em `\(Q\)` alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamento comparam grupos distintos.
 
 ---
 
@@ -685,7 +686,7 @@ Montgomery et al. (2018).
 --
 
 
-- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
+- **Exercício:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
 
 O que você responde?
 
@@ -704,9 +705,9 @@ O que você responde?
 
 $$
 `\begin{aligned}
-y &amp;\sim \mathcal{f}(u_y) \\
-x &amp;\sim \mathcal{f}(u_x) \\
-z &amp;\sim \mathcal{f}(x, y, u_z)
+y &amp;= \mathcal{f}(u_y) \\
+x &amp;= \mathcal{f}(u_x) \\
+z &amp;= \mathcal{f}(x, y, u_z)
 \end{aligned}`
 $$
 
@@ -845,7 +846,7 @@ Vamos supor que o tamanho corporal e a coloração não estão relacionados, mas
 
 ---
 
-## AIC e signicância não vão te salvar
+## AIC e significância não vão te salvar
 
 
 ``` r
@@ -876,7 +877,7 @@ F-statistic: 9.689e-05 on 1 and 98 DF,  p-value: 0.9922
 
 ---
 
-## AIC e signicância não vão te salvar
+## AIC e significância não vão te salvar
 
 .pull-left[
 
@@ -927,10 +928,10 @@ m1 55.1 3
 
 ## Referências
 
-- Cinelli e Hazlett (2020).
-- Montgomery et al. (2018).
+- Cinelli, C. e Hazlett, C. (2020). “Making sense of sensitivity: extending omitted variable bias.” *Journal of the Royal Statistical Society Series B*, 82(1), 39–67.
+- Montgomery, J. M., Nyhan, B. e Torres, M. (2018). “How conditioning on posttreatment variables can ruin your experiment and what to do about it.” *American Journal of Political Science*, 62(3), 760–775.
+- Pearl, J., Glymour, M. e Jewell, N. P. (2016). *Causal Inference in Statistics: A Primer*. Wiley.
 - Ripple, W. J. e Beschta, R. L. (2004). “Wolves and the ecology of fear: Can predation risk structure ecosystems?” *BioScience*, 54(8), 755–766.
-- Westreich et al. (2013).
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
