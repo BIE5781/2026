@@ -432,11 +432,11 @@ plot_dag("dag {
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
 
-- x -> z -> y
+- *X* → *Z* → *Y*
     - lm(y ~ x) : aberto
     - lm(y ~ x + z) : fechado
 
-- x <- z -> y
+- *X* ← *Z* → *Y*
     - lm(y ~ x) : aberto
     - lm(y ~ x + z) : fechado
 ]
@@ -447,7 +447,7 @@ plot_dag("dag {
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
 **Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
 
-- x -> z <- y
+- *X* → *Z* ← *Y*
     - lm(y ~ x) : fechado
     - lm(y ~ x + z) : aberto
 
@@ -477,9 +477,9 @@ knitr::include_graphics("figures/DAGS/paths_dag.png")
     ]
 
 .pull-left[
-    - Descendentes de $X$ não podem ser incluídos como variáveis de controle (nenhuma variável pós-tratamento).
-    
-    - Todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$ devem ser bloqueados. 
+- Descendentes de $X$ não podem ser incluídos como variáveis de controle (nenhuma variável pós-tratamento).
+
+- Todos os caminhos entre $X$ e $Y$ que incluam uma seta apontando para $X$ devem ser bloqueados. 
 ]
 --
 .pull-right[
