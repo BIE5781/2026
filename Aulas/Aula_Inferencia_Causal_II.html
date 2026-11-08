@@ -205,7 +205,29 @@ Ferramentas automatizadas:
 
 ## Identifique todos os caminhos abertos de `\(X\)` a `\(Y\)`
 
-&lt;img src="figures/DAGS/paths_dag.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+
+
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-caminhos-dag-1.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Todos os caminhos de `\(X\)` a `\(Y\)`
+
+.pull-left[
+1. `\(X \rightarrow W \rightarrow Y\)`: **causal**, aberto
+
+2. `\(X \leftarrow Z \rightarrow Y\)`: aberto
+
+3. `\(X \leftarrow A \rightarrow Z \rightarrow Y\)`: aberto
+
+4. `\(X \leftarrow Z \leftarrow B \rightarrow Y\)`: aberto
+
+5. `\(X \leftarrow A \rightarrow Z \leftarrow B \rightarrow Y\)`: **fechado** (`\(Z\)` é um colisor)
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-caminhos-dag-lista-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
