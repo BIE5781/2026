@@ -144,6 +144,40 @@ lm(Y ~ X) |> coef() # Enviesado pelo caminho não-causal, efeito de X é superes
 lm(Y ~ X + Z) |> coef() # Não enviesado, efeito de X está correto e igual a b_yx
 ```
 
+## O critério da porta dos fundos
+
+Por que Z funciona como controle no modelo 2, mesmo sem observarmos U? No modelo 2 existem dois caminhos entre X e Y:
+
+- X → Y: o caminho causal, que queremos estimar;
+- X ← Z ← U → Y: um caminho não-causal, que entra em X por uma seta que **aponta para X** (uma "porta dos fundos").
+
+O caminho pela porta dos fundos é composto de pipes e forks, e por isso está aberto, a não ser que condicionemos em alguma variável ao longo dele. Não podemos condicionar em U, que não foi observado, mas condicionar em Z já fecha o caminho. Esse é o **critério da porta dos fundos**: para estimar o efeito causal de X em Y, precisamos de um conjunto de covariáveis que (1) bloqueie todos os caminhos entre X e Y que começam com uma seta apontando para X e (2) não contenha descendentes de X.
+
+__Questão__: Liste os caminhos entre X e Y nos modelos 1 e 3 e verifique que Z satisfaz o critério da porta dos fundos nos dois casos.
+
+## A falácia da tabela 2
+
+O modelo `lm(Y ~ X + Z)` também estima um coeficiente para Z. É tentador interpretá-lo como o efeito causal de Z em Y, e é isso que muitos artigos fazem ao apresentar todos os coeficientes de um modelo numa mesma tabela (a "tabela 2" de [Westreich e Greenland, 2013](https://doi.org/10.1093/aje/kws412)). Vamos repetir a simulação do modelo 2 com uma amostra maior:
+
+```{r, eval=FALSE }
+set.seed(42)
+N = 1000
+U = rnorm(N)
+Z = rnorm(N, 0.5 * U)
+X = rnorm(N, 0.8 * Z)
+Y = rnorm(N, U + X)
+
+lm(Y ~ X + Z) |> coef()
+```
+
+No modelo 2, Z afeta Y apenas através de X, então o efeito causal (total) de Z em Y é $0{,}8 \times 1 = 0{,}8$, e o efeito direto é zero. O coeficiente de Z no modelo não é nenhum dos dois.
+
+__Questão__: De onde vem o valor estimado para o coeficiente de Z? (Dica: quais caminhos entre Z e Y estão abertos quando condicionamos em X?)
+
+__Questão__: Ajuste `lm(Y ~ Z)`. Essa regressão estima o efeito total de Z em Y? Existe algum conjunto de covariáveis observadas que permitiria estimar esse efeito? Use o critério da porta dos fundos, tratando Z como a exposição.
+
+Um modelo construído para estimar o efeito de X em Y estima o efeito de X em Y. Os coeficientes das variáveis de controle, em geral, não têm interpretação causal.
+
 A mesma lógica se aplica se o confundidor é mediado por outra variável M:
 
 ```{r dag-bons-controles-2, echo=FALSE, eval=TRUE}
@@ -226,6 +260,23 @@ dag_painel(list(
   dag_salva("figs/supercontrole.png")
 ```
 
+No DAG (a), Z é um mediador: condicionar em Z bloqueia o caminho causal. No DAG (b), Z não está no caminho entre X e Y, mas é um descendente do mediador M (por exemplo, uma medida imperfeita de M) e, ao condicionar em Z, bloqueamos parcialmente o caminho causal. Vamos simular o DAG (b):
+
+```{r, eval=FALSE }
+set.seed(3)
+N = 1000
+X = rnorm(N)
+M = rnorm(N, 0.8 * X)
+Y = rnorm(N, M)
+Z = rnorm(N, M, 0.5) # Z é uma medida ruidosa de M
+
+lm(Y ~ X) |> coef()     # Efeito total de X em Y (0.8)
+lm(Y ~ X + Z) |> coef() # Efeito de X subestimado
+lm(Y ~ X + M) |> coef() # Caminho causal completamente bloqueado
+```
+
+__Questão__: O que acontece com a estimativa do efeito de X quando a medida Z fica mais precisa (por exemplo, `sd = 0.1`) ou menos precisa (`sd = 2`)? Por quê?
+
 No seguinte caso, controlar por Z levaria a um aumento no viés causado pela variável não observada U.
 
 ```{r dag-amplificacao-vies, echo=FALSE, eval=TRUE}
@@ -234,7 +285,21 @@ dag_plot('dag { Z [adjusted,pos="0,1"] X [pos="0.5,0"] Y [pos="1.7,0"] U [latent
   dag_salva("figs/amplificacao_vies.png")
 ```
 
-__Exercício__: Simule o exemplo de amplificação de viés e verifique o efeito de incluir a variável Z no modelo.
+__Exercício__: Simule o exemplo de amplificação de viés e verifique o efeito de incluir a variável Z no modelo. Você pode começar com:
+
+```{r, eval=FALSE }
+set.seed(4)
+N = 1000
+Z = rnorm(N)
+U = rnorm(N)
+b_xz = 2
+X = rnorm(N, b_xz * Z + U)
+Y = rnorm(N, X + U) # efeito verdadeiro de X em Y é 1
+```
+
+Compare as estimativas de `lm(Y ~ X)` e `lm(Y ~ X + Z)`. Depois, repita a simulação com valores diferentes de `b_xz` (por exemplo, 0, 1 e 5). Como o viés muda? Por que o viés aumenta quando incluímos Z? (Dica: pense em qual parte da variação de X sobra para estimar o efeito depois que removemos a parte explicada por Z.)
+
+O problema piora quando há muitas covariáveis. [Pearl (2011)](https://doi.org/10.1093/aje/kwr352) mostra que, ao condicionarmos em várias covariáveis em sequência, a amplificação do viés se acumula e cresce sempre, enquanto a redução do viés de confusão pode ser parcialmente cancelada, porque os efeitos de cada covariável podem ter sinais opostos. Por isso, a amplificação pode acumular mais rápido que a redução de viés. Isso é um argumento contra a estratégia de "incluir tudo o que foi medido" no modelo: covariáveis que afetam fortemente X, mas não Y, podem fazer mais mal do que bem quando restam confundidores não observados.
 
 ## AIC e significância não vão ajudar você
 
@@ -273,6 +338,43 @@ AICctab(m1, m2, mnames = c("Correto", "Enviesado"),
 O modelo enviesado também é selecionado pelo AIC. Isso não é surpreendente, já que a inclusão do colisor aumenta a informação disponível sobre Y, e assim faz melhores predições.
 
 __A única maneira de identificar o possível viés é tendo um modelo científico claro.__
+
+## Viés de seleção: condicionando no colisor sem perceber
+
+Não é preciso incluir o colisor como covariável para condicionar nele. Se a forma como os dados foram obtidos depende de um colisor, a própria amostra já está condicionada.
+
+Imagine que queremos saber se o tamanho corporal está associado à coloração (por exemplo, cores de advertência) em uma família de anfíbios, usando registros de coleções de museus. Suponha que tamanho e coloração sejam independentes, mas que indivíduos maiores e mais coloridos sejam mais fáceis de detectar e, portanto, de coletar:
+
+```{r dag-selecao, echo=FALSE, eval=TRUE}
+dag_plot('dag { T [pos="0,1"] C [pos="2,1"] D [adjusted,pos="1,0"]
+             T -> D  C -> D }') |>
+  dag_salva("figs/selecao.png")
+```
+
+Vamos simular a população completa e a amostra de indivíduos detectados (D = 1):
+
+```{r, eval=FALSE }
+set.seed(7)
+N = 1000
+inv_logit = function(x) 1 / (1 + exp(-x))
+Tam = rnorm(N) # tamanho corporal
+Cor = rnorm(N) # intensidade da coloração
+D = rbinom(N, 1, inv_logit(-2 + 2 * Tam + 2 * Cor)) # detecção
+
+lm(Cor ~ Tam) |> coef()                 # População completa
+lm(Cor ~ Tam, subset = D == 1) |> coef() # Apenas indivíduos coletados
+
+plot(Cor ~ Tam, col = ifelse(D == 1, "red", "gray"), pch = 19,
+     xlab = "Tamanho corporal", ylab = "Coloração")
+abline(lm(Cor ~ Tam), lwd = 2, col = "gray40")
+abline(lm(Cor ~ Tam, subset = D == 1), lwd = 2, col = "red")
+```
+
+Nenhuma variável foi adicionada ao modelo, e mesmo assim a estimativa com os indivíduos coletados mostra uma associação negativa entre tamanho e coloração que não existe na população.
+
+__Questão__: Por que a associação induzida é negativa? (Dica: entre os indivíduos coletados, o que esperamos da coloração de um indivíduo pequeno?)
+
+__Questão__: Pense em um conjunto de dados que você usa ou pretende usar no seu projeto. Existe algum processo de seleção (detecção, sobrevivência, publicação, acesso ao local de coleta) que dependa de mais de uma das variáveis de interesse?
 
 # Prática com DAGs
 
@@ -320,4 +422,83 @@ paths(dag1, from = "X", to = "Y")
 
 # obter o conjunto de ajuste correto
 adjustmentSets(dag1, exposure = "X", outcome = "Y")
+```
+
+# Extra: modelos "de luxo" (full luxury models)
+
+Em alguns casos, podemos querer estimar o modelo causal completo, incluindo todas as relações do DAG que conecta X e Y, e não apenas o efeito de X em Y. Esse tipo de modelo é chamado de *full luxury model* por McElreath, e é essencialmente um modelo de equações estruturais (SEM) Bayesiano.
+
+Vamos simular dados a partir do seguinte DAG e tentar ajustar um modelo completo:
+
+```{r dag-luxo, echo=FALSE, eval=TRUE}
+dag_plot('dag { X [pos="0,0"] W [pos="1,0"] Y [pos="2,0"]
+             A [pos="0,1"] Z [pos="1,1"] B [pos="2,1"]
+             X -> W -> Y  Z -> X  Z -> Y  A -> Z  A -> X  B -> Z  B -> Y }') |>
+  dag_salva("figs/luxo.png")
+```
+
+O efeito de X em Y é mediado por W. Use o dagitty para encontrar o conjunto de ajuste:
+
+```{r, eval=FALSE }
+library(dagitty)
+dag2 = dagitty('dag { X -> W W -> Y Z -> X Z -> Y A -> Z A -> X B -> Z B -> Y }')
+adjustmentSets(dag2, exposure = "X", outcome = "Y")
+```
+
+Agora simulamos dados com todos os efeitos iguais a 1, de modo que o efeito causal de X em Y (através de W) também é igual a 1:
+
+```{r, eval=FALSE }
+set.seed(2)
+N = 200
+A = rnorm(N)
+B = rnorm(N)
+Z = rnorm(N, A + B)
+X = rnorm(N, A + Z)
+W = rnorm(N, X)
+Y = rnorm(N, W + Z + B)
+df = data.frame(X, Y, Z, W, A, B)
+```
+
+Existem dois conjuntos de ajuste mínimos para estimar o efeito de X em Y: {Z, B} e {A, Z}. Note que condicionar apenas em Z não é suficiente: Z é um colisor no caminho X ← A → Z ← B → Y, e condicionar em Z abre esse caminho, que precisa ser fechado com A ou B. Vamos usar {Z, B}:
+
+```{r, eval=FALSE }
+lm(Y ~ X + Z + B, data = df) |> coef()
+```
+
+Essa regressão já dá a estimativa correta, mas podemos ir além e ajustar o DAG inteiro, com uma equação para cada variável em função dos seus pais. Na maior parte das vezes isso não é necessário, mas é um bom exercício para entender as implicações do DAG, e permite estimar todos os efeitos de uma só vez:
+
+```{r, eval=FALSE }
+library(rethinking)
+mFull = ulam(
+  alist(
+    A ~ normal(aA, sA),
+    B ~ normal(aB, sB),
+    Z ~ normal(aZ + bAZ * A + bBZ * B, sZ),
+    X ~ normal(aX + bAX * A + bZX * Z, sX),
+    W ~ normal(aW + bXW * X, sW),
+    Y ~ normal(aY + bWY * W + bZY * Z + bBY * B, sY),
+    c(bAZ, bAX, bBZ, bZX, bZY, bBY, bXW, bWY) ~ normal(0, 0.3),
+    c(aA, aB, aZ, aX, aY, aW) ~ normal(0, 1),
+    c(sA, sB, sX, sY, sZ, sW) ~ exponential(1)
+  ), data = df, chains = 4, cores = 4, iter = 2000
+)
+plot(precis(mFull, prob = 0.95))
+abline(v = 1, col = 2)
+```
+
+Neste modelo não existe um parâmetro único para o efeito de X em Y. O efeito causal de X em Y passa por W, e é o produto dos efeitos ao longo do caminho, `bXW * bWY`. Podemos calcular a distribuição posterior desse efeito a partir das amostras:
+
+```{r, eval=FALSE }
+post = extract.samples(mFull)
+efeito_XY = post$bXW * post$bWY
+precis(efeito_XY, prob = 0.95)
+dens(efeito_XY, xlab = "Efeito causal de X em Y")
+abline(v = 1, col = 2)
+```
+
+__Desafio__: E se B não fosse observado? Para estimar apenas o efeito de X em Y, o conjunto {A, Z} continua disponível (confira com o dagitty, declarando `B [latent]`). Mas e o modelo completo? Como poderíamos continuar ajustando o DAG inteiro mesmo sem observar B? (Dica: no modelo Bayesiano, uma variável não observada pode ser tratada como um parâmetro, um valor desconhecido para cada observação.)
+
+```{r, eval=FALSE }
+# B não observado
+df_semB = data.frame(X, Y, W, A, Z)
 ```
