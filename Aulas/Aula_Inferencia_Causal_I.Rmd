@@ -956,10 +956,15 @@ plot_dag("dag {
   X -> Q
   X -> Y
   T -> Q
+  U [latent, pos=\"3.4,2\"]
   T -> Y
   Q -> Y
-}", side_labels = c(T = "Intervenção", X = "Educação dos pais", Q = "Qualidade\nparental", Y = "Nota"))
+  U -> Q
+  U -> Y
+}", side_labels = c(T = "Intervenção", X = "Educação dos pais", Q = "Qualidade\nparental", Y = "Nota", U = "Perfil da\nfamília"))
 ```
+
+$U$: perfil da família (não observado), que afeta tanto a qualidade parental quanto a nota.
 
 ---
 

@@ -248,7 +248,7 @@ plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
 
 .pull-left[
 - O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
-- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipótese sobre as independências condicionais entre as variáveis.
+- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipóteses sobre as independências condicionais entre as variáveis.
 - Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
 - Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
 ]
@@ -525,9 +525,34 @@ plot_dag(dag_caminhos, labels = rotulos_caminhos)
 ]
 --
 .pull-right[
-- Variáveis que são Pipes e forks **bloqueiam** caminhos quando incluídas nos modelos.
+- Variáveis que são pipes e forks **bloqueiam** caminhos quando incluídas nos modelos.
 
-- Variáveis que são Colliders **abrem** caminhos quando incluídas nos modelos.
+- Variáveis que são colliders **abrem** caminhos quando incluídas nos modelos.
+]
+
+---
+
+## Aplicando o critério da porta dos fundos
+
+.pull-left[
+- Os caminhos 2 a 5 têm uma seta apontando para $X$. Os caminhos 2, 3 e 4 estão abertos e precisam ser fechados; o 5 já está fechado.
+
+- Controlar só por $Z$ fecha 2, 3 e 4, mas **abre** o 5, pois $Z$ é um colisor nesse caminho.
+
+- Incluir também $A$ ou $B$ fecha o caminho 5 de novo.
+
+- $W$ é descendente de $X$ e não pode entrar no modelo.
+
+Modelos que estimam o efeito causal de $X$ sobre $Y$:
+
+- `lm(Y ~ X + Z + A)`
+- `lm(Y ~ X + Z + B)`
+]
+
+.pull-right[
+```{r figura-caminhos-dag-criterio, echo=FALSE, eval=TRUE, fig.width=8, fig.height=7, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag(dag_caminhos, labels = rotulos_caminhos)
+```
 ]
 
 ---
@@ -631,7 +656,7 @@ plot_dag(dag_hiv_avc, labels = c(H = "HIV"), label_size = 9, side_labels = c(T =
 plot_dag(dag_hiv_avc, labels = c(H = "HIV"), label_size = 9, side_labels = c(T = "Tabagismo", I = "Idade", A = "AVC"))
 ```
 
-No modelo completo, só o coeficiente do HIV estima um efeito total. Os coeficientes de Tabagismo e Idade não estimam efeitos causais.
+No modelo completo, só o coeficiente do HIV estima um efeito total. Os coeficientes de Tabagismo e Idade estimam apenas efeitos diretos, não totais.
 ]
 
 ---
@@ -673,12 +698,45 @@ No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo 
 
 ---
 
+## Quando podemos estimar efeitos diretos?
+
+.pull-left[
+- Para estimar o efeito direto de $X$ sobre $Y$, condicionamos nos mediadores $M$. Isso só funciona se:
+    1. os caminhos não causais entre $X$ e $Y$ estão fechados;
+    2. todos os caminhos indiretos $X \to M \to Y$ estão bloqueados;
+    3. **não há confundidor aberto entre $M$ e $Y$**: condicionar em $M$ abre $X \to M \leftarrow U \to Y$.
+
+- O efeito total continua estimável com `lm(Y ~ X)`; o efeito direto, não.
+]
+
+.pull-right[
+```{r figura-dag-efeito-direto, echo=FALSE, eval=TRUE, fig.width=10, fig.height=5, out.width="100%", fig.align="center", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  X [pos=\"0,0\"]
+  M [pos=\"1.5,1\"]
+  Y [pos=\"3,0\"]
+  U [latent, pos=\"3,1.6\"]
+  X -> M
+  M -> Y
+  X -> Y
+  U -> M
+  U -> Y
+}")
+```
+
+- **Idade e AVC**: o Tabagismo é mediador e colisor (Idade → Tabagismo ← Álcool).
+- **Intervenção educacional (Aula I)**: o perfil da família afeta a qualidade parental e a nota.
+- **Fragmentação (Aula I)**: a qualidade do habitat pode afetar os predadores (mediador) e a sobrevivência.
+]
+
+---
+
 ## Outras variáveis de controle
 
 .pull-left[
 - Às vezes, não temos nenhum caminho não causal aberto entre $X$ e $Y$, mas acrescentar variáveis no modelo pode melhorar ou piorar a precisão da estimativa do efeito causal de $X$ sobre $Y$.
 
-- Pais de $Y$ que não são pais de $X$ podem ser incluídas para reduzir a variância da estimativa do efeito de $X$ sobre $Y$.
+- Pais de $Y$ que não são pais de $X$ podem ser incluídos para reduzir a variância da estimativa do efeito de $X$ sobre $Y$.
 
 - No DAG ao lado, incluir $Z$ no modelo não muda a estimativa do efeito de $X$ sobre $Y$, mas reduz a variância da estimativa.
 
