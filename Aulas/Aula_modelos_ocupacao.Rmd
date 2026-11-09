@@ -1,0 +1,1166 @@
+---
+title: "Modelos de ocorrência com detecção imperfeita"
+subtitle: "Disciplina BIE5781 - IB - USP"
+author:
+  - "PI (Paulo Inácio Prado)"
+date: '25 de novembro de 2026'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)#para que não bloqueie a sessão
+knitr::opts_chunk$set(prompt = TRUE, comment = "", eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width="85%",
+                      ## Figuras: mesma largura em todos os chunks (texto com tamanho consistente),
+                      ## alta resolução, e fundo transparente para herdar a cor dos slides
+                      fig.width = 8, fig.asp = 0.618,
+                      dpi = 300, fig.retina = 1,
+                      dev.args = list(bg = "transparent"))
+library(xaringanthemer)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(rethinking)
+```
+
+```{r xaringan-themer, include=FALSE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",# base 3
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3", # base 3
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"), text_font_size = "24px",
+  code_font_size="1rem",
+  extra_css = list(
+      ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0"),
+      ".destaque" = list("color" = "#dc322f", "font-size" = "3em",
+                         "font-weight" = "bold", "text-align" = "center"),
+      ## código em fonte menor, para blocos longos: .codigo-pequeno[ ... ]
+      ".codigo-pequeno .remark-code" = list("font-size" = "0.8rem")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+
+## clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+## ggplot theme
+theme_Publication <- function(base_size=14, base_family="helvetica") {
+    (theme_foundation(base_size=base_size, base_family=base_family)
+        + theme(plot.title = element_text(face = "bold",
+                                          size = rel(1.2), hjust = 0.5),
+                text = element_text(colour="#586e75"), # solarized base01
+                panel.background = element_rect(fill = "transparent", colour = NA),
+                plot.background = element_rect(fill = "transparent", colour = NA),
+                legend.background = element_rect(fill = "transparent", colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(1)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text = element_text(colour="#657b83"), # solarized base00
+                axis.line = element_line(colour="#586e75"), # solarized base01
+                axis.ticks = element_line(colour="#586e75"),
+                panel.grid.major = element_line(colour="#eee8d5"), # solarized base2
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(fill = "transparent", colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                legend.spacing = unit(0.2, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#eee8d5",fill="#eee8d5"), # solarized base2
+                strip.text = element_text(face="bold", colour="#586e75")
+                ))
+}
+```
+
+```{r funcoes}
+## Formatação de números no padrão brasileiro
+fmt <- function(x, d = 0) format(round(x, d), big.mark = ".", decimal.mark = ",", nsmall = d)
+## Média e intervalo de 95% de uma posterior
+resumo <- function(a) c(media = mean(a), inf = unname(PI(a, 0.95)[1]), sup = unname(PI(a, 0.95)[2]))
+## Média e intervalo de 95% como texto
+med_ic <- function(a) paste0(fmt(mean(a), 2), " [", fmt(PI(a, 0.95)[1], 2), "; ",
+                             fmt(PI(a, 0.95)[2], 2), "]")
+## Tabela de uma saída do precis, com vírgula decimal
+tab_precis <- function(tab, pars = rownames(tab)) {
+    tab <- as.data.frame(tab)[pars, c("mean", "sd", "2.5%", "97.5%", "rhat")]
+    kable(tab, digits = 2, col.names = c("Média", "DP", "2,5%", "97,5%", "Rhat"),
+          format.args = list(decimal.mark = ","))
+}
+## Cores
+cor.real <- "#859900"    # valores usados na simulação
+cor.mod <- "#dc322f"     # modelo de ocupação
+cor.ing <- "#268bd2"     # estimativa ingênua
+cor.base <- "#586e75"
+
+## Ajusta os modelos com o código mostrado nos slides e guarda as amostras
+## das posteriores e as saídas do precis em um arquivo .rds.
+## Nas próximas compilações, os resultados são lidos do arquivo, sem reajustar,
+## a menos que os dados simulados ou o código dos modelos tenham mudado.
+## (O cache do knitr não serve aqui: objetos do ulam ajustados com cmdstanr
+## apontam para arquivos temporários que são apagados ao fim da sessão)
+## Uso interativo (rodando os chunks no console): a função usa os modelos
+## que já estiverem na sessão (rode antes os chunks dos modelos) ou, se
+## não estiverem, lê os resultados salvos na última compilação.
+ajusta_ou_le <- function(arquivo, rotulos, objetos, dados) {
+    ## Amostras das posteriores, precis e diagnósticos dos modelos que estão na sessão
+    extrai <- function() {
+        mods <- lapply(setNames(objetos, objetos), get, envir = globalenv())
+        list(post = lapply(mods, extract.samples),
+             precis = lapply(mods, precis, depth = 2, prob = 0.95),
+             diag = sapply(mods, function(m)
+                 c(divergencias = divergent(m),
+                   rhat.max = max(precis(m, depth = 2)$rhat, na.rm = TRUE))))
+    }
+    if (!isTRUE(getOption("knitr.in.progress"))) {
+        if (all(sapply(objetos, exists, envir = globalenv()))) return(extrai())
+        if (file.exists(arquivo)) return(readRDS(arquivo))
+        stop("Rode antes os chunks ", paste(rotulos, collapse = ", "),
+             ", ou compile o documento uma vez.")
+    }
+    ## Na compilação: reajusta só se os dados ou o código dos modelos mudaram
+    tmp <- tempfile(); saveRDS(dados, tmp, compress = FALSE)
+    md5 <- unname(tools::md5sum(tmp))
+    codigo <- lapply(rotulos, function(r) as.character(knitr::knit_code$get(r)))
+    if (file.exists(arquivo)) {
+        res <- readRDS(arquivo)
+        if (identical(res$md5, md5) && identical(res$codigo, codigo)) return(res)
+    }
+    set.seed(42)
+    for (r in rotulos) eval(parse(text = knitr::knit_code$get(r)), envir = globalenv())
+    res <- c(list(md5 = md5, codigo = codigo), extrai())
+    saveRDS(res, arquivo)
+    res
+}
+```
+
+## Inventários em muitos sítios
+
+.pull-left[
+
+* Procuramos uma espécie em muitos **sítios**: locais, manchas de
+  hábitat, lagoas, hospedeiros...
+
+* O resultado de cada busca é binário: a espécie foi **registrada (1)**
+  ou **não registrada (0)**.
+
+* Perguntas típicas:
+  * Em que fração dos sítios a espécie ocorre?
+  * Quais características dos sítios afetam a ocorrência?
+
+* A análise padrão seria uma regressão logística dos 0 e 1.
+]
+
+.pull-right[
+
+<br>
+
+| Sítio | Cobertura florestal (%) | Registro |
+|:-----:|:-----------------------:|:--------:|
+| 1     | 85                      | 1        |
+| 2     | 40                      | 0        |
+| 3     | 62                      | 1        |
+| 4     | 90                      | 0        |
+| 5     | 15                      | 0        |
+| ...   | ...                     | ...      |
+
+.right[.f6[Dados hipotéticos.]]
+]
+
+---
+
+## O problema: dois tipos de zero
+
+.pull-left[
+
+* Um **1** é inequívoco: a espécie está no sítio (sem erros de
+  identificação).
+
+* Um **0** pode acontecer por duas razões:
+  1. a espécie **não ocorre** no sítio (zero verdadeiro);
+  2. a espécie **ocorre, mas não foi detectada** (falso zero).
+
+* Espécies raras, crípticas, de baixa densidade ou em hábitats onde são
+  difíceis de ver geram muitos falsos zeros.
+]
+
+.pull-right[
+
+<br>
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Consequências** de ignorar a detecção imperfeita:
+
+* A proporção de sítios com registro **subestima** a ocorrência.
+
+* Se uma variável afeta a detecção, seu efeito se mistura com o efeito
+  sobre a ocorrência: as estimativas dos efeitos ficam **enviesadas**,
+  podendo até inverter de sinal.
+]
+]
+
+---
+
+## A solução: visitas repetidas
+
+.pull-left[
+
+* Cada sítio é visitado mais de uma vez, num período em que a ocupação
+  não muda.
+
+* O registro de cada sítio passa a ser um **histórico de detecções**.
+
+* Sítios com detecção têm 0 e 1 no histórico: a frequência dos 0 nestes
+  sítios informa sobre a **probabilidade de detecção**.
+
+* Com isso, é possível separar a **probabilidade de ocorrência** e a
+  **probabilidade de detecção** (MacKenzie et al. 2002).
+]
+
+.pull-right[
+
+<br>
+
+| Sítio | Visita 1 | Visita 2 | Visita 3 | Visita 4 |
+|:-----:|:--------:|:--------:|:--------:|:--------:|
+| 1     | 0        | 1        | 1        | 0        |
+| 2     | 0        | 0        | 0        | 0        |
+| 3     | 1        | 0        | 0        | 0        |
+| 4     | 0        | 0        | 1        | 0        |
+| 5     | 0        | 0        | 0        | 0        |
+| ...   | ...      | ...      | ...      | ...      |
+
+.f6[Os sítios 1, 3 e 4 seriam zeros com qualquer uma das visitas sozinha.
+Com uma única visita, só é possível estimar o produto das duas
+probabilidades.]
+]
+
+---
+class: inverse, center, middle
+
+# Modelo com ocorrência e detecção constantes
+
+---
+
+## Probabilidades dos registros
+
+.pull-left[
+
+Em **uma visita** a um sítio:
+
+* A espécie ocorre com probabilidade $\phi$.
+
+* Se ocorre, é detectada com probabilidade $p$.
+
+Os dois resultados possíveis:
+
+$$\begin{aligned}
+\Pr(\text{detecção}) &= \phi \, p \\[0.5em]
+\Pr(\text{não detecção}) &= \underbrace{\phi \, (1 - p)}_{\text{falso zero}} + \underbrace{(1 - \phi)}_{\text{zero verdadeiro}}
+\end{aligned}$$
+
+.f6[Na literatura a probabilidade de ocorrência costuma ser chamada de $\psi$.]
+]
+
+.pull-right[
+```{r arvore, fig.width = 6, fig.asp = 0.85, out.width = "100%"}
+nos <- data.frame(x = c(0, 1.4, 1.4, 3, 3),
+                  y = c(0, 1, -1, 1.6, 0.4),
+                  rotulo = c("Sítio", "Ocorre", "Não ocorre",
+                             "Detectada", "Não detectada"))
+ramos <- data.frame(x = c(0, 0, 1.4, 1.4), y = c(0, 0, 1, 1),
+                    xend = c(1.4, 1.4, 3, 3), yend = c(1, -1, 1.6, 0.4),
+                    prob = c("phi", "1 - phi", "p", "1 - p"))
+folhas <- data.frame(y = c(1.6, 0.4, -1), reg = c("1", "0", "0"),
+                     prob = c("phi * p", "phi * (1 - p)", "1 - phi"))
+ggplot() +
+    geom_segment(data = ramos, aes(x, y, xend = xend, yend = yend), colour = cor.base) +
+    geom_label(data = ramos, aes((x + xend) / 2, (y + yend) / 2, label = prob),
+               parse = TRUE, size = 6, colour = "#cb4b16", fill = "#fdf6e3",
+               label.size = 0) +
+    geom_label(data = nos, aes(x, y, label = rotulo), size = 5, colour = cor.base,
+               fill = "#fdf6e3") +
+    geom_text(data = folhas, aes(4.3, y, label = reg, colour = reg),
+              size = 7, fontface = "bold") +
+    geom_text(data = folhas, aes(5, y, label = prob, colour = reg),
+              parse = TRUE, size = 6, hjust = 0) +
+    annotate("text", x = c(4.3, 5), y = 2.15, label = c("Registro", "Prob."),
+             size = 5, fontface = "bold", colour = cor.base, hjust = c(0.5, 0)) +
+    scale_colour_manual(values = c("1" = cor.real, "0" = cor.mod), guide = "none") +
+    coord_cartesian(xlim = c(-0.4, 5.9), ylim = c(-1.3, 2.2)) +
+    theme_void()
+```
+]
+
+---
+
+## Probabilidades dos históricos de detecção
+
+.pull-left[
+
+Com $J$ visitas **independentes** a cada sítio, seja $y_i$ o número de
+visitas com detecção no sítio $i$:
+
+* Se $y_i > 0$, a espécie certamente ocorre:
+$$\Pr(y_i) = \phi \, \binom{J}{y_i} p^{y_i} (1 - p)^{J - y_i}$$
+
+* Se $y_i = 0$, a espécie ocorre e não foi detectada em nenhuma visita,
+  ou não ocorre:
+$$\Pr(y_i = 0) = \phi \, (1 - p)^J + (1 - \phi)$$
+
+* Com mais visitas, $(1 - p)^J$ diminui: menos falsos zeros.
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+```{r sim-const, echo = TRUE}
+set.seed(2)
+M <- 200       # n de sítios
+J <- 4         # n de visitas por sítio
+phi.sim <- 0.6 # prob. de ocorrência
+p.sim <- 0.3   # prob. de detecção
+## Ocorrência (não observada)
+z <- rbinom(M, size = 1, prob = phi.sim)
+## Histórico de detecções (M x J)
+Y <- matrix(rbinom(M * J, size = 1,
+                   prob = z * p.sim),
+            nrow = M)
+## n de visitas com detecção
+y <- rowSums(Y)
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+$$\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi) \\[0.5em]
+y_i &\sim \text{Binomial}(J, \, z_i \, p) \\[0.5em]
+\text{logit}(\phi) &= \alpha_\phi \\[0.5em]
+\text{logit}(p) &= \alpha_p \\[0.5em]
+\alpha_\phi, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5)
+\end{aligned}$$
+
+* $z_i$: ocorrência (1) ou não (0) no sítio $i$, **variável latente**
+  (não observada).
+
+* Se $z_i = 0$, a probabilidade de detecção é zero.
+]
+
+.pull-right[
+
+* É um modelo **hierárquico**: a distribuição de $y_i$ depende de
+  $z_i$, que tem sua própria distribuição.
+
+* O Stan não amostra variáveis discretas como $z_i$. Por isso, somamos
+  (**marginalizamos**) as duas possibilidades para $z_i$:
+
+$$\begin{aligned}
+\Pr(y_i) = \; &\phi \; \text{Binomial}(y_i \mid J, p) \; + \\[0.3em]
+&(1 - \phi) \; \mathbb{1}(y_i = 0)
+\end{aligned}$$
+
+.f6[$\mathbb{1}(y_i = 0)$ vale 1 se não houve detecção e 0 caso contrário:
+se a espécie não ocorre, a única possibilidade é $y_i = 0$. É uma
+**mistura** de duas distribuições, como os modelos inflados de zeros.]
+]
+
+---
+
+## O modelo no rethinking
+
+.pull-left[
+```{r m-const, eval = FALSE, echo = TRUE}
+dl1 <- list(y = y, J = J,
+            det = as.integer(y > 0))
+m.const <- ulam(
+  alist(
+    y | det == 1 ~ custom(
+      log(phi) + binomial_lpmf(y | J, p)),
+    y | det == 0 ~ custom(log_sum_exp(
+      log(phi) + binomial_lpmf(y | J, p),
+      log1m(phi))),
+    logit(phi) <- a_phi,
+    logit(p) <- a_p,
+    c(a_phi, a_p) ~ dnorm(0, 1.5)
+  ),
+  data = dl1, chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+* `det`: indicadora de pelo menos uma detecção no sítio.
+
+* `y | det == 1 ~ ...`: a linha vale só para os sítios com `det == 1`.
+  Cada tipo de sítio tem sua verossimilhança.
+
+* `custom(...)`: soma a expressão ao log da posterior. Ou seja, nós
+  escrevemos o **log da verossimilhança** de cada observação.
+
+* Os detalhes estão no próximo slide.
+]
+
+```{r dados-const}
+dl1 <- list(y = y, J = J, det = as.integer(y > 0))
+```
+
+```{r ajuste-const, include = FALSE}
+aj.const <- ajusta_ou_le("posteriores_ocupacao_const.rds", "m-const", "m.const", dl1)
+post.const <- aj.const$post$m.const
+```
+
+---
+
+## Do modelo teórico ao código
+
+.pull-left[
+
+**Sítios com detecção** ( $y_i > 0$ ):
+
+$$\log \Pr(y_i) = \log \phi + \log \text{Binomial}(y_i \mid J, p)$$
+
+```{r, eval = FALSE, echo = TRUE}
+log(phi) + binomial_lpmf(y | J, p)
+```
+
+* `binomial_lpmf(y | J, p)`: log da função de probabilidade (*log
+  probability mass function*) da binomial, uma função do Stan.
+
+* O produto de probabilidades vira uma **soma** de logs.
+]
+
+.pull-right[
+
+**Sítios sem detecção** ( $y_i = 0$ ):
+
+$$\log \Pr(y_i) = \log \left[ \phi (1 - p)^J + (1 - \phi) \right]$$
+
+```{r, eval = FALSE, echo = TRUE}
+log_sum_exp(
+  log(phi) + binomial_lpmf(y | J, p),
+  log1m(phi))
+```
+
+* `log_sum_exp(a, b)` = $\log(e^a + e^b)$: o log de uma **soma** de
+  probabilidades, calculado a partir dos logs de cada parcela, de forma
+  numericamente estável.
+
+* `log1m(phi)` = $\log(1 - \phi)$.
+
+* Com $y_i = 0$, `binomial_lpmf(0 | J, p)` = $J \log(1 - p)$.
+]
+
+---
+
+## Premissas do modelo
+
+<br>
+
+* **População fechada**: a ocorrência ( $z_i$ ) não muda durante o
+  período das visitas. Se a espécie entra e sai dos sítios, $\phi$
+  passa a ser a probabilidade de **uso** do sítio.
+
+* **Probabilidades constantes**: $\phi$ é a mesma em todos os sítios e
+  $p$ é a mesma em todos os sítios e visitas.
+
+* **Independência**: dada a ocorrência, as detecções em visitas
+  diferentes são independentes. A ocorrência em um sítio é independente
+  da ocorrência nos outros.
+
+* **Sem falsos positivos**: a espécie nunca é registrada onde não ocorre
+  (identificação correta).
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Variação não modelada na detecção entre sítios (heterogeneidade)
+tende a fazer o modelo **subestimar** $\phi$.
+]
+
+---
+
+## Resultados
+
+.pull-left[
+```{r precis-const, eval = FALSE, echo = TRUE}
+precis(m.const, prob = 0.95)
+```
+```{r tab-const}
+tab_precis(aj.const$precis$m.const, c("a_phi", "a_p"))
+```
+
+.f6[Escala logito. Valores usados na simulação:
+$\alpha_\phi$ = `r fmt(logit(phi.sim), 2)` e $\alpha_p$ = `r fmt(logit(p.sim), 2)`.]
+
+```{r, eval = FALSE, echo = TRUE}
+post <- extract.samples(m.const)
+phi <- inv_logit(post$a_phi)
+p <- inv_logit(post$a_p)
+```
+]
+
+.pull-right[
+```{r grafico-const, fig.width = 6, fig.asp = 0.9, out.width = "100%"}
+d.const <- rbind(
+    data.frame(par = "Ocorrência (φ)", valor = inv_logit(post.const$a_phi)),
+    data.frame(par = "Detecção (p)", valor = inv_logit(post.const$a_p)))
+d.const$par <- factor(d.const$par, levels = c("Ocorrência (φ)", "Detecção (p)"))
+ref.const <- rbind(
+    data.frame(par = c("Ocorrência (φ)", "Detecção (p)"), valor = c(phi.sim, p.sim),
+               tipo = "Valor real"),
+    data.frame(par = "Ocorrência (φ)", valor = mean(dl1$det), tipo = "Ingênua"))
+ref.const$par <- factor(ref.const$par, levels = levels(d.const$par))
+ggplot(d.const, aes(valor)) +
+    geom_density(colour = cor.mod, fill = cor.mod, alpha = 0.25, linewidth = 1) +
+    geom_vline(data = ref.const, aes(xintercept = valor, linetype = tipo, colour = tipo),
+               linewidth = 1) +
+    scale_colour_manual(values = c("Valor real" = cor.real, "Ingênua" = cor.ing), name = NULL) +
+    scale_linetype_manual(values = c("Valor real" = "dashed", "Ingênua" = "dotted"), name = NULL) +
+    facet_wrap(~ par, ncol = 1, scales = "free_y") +
+    labs(x = "Probabilidade", y = "Densidade posterior") +
+    theme_Publication(16) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+.f6[Ingênua: proporção de sítios com pelo menos uma detecção.]
+]
+
+---
+
+## Quantidade derivada: ocorrência onde não houve detecção
+
+.pull-left[
+
+Qual a probabilidade de a espécie ocorrer em um sítio sem nenhuma
+detecção?
+
+Pelo teorema de Bayes:
+
+$$\begin{aligned}
+\Pr(z_i = 1 \mid y_i = 0) &= \frac{\Pr(y_i = 0 \mid z_i = 1) \Pr(z_i = 1)}{\Pr(y_i = 0)} \\[0.5em]
+&= \frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
+\end{aligned}$$
+
+* **Numerador**: o caminho da árvore que gera um falso zero.
+
+* **Denominador**: todos os caminhos que geram um zero.
+]
+
+.pull-right[
+
+Calculamos a expressão para cada amostra da posterior:
+
+```{r derivada, eval = FALSE, echo = TRUE}
+## P(ocorre | nenhuma detecção)
+phi0 <- phi * (1 - p)^J /
+    (phi * (1 - p)^J + (1 - phi))
+## n de sítios ocupados:
+## sítios com detecção + um sorteio
+## entre os sítios sem detecção
+n0 <- sum(dl1$det == 0)
+N.ocup <- sum(dl1$det) +
+    rbinom(length(phi0), n0, phi0)
+```
+
+.f6[O número de sítios ocupados na amostra é outra quantidade derivada:
+os sítios com detecção estão ocupados com certeza, e cada sítio sem
+detecção está ocupado com probabilidade $\Pr(z_i = 1 \mid y_i = 0)$.]
+]
+
+---
+
+## Quantidades derivadas: posteriores
+
+```{r calcula-derivada}
+phi <- inv_logit(post.const$a_phi)
+p <- inv_logit(post.const$a_p)
+phi0 <- phi * (1 - p)^J / (phi * (1 - p)^J + (1 - phi))
+n0 <- sum(dl1$det == 0)
+set.seed(42)
+N.ocup <- sum(dl1$det) + rbinom(length(phi0), n0, phi0)
+phi0.real <- phi.sim * (1 - p.sim)^J / (phi.sim * (1 - p.sim)^J + (1 - phi.sim))
+```
+
+.pull-left[
+```{r grafico-phi0, fig.width = 6, fig.asp = 0.75, out.width = "100%"}
+ggplot(data.frame(phi0 = phi0), aes(phi0)) +
+    geom_density(colour = cor.mod, fill = cor.mod, alpha = 0.25, linewidth = 1) +
+    geom_vline(aes(xintercept = phi0.real, linetype = "Valor real"),
+               colour = cor.real, linewidth = 1) +
+    scale_linetype_manual(values = c("Valor real" = "dashed"), name = NULL) +
+    labs(x = "P(ocorre | nenhuma detecção)", y = "Densidade posterior") +
+    theme_Publication(16) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+.f6[Valor real: calculado com $\phi$ e $p$ da simulação. Na amostra
+simulada, `r sum(z[y == 0])` dos `r n0` sítios sem detecção estavam
+ocupados (`r fmt(100 * mean(z[y == 0]))`%).]
+]
+
+.pull-right[
+```{r grafico-nocup, fig.width = 6, fig.asp = 0.75, out.width = "100%"}
+ggplot(data.frame(N = N.ocup), aes(N)) +
+    geom_bar(fill = cor.mod, alpha = 0.5) +
+    geom_vline(aes(xintercept = sum(z), linetype = "Valor real", colour = "Valor real"),
+               linewidth = 1) +
+    geom_vline(aes(xintercept = sum(dl1$det), linetype = "Ingênua", colour = "Ingênua"),
+               linewidth = 1) +
+    scale_colour_manual(values = c("Valor real" = cor.real, "Ingênua" = cor.ing), name = NULL) +
+    scale_linetype_manual(values = c("Valor real" = "dashed", "Ingênua" = "dotted"), name = NULL) +
+    labs(x = paste0("N de sítios ocupados (de ", M, ")"), y = "Frequência (amostras)") +
+    theme_Publication(16) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+.f6[Ingênua: n de sítios com pelo menos uma detecção.]
+]
+
+---
+class: inverse, center, middle
+
+# Covariáveis na ocorrência e na detecção
+
+---
+
+## Uma variável que afeta os dois processos
+
+.pull-left[
+
+* Exemplo: a **densidade da vegetação** ( $x$ ) de cada sítio.
+
+* A espécie prefere vegetação densa: $\phi$ **aumenta** com $x$.
+
+* Mas na vegetação densa é mais difícil vê-la: $p$ **diminui** com $x$.
+
+* Uma regressão logística dos registros mistura os dois efeitos.
+
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+```{r sim-cov, echo = TRUE}
+set.seed(2024)
+M <- 300; J <- 4
+x <- rnorm(M) # densidade da vegetação
+## Efeitos na escala logito
+phi.x <- inv_logit(0.3 + 1 * x)
+p.x <- inv_logit(-0.5 - 1 * x)
+z <- rbinom(M, 1, phi.x)
+Y <- matrix(rbinom(M * J, 1, z * p.x),
+            nrow = M)
+y <- rowSums(Y)
+dl2 <- list(y = y, J = J, x = x,
+            det = as.integer(y > 0))
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+$$\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\[0.5em]
+y_i &\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.5em]
+\text{logit}(\phi_i) &= \alpha_\phi + \beta_\phi \, x_i \\[0.5em]
+\text{logit}(p_i) &= \alpha_p + \beta_p \, x_i \\[0.5em]
+\alpha_\phi, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\[0.5em]
+\beta_\phi, \, \beta_p &\sim \text{Normal}(0, \, 1)
+\end{aligned}$$
+
+* Cada sítio tem sua probabilidade de ocorrência ( $\phi_i$ ) e de
+  detecção ( $p_i$ ).
+
+* As covariáveis de $\phi$ e de $p$ podem ser as mesmas ou diferentes.
+]
+
+.pull-right[
+```{r m-cov, eval = FALSE, echo = TRUE}
+m.cov <- ulam(
+  alist(
+    y | det == 1 ~ custom(
+      log(phi) + binomial_lpmf(y | J, p)),
+    y | det == 0 ~ custom(log_sum_exp(
+      log(phi) + binomial_lpmf(y | J, p),
+      log1m(phi))),
+    logit(phi) <- a_phi + b_phi * x,
+    logit(p) <- a_p + b_p * x,
+    c(a_phi, a_p) ~ dnorm(0, 1.5),
+    c(b_phi, b_p) ~ dnorm(0, 1)
+  ),
+  data = dl2, chains = 4, cores = 4)
+```
+
+.f6[A verossimilhança é a mesma do modelo anterior: só mudam os preditores
+lineares de `phi` e `p`.]
+]
+
+---
+
+## Comparação com uma regressão logística ingênua
+
+.pull-left[
+
+$$\begin{aligned}
+d_i &\sim \text{Bernoulli}(q_i) \\[0.5em]
+\text{logit}(q_i) &= a + b \, x_i \\[0.5em]
+a &\sim \text{Normal}(0; \, 1{,}5) \\[0.5em]
+b &\sim \text{Normal}(0, \, 1)
+\end{aligned}$$
+
+* $d_i$: indicadora de pelo menos uma detecção no sítio $i$.
+
+* $q_i$ não é a probabilidade de ocorrência. É a probabilidade de a
+  espécie **ocorrer e ser detectada** ao menos uma vez:
+  $q_i = \phi_i \left[ 1 - (1 - p_i)^J \right]$.
+]
+
+.pull-right[
+```{r m-ing, eval = FALSE, echo = TRUE}
+m.ing <- ulam(
+  alist(
+    det ~ dbern(q),
+    logit(q) <- a + b * x,
+    a ~ dnorm(0, 1.5),
+    b ~ dnorm(0, 1)
+  ),
+  data = dl2, chains = 4, cores = 4)
+```
+]
+
+```{r ajuste-cov, include = FALSE}
+aj.cov <- ajusta_ou_le("posteriores_ocupacao_cov.rds", c("m-cov", "m-ing"),
+                       c("m.cov", "m.ing"), dl2)
+post.cov <- aj.cov$post$m.cov
+post.ing <- aj.cov$post$m.ing
+```
+
+---
+
+## Resultados
+
+```{r grafico-cov, fig.width = 12, fig.asp = 0.42, out.width = "92%"}
+x.grade <- seq(-2.5, 2.5, length.out = 100)
+curva <- function(a, b, nome, par)
+    data.frame(x = x.grade, modelo = nome, par = par,
+               t(sapply(x.grade, function(xx) resumo(inv_logit(a + b * xx)))))
+d.cov <- rbind(
+    curva(post.cov$a_phi, post.cov$b_phi, "Modelo de ocupação", "Ocorrência (φ)"),
+    curva(post.ing$a, post.ing$b, "Logística ingênua", "Ocorrência (φ)"),
+    curva(post.cov$a_p, post.cov$b_p, "Modelo de ocupação", "Detecção (p)"))
+reais <- rbind(
+    data.frame(x = x.grade, par = "Ocorrência (φ)", valor = inv_logit(0.3 + x.grade)),
+    data.frame(x = x.grade, par = "Detecção (p)", valor = inv_logit(-0.5 - x.grade)))
+d.cov$par <- factor(d.cov$par, levels = c("Ocorrência (φ)", "Detecção (p)"))
+reais$par <- factor(reais$par, levels = levels(d.cov$par))
+ggplot(d.cov, aes(x)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = modelo), alpha = 0.25) +
+    geom_line(aes(y = media, colour = modelo), linewidth = 1) +
+    geom_line(data = reais, aes(y = valor, linetype = "Valor real"), colour = cor.real,
+              linewidth = 1) +
+    scale_colour_manual(values = c("Modelo de ocupação" = cor.mod, "Logística ingênua" = cor.ing),
+                        name = NULL) +
+    scale_fill_manual(values = c("Modelo de ocupação" = cor.mod, "Logística ingênua" = cor.ing),
+                      name = NULL) +
+    scale_linetype_manual(values = c("Valor real" = "dashed"), name = NULL) +
+    facet_wrap(~ par) +
+    coord_cartesian(ylim = c(0, 1)) +
+    labs(x = "Densidade da vegetação (padronizada)", y = "Probabilidade") +
+    theme_Publication(18) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+
+.right[.f6[Linhas e faixas: média e intervalo de 95% da posterior. Inclinação
+de $\phi$ (escala logito): real = 1; modelo de ocupação = `r fmt(mean(post.cov$b_phi), 2)`;
+logística ingênua = `r fmt(mean(post.ing$b), 2)`.]]
+
+---
+
+## Premissas do modelo com covariáveis
+
+<br>
+
+* As mesmas do modelo anterior, mas agora $\phi$ e $p$ são constantes
+  **condicionadas às covariáveis**: sítios com os mesmos valores das
+  covariáveis têm as mesmas probabilidades.
+
+* As relações são **lineares na escala logito**.
+
+* As covariáveis são medidas **sem erro**.
+
+* Covariáveis de $\phi$ devem descrever o **sítio**, e não mudar entre
+  as visitas (população fechada).
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Quando a mesma variável afeta a ocorrência e a detecção, os dois efeitos
+só podem ser separados porque as visitas repetidas informam sobre $p$.
+É importante pensar *a priori* que variáveis podem afetar cada processo.
+]
+
+---
+
+## Covariáveis de detecção que mudam a cada visita
+
+.pull-left[
+
+* A detecção pode depender das condições de **cada visita**: horário,
+  temperatura, chuva, observador, esforço...
+
+* Agora $p_{ij}$ varia entre as visitas $j$ de um mesmo sítio $i$.
+
+* O número de detecções $y_i$ **deixa de ser binomial** (as $J$
+  tentativas têm probabilidades diferentes).
+
+* Usamos o histórico de detecções completo: cada visita é uma
+  Bernoulli.
+]
+
+.pull-right[
+
+$$\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\[0.5em]
+y_{ij} &\sim \text{Bernoulli}(z_i \, p_{ij}) \\[0.5em]
+\text{logit}(\phi_i) &= \alpha_\phi + \beta_\phi \, x_i \\[0.5em]
+\text{logit}(p_{ij}) &= \alpha_p + \beta_p \, x_i + \gamma_p \, w_{ij}
+\end{aligned}$$
+
+.f6[$w_{ij}$: covariável da visita $j$ ao sítio $i$ (por exemplo, a
+temperatura). Prioris como no modelo anterior, e $\gamma_p \sim
+\text{Normal}(0, 1)$.]
+
+**Verossimilhança marginal**:
+
+$$\begin{aligned}
+\text{com detecção: } &\phi_i \prod_j p_{ij}^{y_{ij}} (1 - p_{ij})^{1 - y_{ij}} \\[0.3em]
+\text{sem detecção: } &\phi_i \prod_j (1 - p_{ij}) + (1 - \phi_i)
+\end{aligned}$$
+]
+
+---
+
+## Estrutura dos dados
+
+.pull-left[
+
+* Duas **matrizes** sítios $\times$ visitas: os registros ( $Y$ ) e a
+  covariável de visita ( $W$ ).
+
+* Covariáveis de sítio continuam como vetores.
+
+```{r sim-vis, echo = TRUE}
+set.seed(2025)
+## temperatura (padronizada) de cada visita
+W <- matrix(rnorm(M * J), nrow = M)
+p.xw <- inv_logit(-0.5 - 1 * x + 0.8 * W)
+Y.v <- matrix(rbinom(M * J, 1, z * p.xw),
+              nrow = M)
+dl3 <- list(y = rowSums(Y.v), x = x,
+            det = as.integer(rowSums(Y.v) > 0),
+            Y = Y.v, W = W)
+```
+
+.f6[Mesmos sítios ( $x$ e $z$ ) da simulação anterior.]
+]
+
+.pull-right[
+```{r tabela-vis}
+tab.vis <- data.frame(sitio = 1:5, x = x[1:5], Y.v[1:5, ], W[1:5, ])
+kable(tab.vis, digits = 1, format.args = list(decimal.mark = ","),
+      col.names = c("Sítio", "x", paste0("Y", 1:J), paste0("W", 1:J)))
+```
+
+<br>
+
+.f6[`Y[i]` e `W[i]` são as linhas $i$ das matrizes: o histórico de
+detecções e as temperaturas das $J$ visitas ao sítio $i$.]
+]
+
+---
+
+## O modelo no rethinking
+
+.codigo-pequeno[
+```{r m-vis, eval = FALSE, echo = TRUE}
+m.vis <- ulam(
+  alist(
+    y | det == 1 ~ custom(log(phi) +
+      dot_product(Y[i], log_inv_logit(a_p + b_p * x[i] + c_p * W[i])) +
+      dot_product(1 - Y[i], log1m_inv_logit(a_p + b_p * x[i] + c_p * W[i]))),
+    y | det == 0 ~ custom(log_sum_exp(
+      log(phi) + sum(log1m_inv_logit(a_p + b_p * x[i] + c_p * W[i])),
+      log1m(phi))),
+    logit(phi) <- a_phi + b_phi * x,
+    c(a_phi, a_p) ~ dnorm(0, 1.5),
+    c(b_phi, b_p, c_p) ~ dnorm(0, 1)
+  ),
+  data = dl3, chains = 4, cores = 4)
+```
+]
+
+.pull-left[
+* `a_p + b_p * x[i] + c_p * W[i]`: vetor com o logito de $p_{ij}$ das
+  $J$ visitas ao sítio $i$.
+
+* `log_inv_logit()` e `log1m_inv_logit()`: $\log p_{ij}$ e
+  $\log(1 - p_{ij})$.
+]
+
+.pull-right[
+* `dot_product(Y[i], log p)` = $\sum_j y_{ij} \log p_{ij}$: soma os logs
+  das visitas com detecção.
+
+* Aqui o índice `[i]` é escrito explicitamente, pois `Y` e `W` são
+  matrizes.
+]
+
+```{r ajuste-vis, include = FALSE}
+aj.vis <- ajusta_ou_le("posteriores_ocupacao_vis.rds", "m-vis", "m.vis", dl3)
+```
+
+---
+
+## Resultados
+
+.pull-left[
+```{r tab-vis}
+pr.vis <- as.data.frame(aj.vis$precis$m.vis)[c("a_phi", "b_phi", "a_p", "b_p", "c_p"), ]
+kable(data.frame(Real = c(0.3, 1, -0.5, -1, 0.8), pr.vis[, c("mean", "2.5%", "97.5%", "rhat")]),
+      digits = 2, col.names = c("Valor real", "Média", "2,5%", "97,5%", "Rhat"),
+      format.args = list(decimal.mark = ","))
+```
+.f6[Escala logito. Saída do `precis(m.vis, prob = 0.95)`.]
+]
+
+.pull-right[
+
+* As estimativas recuperam os valores usados na simulação.
+
+* **Sítios com números diferentes de visitas**: complete as matrizes com
+  zeros e inclua uma matriz indicadora das visitas realizadas, que
+  multiplica os termos de cada visita.
+
+* Com covariáveis só de sítio, a versão binomial é equivalente e mais
+  rápida.
+]
+
+---
+class: inverse, center, middle
+
+# Efeitos aleatórios
+
+---
+
+## Sítios agrupados
+
+.pull-left[
+
+* Os sítios costumam estar agrupados: em paisagens, bacias, fragmentos,
+  regiões...
+
+* Sítios de um mesmo grupo podem ter ocorrência mais parecida, por
+  fatores não medidos: **dependência** entre as observações.
+
+* Como nos modelos hierárquicos que já vimos, cada grupo tem seu
+  intercepto, que vem de uma distribuição com parâmetros estimados
+  (**agregação parcial**).
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+```{r sim-ef, echo = TRUE}
+set.seed(42)
+R <- 15; M <- 300; J <- 4
+reg <- rep(1:R, length.out = M) # região
+a.reg <- rnorm(R, 0.3, 1)  # interceptos
+x <- rnorm(M)
+z <- rbinom(M, 1,
+            inv_logit(a.reg[reg] + 1 * x))
+Y <- matrix(rbinom(M * J, 1,
+                   z * inv_logit(-0.5 - 1 * x)),
+            nrow = M)
+y <- rowSums(Y)
+dl4 <- list(y = y, J = J, x = x, reg = reg,
+            det = as.integer(y > 0))
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+$$\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\[0.4em]
+y_i &\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
+\text{logit}(\phi_i) &= \alpha_{\text{REG}[i]} + \beta_\phi \, x_i \\[0.4em]
+\text{logit}(p_i) &= \alpha_p + \beta_p \, x_i \\[0.4em]
+\alpha_r &\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.4em]
+\bar\alpha, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\[0.4em]
+\beta_\phi, \, \beta_p &\sim \text{Normal}(0, \, 1) \\[0.4em]
+\sigma &\sim \text{Exponencial}(1)
+\end{aligned}$$
+]
+
+.pull-right[
+.codigo-pequeno[
+```{r m-ef, eval = FALSE, echo = TRUE}
+m.ef <- ulam(
+  alist(
+    y | det == 1 ~ custom(
+      log(phi) + binomial_lpmf(y | J, p)),
+    y | det == 0 ~ custom(log_sum_exp(
+      log(phi) + binomial_lpmf(y | J, p),
+      log1m(phi))),
+    logit(phi) <- abar + u[reg] * sigma +
+      b_phi * x,
+    logit(p) <- a_p + b_p * x,
+    u[reg] ~ dnorm(0, 1),
+    c(abar, a_p) ~ dnorm(0, 1.5),
+    c(b_phi, b_p) ~ dnorm(0, 1),
+    sigma ~ dexp(1),
+    gq> vector[reg]:a_r <<- abar + u * sigma
+  ),
+  data = dl4, chains = 4, cores = 4)
+```
+]
+
+.f6[Parametrização **não centrada**: $\alpha_r = \bar\alpha + u_r \, \sigma$,
+com $u_r \sim \text{Normal}(0, 1)$. A linha `gq>` calcula os $\alpha_r$
+como quantidade gerada.]
+]
+
+```{r ajuste-ef, include = FALSE}
+aj.ef <- ajusta_ou_le("posteriores_ocupacao_ef.rds", "m-ef", "m.ef", dl4)
+post.ef <- aj.ef$post$m.ef
+```
+
+---
+
+## Ocorrência em cada região
+
+```{r grafico-ef, fig.width = 12, fig.asp = 0.42, out.width = "92%"}
+est.reg <- data.frame(reg = 1:R, real = inv_logit(a.reg),
+                      ingenua = tapply(dl4$det, dl4$reg, mean),
+                      t(apply(inv_logit(post.ef$a_r), 2, resumo)))
+est.reg$indice <- rank(est.reg$real, ties.method = "first")
+phi.bar <- resumo(inv_logit(post.ef$abar))
+ggplot(est.reg, aes(indice)) +
+    annotate("rect", xmin = -Inf, xmax = Inf, ymin = phi.bar["inf"], ymax = phi.bar["sup"],
+             fill = "#93a1a1", alpha = 0.4) +
+    geom_pointrange(aes(y = media, ymin = inf, ymax = sup, colour = "Modelo hierárquico"),
+                    size = 0.4, linewidth = 0.8) +
+    geom_point(aes(y = real, colour = "Valor real"), shape = 4, size = 4, stroke = 1.5) +
+    geom_point(aes(y = ingenua, colour = "Ingênua"), size = 3) +
+    scale_colour_manual(values = c("Modelo hierárquico" = cor.mod, "Valor real" = cor.real,
+                                   "Ingênua" = cor.ing), name = NULL) +
+    scale_x_continuous(breaks = 1:R) +
+    labs(x = "Região (ordenadas pelo valor real)", y = "Prob. de ocorrência (x = 0)") +
+    theme_Publication(18) +
+    theme(legend.key.size = unit(0.8, "cm"))
+```
+
+.right[.f6[Modelo hierárquico: média e intervalo de 95% da posterior de
+$\text{logit}^{-1}(\alpha_r)$. Ingênua: proporção de sítios com detecção na
+região. Faixa cinza: intervalo de 95% de $\text{logit}^{-1}(\bar\alpha)$.
+Desvio-padrão entre regiões ( $\sigma$ ): real = 1; estimado =
+`r med_ic(post.ef$sigma)`.]]
+
+---
+
+## Premissas adicionais e extensões
+
+.pull-left[
+
+**Premissas adicionais**
+
+* As regiões são uma amostra de uma **população de regiões**,
+  intercambiáveis entre si.
+
+* Os interceptos têm distribuição **normal na escala logito**.
+
+* Dada a região, os sítios são independentes.
+
+* Para estimar $\sigma$ é preciso um número razoável de regiões.
+]
+
+.pull-right[
+
+**Extensões**
+
+* Efeitos aleatórios na **detecção** (p.ex., observadores).
+
+* Inclinações variáveis entre grupos, como no modelo de COVID-19.
+
+* **Comunidades**: modelos multiespécies, com $\phi$ e $p$ de cada
+  espécie vindos de uma distribuição comum.
+
+* **Dinâmica**: colonização e extinção entre estações.
+
+* **Abundância**: no modelo de Royle & Nichols (2003), a variável
+  latente é o número de indivíduos, e não só a presença.
+]
+
+---
+
+## Para saber mais
+
+### Occupancy 
+
+* Kéry, M. & Royle, J. A. (2016). *Applied Hierarchical Modeling in
+  Ecology*. Vol. 1. Academic Press.
+
+* MacKenzie, D. I. et al. (2018). *Occupancy Estimation and Modeling*.
+  2ª ed. Academic Press.
+
+### Outros
+
+* Williams, Nichols, & Conroy (2002). Analysis and management of animal populations. Academic Press.
+* Buckland *et al.* (2004). Advanced distance sampling. Oxford University Press.
+* Thomas *et al.* (2015). Distance sampling: Methods and applications. Springer.
+* Kéry & Royle (2016 e 2020). Applied hierarchical modeling in ecology (Vols. 1 e 2). Academic Press.
+
+---
+
+## Pacotes
+
+* `unmarked`: modelos de ocupação e outros sem marcação individual (ML)
+* `ubms`: implementação Bayesiana de modelos do `unmarked` e outros 
+* `spOccupancy`: idem, Bayesiano com estrutura espacial
+* `inlabru`: Bayesiano com INLA, modelos espaciais e outros
+* `secr`: dados de marcação e recaptura com estrutura espacial 
+* `RMark`: interface R para programa clássico e maduro de marcação e recaptura (ML)
+* `Distance`, `dsm`, `mrds` : métodos baseados em distância (ML)
+* E muito mais!
