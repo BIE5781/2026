@@ -2,7 +2,7 @@
 title: "Inferência causal I"
 subtitle: "Conectando modelos científicos e estatísticos"
 author: "Diogo Melo"
-date: "16 de novembro de 2026"
+date: "6 de novembro de 2026"
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -534,9 +534,10 @@ print(fork)
 $$
 \begin{aligned}
 y &\sim \mathrm{Normal}(\mu, \sigma) \\
-\mu &= a + \beta_{x}x + \beta_{z}z \\
+\mu &= \alpha + \beta_{x}x + \beta_{z}z \\
 \alpha &\sim \mathrm{Normal}(0, 5) \\
-\beta_{x}, \beta_{z} &\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{x} &\sim \mathrm{Normal}(0, 0.3) \\
+\beta_{z} &\sim \mathrm{Normal}(0, 5) \\
 \sigma &\sim \mathrm{Exponential}(1)
 \end{aligned}
 $$
@@ -549,7 +550,7 @@ m2 <- quap(
     mu <- a + bx * x + bz * z,
     a ~ dnorm(0, 5),
     bx ~ dnorm(0, 0.3),
-    bz ~ dnorm(0,0.3),
+    bz ~ dnorm(0, 5),
     sigma ~ dexp(1)
   ),
   data = list(y = y, x = x, z = z)
@@ -857,7 +858,7 @@ Estimativa do efeito de $x$ controlando por $z$
 O ponto azul é o efeito direto de $x$ sobre $y$ ($0$): controlar pelo mediador bloqueia o caminho causal entre $x$ e $y$.
 
 ```{r figura-pipe-coef-com-correcao, echo=FALSE, eval=TRUE, fig.width=6, fig.height=5, out.width="70%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
-plot_coef(precis(m2, pars = c("bx", "bz")), xlim = c(-0.3, 2.5), verdadeiro = efeito_total, linha = 2)
+plot_coef(precis(m2, pars = c("bx", "bz")), xlim = c(-0.3, 2.5), verdadeiro = 0, linha = 2)
 ```
 ]
 
@@ -937,7 +938,7 @@ plot_dag("dag {
   T -> Pf
   T -> L
   L -> Pf
-}", side_labels = c(T = "Tratamento", Pi = "Peso inicial", Pf = "Peso final", L = "Áres de lesões"))
+}", side_labels = c(T = "Tratamento", Pi = "Peso inicial", Pf = "Peso final", L = "Área de lesões"))
 ```
 
 ---
@@ -955,10 +956,15 @@ plot_dag("dag {
   X -> Q
   X -> Y
   T -> Q
+  U [latent, pos=\"3.4,2\"]
   T -> Y
   Q -> Y
-}", side_labels = c(T = "Intervenção", X = "Educação dos pais", Q = "Qualidade\nparental", Y = "Nota"))
+  U -> Q
+  U -> Y
+}", side_labels = c(T = "Intervenção", X = "Educação dos pais", Q = "Qualidade\nparental", Y = "Nota", U = "Perfil da\nfamília"))
 ```
+
+$U$: perfil da família (não observado), que afeta tanto a qualidade parental quanto a nota.
 
 ---
 
@@ -994,7 +1000,7 @@ c(Q_baixa = 70 - (0.1 * 60 + 0.7 * 65) / 0.8,
   Q_alta = (0.7 * 80 + 0.2 * 100) / 0.9 - 90)
 ```
 
-Em $Q$ baixa, o controle também inclui quem melhoraria com a intervenção; em $Q$ alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamentocomparam grupos distintos.
+Em $Q$ baixa, o controle também inclui quem melhoraria com a intervenção; em $Q$ alta, só o grupo tratado inclui essas pessoas. Portanto, as diferenças entre controle e tratamento comparam grupos distintos.
 
 ---
 
@@ -1091,7 +1097,7 @@ Montgomery et al. (2018).
 --
 
 
-- **Exercicio:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
+- **Exercício:** Uma colega te escreve dizendo que está avaliando o efeito da fragmentação florestal (áreas contínuas vs. fragmentadas) na taxa de sobrevivência de filhotes de uma espécie de pássaro. A pergunta principal é se viver em fragmentos diminui a sobrevivência dos filhotes. No entanto, ela também mediu a abundância de predadores de ninho em cada área (que costuma ser bem maior nas bordas dos fragmentos). A dúvida é se ela deveria incluir a abundância de predadores como covariável no modelo.
 
 O que você responde?
 
@@ -1118,9 +1124,9 @@ O que você responde?
 
 $$
 \begin{aligned}
-y &\sim \mathcal{f}(u_y) \\
-x &\sim \mathcal{f}(u_x) \\
-z &\sim \mathcal{f}(x, y, u_z)
+y &= \mathcal{f}(u_y) \\
+x &= \mathcal{f}(u_x) \\
+z &= \mathcal{f}(x, y, u_z)
 \end{aligned}
 $$
 
@@ -1300,7 +1306,7 @@ Vamos supor que o tamanho corporal e a coloração não estão relacionados, mas
 
 ---
 
-## AIC e signicância não vão te salvar
+## AIC e significância não vão te salvar
 
 ```{r collider-significance_1, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
 set.seed(1); N <- 100
@@ -1311,7 +1317,7 @@ m1 <- lm(y ~ x); summary(m1)
 
 ---
 
-## AIC e signicância não vão te salvar
+## AIC e significância não vão te salvar
 
 .pull-left[
 ```{r collider-significance_2, echo=TRUE, eval=TRUE, fig.width=6, fig.height=5, out.width="60%", fig.align="center", dpi=200, dev="png", dev.args=list(bg="transparent")}
@@ -1332,7 +1338,7 @@ bbmle::AICtab(m1, m2)
 
 ## Referências
 
-- Cinelli e Hazlett (2020).
-- Montgomery et al. (2018).
+- Cinelli, C. e Hazlett, C. (2020). “Making sense of sensitivity: extending omitted variable bias.” *Journal of the Royal Statistical Society Series B*, 82(1), 39–67.
+- Montgomery, J. M., Nyhan, B. e Torres, M. (2018). “How conditioning on posttreatment variables can ruin your experiment and what to do about it.” *American Journal of Political Science*, 62(3), 760–775.
+- Pearl, J., Glymour, M. e Jewell, N. P. (2016). *Causal Inference in Statistics: A Primer*. Wiley.
 - Ripple, W. J. e Beschta, R. L. (2004). “Wolves and the ecology of fear: Can predation risk structure ecosystems?” *BioScience*, 54(8), 755–766.
-- Westreich et al. (2013).

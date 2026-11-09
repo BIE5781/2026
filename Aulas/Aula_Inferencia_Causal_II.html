@@ -30,7 +30,7 @@ class: center, middle, inverse, title-slide
 ### Diogo Melo
 ]
 .date[
-### 19 de outubro de 2026
+### 11 de novembro de 2026
 ]
 
 ---
@@ -44,28 +44,31 @@ class: center, middle, inverse, title-slide
 .pull-left-70  { float: left;  width: 64%; }
 .pull-right-30 { float: right; width: 32%; }
 .pull-left-70 &gt; :first-child, .pull-right-30 &gt; :first-child { margin-top: 0; }
+.pull-left-40  { float: left;  width: 40%; }
+.pull-right-60 { float: right; width: 58%; }
+.pull-left-40 &gt; :first-child, .pull-right-60 &gt; :first-child { margin-top: 0; }
 &lt;/style&gt;
 
 
 
-## Recaptitulando
+## Recapitulando
 
 .pull-left[
 - O uso de modelos estatísticos para estimativas de efeitos causais depende de um modelo causal subjacente.
-- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipótese sobre as independências condicionais entre as variáveis.
-- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **pipes**, **forks** e **colliders**.
+- O modelo causal pode ser representado por um DAG, que representa um conjunto de hipóteses sobre as independências condicionais entre as variáveis.
+- Todas as relações contidas nos DAGs podem ser decompostas em 3 tipos de estruturas: **cadeias** (pipes), **bifurcações** (forks) e **colisores** (colliders).
 - Cada tipo de relação tem implicações diferentes para o efeito estimado por um modelo estatístico.
 ]
 .pull-right[
-**Pipe**
+**Cadeia (pipe)**
 
 &lt;img src="figures/DAGS/pipe.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
-**Fork**
+**Bifurcação (fork)**
 
 &lt;img src="figures/DAGS/fork.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 
-**Collider**
+**Colisor (collider)**
 
 &lt;img src="figures/DAGS/colider.svg" alt="" width="90%" style="display: block; margin: auto;" /&gt;
 ]
@@ -99,7 +102,7 @@ $$
 
 ## Representando intervenções
 
-.pull-left[
+.pull-left-40[
 
 - Vamos imaginar uma intervenção na variável "regador" (`\(x_2\)`), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação `\(do(x_2)\)`, que remove todas as setas que entram em `\(x_2\)`.
 
@@ -114,7 +117,7 @@ x_5 &amp;= \mathcal{f}(x_4, u_5)
 $$
 
 ]
-.pull-right[
+.pull-right-60[
 &lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-condicionado-chuva-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ] 
 
@@ -122,7 +125,7 @@ $$
 
 ## Representando intervenções
 
-.pull-left[
+.pull-left-40[
 
 - Vamos imaginar uma intervenção na variável "regador" (`\(x_2\)`), que é uma variável que podemos manipular. A intervenção é representada por um nó de ação `\(do(x_2)\)`, que remove todas as setas que entram em `\(x_2\)`.
 
@@ -131,13 +134,13 @@ $$
 x_1 &amp;= \mathcal{f}(u_1) \\
 x_2^* &amp;= \mathrm{do}(x_2 = \text{ligado}) \\
 x_3 &amp;= \mathcal{f}(x_1, u_3) \\
-x_4 &amp;= \mathcal{f}(x_2, x_3, u_4) \\
+x_4 &amp;= \mathcal{f}(x_2^*, x_3, u_4) \\
 x_5 &amp;= \mathcal{f}(x_4, u_5)
 \end{aligned}`
 $$
 
 ]
-.pull-right[
+.pull-right-60[
 &lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-xy-condicionado-chuva-x2-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 ] 
 
@@ -152,7 +155,7 @@ $$
 - Para estimar um efeito causal usando um modelo estatístico, precisamos encontrar um conjunto de variáveis `\(Z\)` que podemos controlar, de forma que o efeito causal de `\(do(X)\)` sobre `\(Y\)` seja igual ao efeito estatístico de `\(X\)` sobre `\(Y\)` controlando por `\(Z\)`.
 .center[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-    `\(p(y | do(x)) = p(y | x, z)\)`
+    `\(p(y \mid do(x)) = \sum_z p(y \mid x, z)\, p(z)\)`
     ]]
 
 - Em quais condições existe um conjunto de variáveis `\(Z\)` que podemos controlar para estimar o efeito causal de `\(X\)` sobre `\(Y\)`?
@@ -168,13 +171,13 @@ $$
 
 .pull-left[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm pipes ou forks não controlados ficam abertos.**]
+**Caminhos que contêm cadeias ou bifurcações não controladas ficam abertos.**]
 
-- x -&gt; z -&gt; y
+- *X* → *Z* → *Y*
     - lm(y ~ x) : aberto
     - lm(y ~ x + z) : fechado
 
-- x &lt;- z -&gt; y
+- *X* ← *Z* → *Y*
     - lm(y ~ x) : aberto
     - lm(y ~ x + z) : fechado
 ]
@@ -183,9 +186,9 @@ $$
 
 .pull-right[
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Caminhos que contêm colliders ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
+**Caminhos que contêm colisores ficam fechados por padrão, mas se abrem quando condicionamos no colisor.**]
 
-- x -&gt; z &lt;- y
+- *X* → *Z* ← *Y*
     - lm(y ~ x) : fechado
     - lm(y ~ x + z) : aberto
 
@@ -202,7 +205,29 @@ Ferramentas automatizadas:
 
 ## Identifique todos os caminhos abertos de `\(X\)` a `\(Y\)`
 
-&lt;img src="figures/DAGS/paths_dag.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+
+
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-caminhos-dag-1.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Todos os caminhos de `\(X\)` a `\(Y\)`
+
+.pull-left[
+1. `\(X \rightarrow W \rightarrow Y\)`: **causal**, aberto
+
+2. `\(X \leftarrow Z \rightarrow Y\)`: aberto
+
+3. `\(X \leftarrow A \rightarrow Z \rightarrow Y\)`: aberto
+
+4. `\(X \leftarrow Z \leftarrow B \rightarrow Y\)`: aberto
+
+5. `\(X \leftarrow A \rightarrow Z \leftarrow B \rightarrow Y\)`: **fechado** (`\(Z\)` é um colisor)
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-caminhos-dag-lista-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
 
 ---
 
@@ -213,14 +238,57 @@ Ferramentas automatizadas:
     ]
 
 .pull-left[
-    - Descendentes de `\(X\)` não podem ser incluídos como variáveis de controle (nenhuma vaviável pós-tratamento).
-    - Todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)` devem ser bloqueados. 
+- Descendentes de `\(X\)` não podem ser incluídos como variáveis de controle (nenhuma variável pós-tratamento).
+
+- Todos os caminhos entre `\(X\)` e `\(Y\)` que incluam uma seta apontando para `\(X\)` devem ser bloqueados. 
 ]
 --
 .pull-right[
-- Variáveis que são Pipes e forks **bloqueiam** caminhos quando incluidas nos modelos.
+- Variáveis no meio de cadeias e bifurcações **bloqueiam** caminhos quando incluídas nos modelos.
 
-- Variáveis que são Colliders **abrem** caminhos quando incluidas nos modelos.
+- Variáveis que são colisores **abrem** caminhos quando incluídas nos modelos.
+]
+
+---
+
+## Aplicando o critério da porta dos fundos
+
+.pull-left[
+- Os caminhos 2 a 5 têm uma seta apontando para `\(X\)`. Os caminhos 2, 3 e 4 estão abertos e precisam ser fechados; o 5 já está fechado.
+
+- Controlar só por `\(Z\)` fecha 2, 3 e 4, mas **abre** o 5, pois `\(Z\)` é um colisor nesse caminho.
+
+- Incluir também `\(A\)` ou `\(B\)` fecha o caminho 5 de novo.
+
+- `\(W\)` é descendente de `\(X\)` e não pode entrar no modelo.
+
+Modelos que estimam o efeito causal de `\(X\)` sobre `\(Y\)`:
+
+- `lm(Y ~ X + Z + A)`
+- `lm(Y ~ X + Z + B)`
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-caminhos-dag-criterio-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## Critério da porta da frente (Front-door criterion)
+
+.pull-left[
+- E quando a porta dos fundos não pode ser fechada (confundidor não observado)?
+
+- Se todo o efeito de `\(X\)` em `\(Y\)` passa por um mediador `\(M\)` sem confundimento, podemos estimar o efeito em duas partes:
+  - `\(X \to M\)`: sem porta dos fundos aberta (o caminho por `\(U\)` passa pelo colisor `\(Y\)`).
+  - `\(M \to Y\)`: a porta dos fundos `\(M \leftarrow X \leftarrow U \to Y\)` é fechada condicionando em `\(X\)`.
+
+- Em modelos lineares, o efeito de `\(X\)` em `\(Y\)` é o produto `\(\beta_{XM} \times \beta_{MY}\)`.
+]
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-porta-frente-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+`\(M\)`: depósito de alcatrão nos pulmões. Se as suposições do DAG valerem, o efeito do tabagismo pode ser estimado mesmo que o genótipo proposto por Fisher (Aula I) não seja observado.
 ]
 
 ---
@@ -229,7 +297,7 @@ Ferramentas automatizadas:
 
 &lt;img src="figures/table_2.png" alt="" width="60%" style="display: block; margin: auto;" /&gt;
 
-- Westreich et al. (2013).
+- Westreich e Greenland (2013).
 
 ---
 
@@ -249,16 +317,80 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 ## HIV e acidente vascular cerebral
 
-&lt;img src="figures/DAGS/hiv_stroke.svg" alt="" width="40%" style="display: block; margin: auto;" /&gt;
+
+
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-1.png" alt="" width="85%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## HIV e AVC: um modelo para cada efeito
+
+.pull-left[
+- **Efeito do HIV**: fechar as portas dos fundos por Tabagismo e Idade.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: fechar a porta dos fundos por Idade, sem incluir o HIV (mediador).
+    - `lm(AVC ~ Tabagismo + Idade)`
+
+- **Efeito da Idade**: não há portas dos fundos; HIV e Tabagismo são mediadores.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-modelos-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+No modelo completo, só o coeficiente do HIV estima um efeito total. Os coeficientes de Tabagismo e Idade estimam apenas efeitos diretos, não totais.
+]
+
+---
+
+## HIV e AVC: um confundidor não observado
+
+.pull-left[
+- **Efeito do HIV**: continua estimável. Condicionar no Tabagismo também fecha HIV ← Tabagismo ← Álcool → AVC.
+    - `lm(AVC ~ HIV + Tabagismo + Idade)`
+
+- **Efeito do Tabagismo**: **não é mais estimável**. A porta dos fundos Tabagismo ← Álcool → AVC só seria fechada medindo o álcool.
+
+- **Efeito da Idade**: continua estimável. O caminho Idade → Tabagismo ← Álcool → AVC está fechado, pois o Tabagismo é um colisor.
+    - `lm(AVC ~ Idade)`
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-hiv-avc-alcool-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+No modelo completo, condicionar no Tabagismo abre o caminho Idade → Tabagismo ← Álcool → AVC: o coeficiente da Idade fica enviesado até como efeito direto.
+]
+
+---
+
+## Quando podemos estimar efeitos diretos?
+
+.pull-left[
+- Para estimar o efeito direto de `\(X\)` sobre `\(Y\)`, condicionamos nos mediadores `\(M\)`. Isso só funciona se:
+    1. os caminhos não causais entre `\(X\)` e `\(Y\)` estão fechados;
+    2. todos os caminhos indiretos `\(X \to M \to Y\)` estão bloqueados;
+    3. **não há confundidor aberto entre `\(M\)` e `\(Y\)`**: condicionar em `\(M\)` abre `\(X \to M \leftarrow U \to Y\)`.
+
+- O efeito total continua estimável com `lm(Y ~ X)`; o efeito direto, não.
+]
+
+.pull-right[
+&lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figura-dag-efeito-direto-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+
+- **Idade e AVC**: o Tabagismo é mediador e colisor (Idade → Tabagismo ← Álcool).
+- **Intervenção educacional (Aula I)**: o perfil da família afeta a qualidade parental e a nota.
+- **Fragmentação (Aula I)**: a qualidade do habitat pode afetar os predadores (mediador) e a sobrevivência.
+]
 
 ---
 
 ## Outras variáveis de controle
 
 .pull-left[
-- As vezes, não temos nenhum caminho não causal aberto entre `\(X\)` e `\(Y\)`, mas acrescentar variáveis no modelo pode melhorar ou piorar a precisão da estimativa do efeito causal de `\(X\)` sobre `\(Y\)`.
+- Às vezes, não temos nenhum caminho não causal aberto entre `\(X\)` e `\(Y\)`, mas acrescentar variáveis no modelo pode melhorar ou piorar a precisão da estimativa do efeito causal de `\(X\)` sobre `\(Y\)`.
 
-- Pais de `\(Y\)` que não são pais de `\(X\)` podem ser incluídas para reduzir a variância da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
+- Pais de `\(Y\)` que não são pais de `\(X\)` podem ser incluídos para reduzir a variância da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
 
 - No DAG ao lado, incluir `\(Z\)` no modelo não muda a estimativa do efeito de `\(X\)` sobre `\(Y\)`, mas reduz a variância da estimativa.
 
@@ -274,7 +406,7 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 
 .pull-left[
-- Por outro lado, também é possivel piorar a precisão da estimativa incluindo variáveis de controle equivocadas.
+- Por outro lado, também é possível piorar a precisão da estimativa incluindo variáveis de controle equivocadas.
    
 - Pais de `\(X\)` que não afetam `\(Y\)` pioram a precisão da estimativa.
 
@@ -294,13 +426,13 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 
 .pull-left[
-- A situação é mais grave ainda quando existe um fork entre `\(X\)` e `\(Y\)` e incluímos uma variável de controle que é um pai de `\(X\)` que não afeta `\(Y\)`.
+- A situação é mais grave ainda quando existe uma bifurcação entre `\(X\)` e `\(Y\)` e incluímos uma variável de controle que é um pai de `\(X\)` que não afeta `\(Y\)`.
 
 - Nesse caso, a inclusão de `\(Z\)` no modelo é catastrófica.
 
 - A inclusão de `\(Z\)`:
   -  remove a variância de `\(X\)` que seria preditora de `\(Y\)` diretamente, e, portanto
-  -  amplifica o efeito da variância de `\(X\)` que é causada por `\(u\)`, aumentando o viés da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
+  -  amplifica o efeito da variância de `\(X\)` que é causada por `\(U\)`, aumentando o viés da estimativa do efeito de `\(X\)` sobre `\(Y\)`.
 ]
 .pull-right[
 &lt;img src="Aula_Inferencia_Causal_II_files/figure-html/figure-dag-bias-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
@@ -317,27 +449,43 @@ Nem todos os coeficientes são estimativas de efeitos causais.
 
 ## Bons controles
 
-- Bloqueiam caminhos não causais.
-- Melhoram a precisão.
-- Permitem inferências causais.
+- **Confundidores** (bifurcações): causas comuns de `\(X\)` e `\(Y\)`. Incluí-los fecha caminhos não causais pela porta dos fundos.
+
+- **Variáveis no caminho de uma porta dos fundos**: mesmo quando o confundidor não é observado, condicionar em outra variável ao longo do caminho (ex.: `\(U \to Z \to X\)`) já o fecha.
+
+- **Causas de `\(Y\)` que não afetam `\(X\)`**: não mudam a estimativa, mas aumentam a precisão, pois explicam parte da variação de `\(Y\)`.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt4[
+Um bom conjunto de controles satisfaz o critério da porta dos fundos: bloqueia todos os caminhos não causais entre `\(X\)` e `\(Y\)`, sem incluir descendentes de `\(X\)`.
+]
 
 ---
 
 ## Maus controles
 
-- Bloqueiam caminhos causais (bloqueando caminhos).
-- Abrem caminhos não causais (abrindo colisores).
-- Reduzem a precisão.
-- Impedem inferências causais.
+- **Mediadores e outros descendentes de `\(X\)`** (variáveis pós-tratamento): bloqueiam total ou parcialmente o caminho causal e subestimam o efeito total.
+
+- **Colisores e seus descendentes**: abrem caminhos não causais e criam associações espúrias, inclusive quando a amostra é selecionada com base no colisor.
+
+- **Causas de `\(X\)` que não afetam `\(Y\)`**: reduzem a precisão e, se houver confundimento não observado, amplificam o viés.
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt4[
+Nenhum critério estatístico (AIC, p-valor, `\(R^2\)`) distingue bons de maus controles. A escolha depende do modelo causal, e não dos dados.
+]
+
+Para um catálogo completo, veja Cinelli, Forney e Pearl (2024).
 
 ---
 
 ## Referências
 
-- Cinelli e Hazlett (2020).
-- Montgomery et al. (2018).
-- Ripple, W. J. e Beschta, R. L. (2004). “Wolves and the ecology of fear: Can predation risk structure ecosystems?” *BioScience*, 54(8), 755–766.
-- Westreich et al. (2013).
+- Cinelli, C., Forney, A. e Pearl, J. (2024). “A crash course in good and bad controls.” *Sociological Methods &amp; Research*, 53(3), 1071–1104.
+- McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with Examples in R and Stan*, 2ª ed. CRC Press.
+- Pearl, J. (1995). “Causal diagrams for empirical research.” *Biometrika*, 82(4), 669–688.
+- Pearl, J. (2011). “Invited commentary: understanding bias amplification.” *American Journal of Epidemiology*, 174(11), 1223–1227.
+- Pearl, J., Glymour, M. e Jewell, N. P. (2016). *Causal Inference in Statistics: A Primer*. Wiley.
+- Textor, J., van der Zander, B., Gilthorpe, M. S., Liśkiewicz, M. e Ellison, G. T. H. (2016). “Robust causal inference using directed acyclic graphs: the R package ‘dagitty’.” *International Journal of Epidemiology*, 45(6), 1887–1894.
+- Westreich, D. e Greenland, S. (2013). “The Table 2 fallacy: presenting and interpreting confounder and modifier coefficients.” *American Journal of Epidemiology*, 177(4), 292–298.
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
