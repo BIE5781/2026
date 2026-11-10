@@ -146,7 +146,7 @@ lm(Y ~ X + Z) |> coef() # Não enviesado, efeito de X está correto e igual a b_
 
 ## O critério da porta dos fundos
 
-Por que Z funciona como controle no modelo 2, mesmo sem observarmos U? No modelo 2 existem dois caminhos entre X e Y:
+Por que Z funciona como controle no modelo 2, mesmo sem observarmos U? No modelo 2 existem dois caminhos entre X e Y[^2]:
 
 - X → Y: o caminho causal, que queremos estimar;
 - X ← Z ← U → Y: um caminho não-causal, que entra em X por uma seta que **aponta para X** (uma "porta dos fundos").
@@ -568,7 +568,7 @@ precis(mIV, depth = 3)
 
 O coeficiente `bXY` recupera o efeito causal de X em Y, e a correlação estimada entre os resíduos (`Rho[1,2]`) é a assinatura do confundidor não observado U.
 
-__Questão__: Ajuste o mesmo modelo fixando a correlação entre os resíduos em zero (ou seja, duas regressões independentes, `Y ~ X` e `X ~ Z`). O que acontece com a estimativa de `bXY`? Por quê?
+__Questão__: Ajuste o mesmo modelo fixando a correlação entre os resíduos em zero (ou seja, duas regressões independentes, `Y ~ X` e `X ~ Z` [^1]). O que acontece com a estimativa de `bXY`? Por quê?
 
 ## Instrumentos fracos
 
@@ -679,3 +679,7 @@ __Desafio__: E se B não fosse observado? Para estimar apenas o efeito de X em Y
 # B não observado
 df_semB = data.frame(X, Y, W, A, Z)
 ```
+
+[^1]: Um modelo com as correlações iguais a zero equivale a um modelo com duas verossimilhanças separadas, para cada regressão. Ou, se quiser manter a normal multivariada, decalre o valor da matriz Rho nos dados: `data = list(X = X, Y = Y, Z = Z, Rho = diag(2)), chains = 4, cores = 4)`
+
+[^2]: Note que um caminho é apenas uma conexão por via de uma ou mais setas, independente do sentido de cada seta.
