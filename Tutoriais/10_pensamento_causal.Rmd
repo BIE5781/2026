@@ -593,7 +593,9 @@ quantile(est_fraco, c(0.05, 0.5, 0.95))
 
 Compare com o exercício de amplificação de viés: o mesmo parâmetro `b_xz` que torna Z um controle catastrófico torna Z um bom instrumento.
 
-## Um exemplo biológico: randomização mendeliana
+## Exemplos biológicos
+
+### Randomização mendeliana
 
 Na epidemiologia genética, alelos são usados como instrumentos. Suponha que queremos saber se o nível de colesterol (X) causa doença cardíaca (Y). Fatores como dieta e estilo de vida (U) afetam as duas variáveis, e não são bem medidos. Mas existem alelos (Z) que alteram o nível de colesterol. Como os alelos são herdados aleatoriamente dos pais (segregação mendeliana), eles não deveriam estar associados à dieta ou ao estilo de vida: a natureza fez o sorteio do experimento por nós. Essa abordagem é chamada de **randomização mendeliana**.
 
@@ -601,9 +603,46 @@ __Questão__: A pleiotropia (um mesmo gene afetando vários caracteres) é uma d
 
 __Questão__: Pense em um exemplo de variável instrumental na sua área de pesquisa. Ela satisfaz as três condições?
 
+### Intervenção em campo
+
+Em experimentos de campo, a intervenção nem sempre produz o tratamento
+pretendido. Considere um experimento para avaliar o controle biológico
+de pragas do café por aves insetívoras. Em uma plantação, sorteia-se
+uma parte dos pés de café para ser coberta por telas que impedem o
+acesso das aves. Os demais ficam sem tela, como controle. A variável
+resposta é a produção de grãos de cada planta. Para medir a predação,
+em cada planta são colocados modelos de lagartas feitos de massa de
+modelar. A proporção de modelos removidos ou com marcas de bico serve
+como índice da atividade de aves insetívoras na planta.
+
+O tratamento, porém, não sai exatamente como planejado. Algumas telas
+são rompidas por animais ou pelo tempo, e as aves passam a forragear
+nessas plantas. Já nas plantas sem tela, a atividade das aves varia
+muito por causa de diferenças não controladas entre as plantas, como
+tamanho, posição na plantação e microclima, que também podem afetar a
+produção de frutos.
+
+Para estimar o efeito da atividade das aves sobre a produção de café,
+usa-se como instrumento a variável binária que indica se a planta foi
+telada, no início do experimento.
+
+**Questão**: que premissas são necessárias para que a tela seja um
+instrumento válido? Alguma delas é questionável neste experimento?
+
+**Questão** : o que estima um modelo da produção apenas em função da
+tela? Para que tipo de pergunta essa estimativa seria a mais útil?
+
+**Questão** : qual é o problema de estimar o efeito da atividade das
+aves com uma regressão da produção apenas na atividade das aves, sem
+usar o instrumento?
+
 # Extra: modelos "de luxo" (full luxury models)
 
-Em alguns casos, podemos querer estimar o modelo causal completo, incluindo todas as relações do DAG que conecta X e Y, e não apenas o efeito de X em Y. Esse tipo de modelo é chamado de *full luxury model* por McElreath, e é essencialmente um modelo de equações estruturais (SEM) Bayesiano.
+Em alguns casos, podemos querer estimar o modelo causal completo,
+incluindo todas as relações do DAG que conecta X e Y, e não apenas o
+efeito de X em Y. Esse tipo de modelo é chamado de *full luxury model*
+por McElreath, e é essencialmente um modelo de equações estruturais
+(SEM) Bayesiano.
 
 Vamos simular dados a partir do seguinte DAG e tentar ajustar um modelo completo:
 
