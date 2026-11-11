@@ -568,7 +568,7 @@ precis(mIV, depth = 3)
 
 O coeficiente `bXY` recupera o efeito causal de X em Y, e a correlação estimada entre os resíduos (`Rho[1,2]`) é a assinatura do confundidor não observado U.
 
-__Questão__: Ajuste o mesmo modelo fixando a correlação entre os resíduos em zero (ou seja, duas regressões independentes, `Y ~ X` e `X ~ Z` [^1]). O que acontece com a estimativa de `bXY`? Por quê?
+__Questão__: Ajuste o mesmo modelo fixando a correlação entre os resíduos em zero (ou seja, duas regressões independentes, `Y ~ X` e `X ~ Z`)[^1]. O que acontece com a estimativa de `bXY`? Por quê?
 
 ## Instrumentos fracos
 
