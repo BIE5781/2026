@@ -453,7 +453,7 @@ Note que passar nesses testes não prova que o DAG está correto: vários DAGs d
 
 __Questão__: Liste as independências condicionais implicadas pelos outros três DAGs acima. Se você tivesse dados das quatro variáveis, conseguiria distinguir entre os quatro DAGs?
 
-# Extra: o critério da porta da frente
+# O critério da porta da frente
 
 Quando há um confundidor não observado entre X e Y, nenhum conjunto de covariáveis satisfaz o critério da porta dos fundos. Mas, em alguns casos, ainda é possível estimar o efeito de X em Y usando um mediador. Esse é o **critério da porta da frente**:
 
@@ -489,7 +489,7 @@ __Questão__: Qual é o coeficiente de X em `lm(Y ~ M + X)`? Ele tem alguma inte
 
 __Questão__: O exemplo clássico da porta da frente é o efeito do tabagismo (X) no câncer de pulmão (Y), mediado pelo depósito de alcatrão nos pulmões (M), com um genótipo não observado (U) afetando tabagismo e câncer, como na hipótese de Fisher. Quais suposições desse DAG você acha mais difíceis de defender?
 
-# Extra: variáveis instrumentais
+# Variáveis instrumentais
 
 Na seção sobre amplificação de viés, vimos que incluir Z como covariável piora a estimativa do efeito de X em Y. Como U não é observado, nenhum conjunto de covariáveis satisfaz o critério da porta dos fundos nesse DAG. Mas Z ainda carrega informação útil: Z altera X sem passar por U. Uma variável com essas propriedades é chamada de **variável instrumental**.
 

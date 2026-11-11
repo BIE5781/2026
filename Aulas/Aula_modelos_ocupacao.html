@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelos de ocorrência com detecção imperfeita</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="PI (Paulo Inácio Prado)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copiar código <i class=\"fa fa-clipboard\"><\/i>","success":"Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"><\/i>"})</script>
+    <link href="libs/font-awesome/css/all.min.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelos de ocorrência com detecção imperfeita
+]
+.subtitle[
+## Disciplina BIE5781 - IB - USP
+]
+.author[
+### PI (Paulo Inácio Prado)
+]
+.date[
+### 25 de novembro de 2026
+]
+
+---
+
+
+
+
+
+
+
+
+## Inventários em muitos sítios
+
+.pull-left[
+
+* Procuramos uma espécie em muitos **sítios**: locais, manchas de
+  hábitat, lagoas, hospedeiros...
+
+* O resultado de cada busca é binário: a espécie foi **registrada (1)**
+  ou **não registrada (0)**.
+
+* Perguntas típicas:
+  * Em que fração dos sítios a espécie ocorre?
+  * Quais características dos sítios afetam a ocorrência?
+
+* A análise padrão seria uma regressão logística dos 0 e 1.
+]
+
+.pull-right[
+
+&lt;br&gt;
+
+| Sítio | Cobertura florestal (%) | Registro |
+|:-----:|:-----------------------:|:--------:|
+| 1     | 85                      | 1        |
+| 2     | 40                      | 0        |
+| 3     | 62                      | 1        |
+| 4     | 90                      | 0        |
+| 5     | 15                      | 0        |
+| ...   | ...                     | ...      |
+
+.right[.f6[Dados hipotéticos.]]
+]
+
+---
+
+## O problema: dois tipos de zero
+
+.pull-left[
+
+* Um **1** é inequívoco: a espécie está no sítio (sem erros de
+  identificação).
+
+* Um **0** pode acontecer por duas razões:
+  1. a espécie **não ocorre** no sítio (zero verdadeiro);
+  2. a espécie **ocorre, mas não foi detectada** (falso zero).
+
+* Espécies raras, crípticas, de baixa densidade ou em hábitats onde são
+  difíceis de ver geram muitos falsos zeros.
+]
+
+.pull-right[
+
+&lt;br&gt;
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+**Consequências** de ignorar a detecção imperfeita:
+
+* A proporção de sítios com registro **subestima** a ocorrência.
+
+* Se uma variável afeta a detecção, seu efeito se mistura com o efeito
+  sobre a ocorrência: as estimativas dos efeitos ficam **enviesadas**,
+  podendo até inverter de sinal.
+]
+]
+
+---
+
+## A solução: visitas repetidas
+
+.pull-left[
+
+* Cada sítio é visitado mais de uma vez, num período em que a ocupação
+  não muda.
+
+* O registro de cada sítio passa a ser um **histórico de detecções**.
+
+* Sítios com detecção têm 0 e 1 no histórico: a frequência dos 0 nestes
+  sítios informa sobre a **probabilidade de detecção**.
+
+* Com isso, é possível separar a **probabilidade de ocorrência** e a
+  **probabilidade de detecção** (MacKenzie et al. 2002).
+]
+
+.pull-right[
+
+&lt;br&gt;
+
+| Sítio | Visita 1 | Visita 2 | Visita 3 | Visita 4 |
+|:-----:|:--------:|:--------:|:--------:|:--------:|
+| 1     | 0        | 1        | 1        | 0        |
+| 2     | 0        | 0        | 0        | 0        |
+| 3     | 1        | 0        | 0        | 0        |
+| 4     | 0        | 0        | 1        | 0        |
+| 5     | 0        | 0        | 0        | 0        |
+| ...   | ...      | ...      | ...      | ...      |
+
+.f6[Os sítios 1, 3 e 4 seriam zeros com qualquer uma das visitas sozinha.
+Com uma única visita, só é possível estimar o produto das duas
+probabilidades.]
+]
+
+---
+class: inverse, center, middle
+
+# Modelo com ocorrência e detecção constantes
+
+---
+
+## Probabilidades dos registros
+
+.pull-left[
+
+Em **uma visita** a um sítio:
+
+* A espécie ocorre com probabilidade `\(\phi\)`.
+
+* Se ocorre, é detectada com probabilidade `\(p\)`.
+
+Os dois resultados possíveis:
+
+`$$\begin{aligned}
+\Pr(\text{detecção}) &amp;= \phi \, p \\[0.5em]
+\Pr(\text{não detecção}) &amp;= \underbrace{\phi \, (1 - p)}_{\text{falso zero}} + \underbrace{(1 - \phi)}_{\text{zero verdadeiro}}
+\end{aligned}$$`
+
+.f6[Na literatura a probabilidade de ocorrência costuma ser chamada de `\(\psi\)`.]
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/arvore-1.png" alt="" width="100%" /&gt;
+]
+
+---
+
+## Probabilidades dos históricos de detecção
+
+.pull-left[
+
+Com `\(J\)` visitas **independentes** a cada sítio, seja `\(y_i\)` o número de
+visitas com detecção no sítio `\(i\)`:
+
+* Se `\(y_i &gt; 0\)`, a espécie certamente ocorre:
+`$$\Pr(y_i) = \phi \, \binom{J}{y_i} p^{y_i} (1 - p)^{J - y_i}$$`
+
+* Se `\(y_i = 0\)`, a espécie ocorre e não foi detectada em nenhuma visita,
+  ou não ocorre:
+`$$\Pr(y_i = 0) = \phi \, (1 - p)^J + (1 - \phi)$$`
+
+* Com mais visitas, `\((1 - p)^J\)` diminui: menos falsos zeros.
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+
+``` r
+&gt; set.seed(2)
+&gt; M &lt;- 200       # n de sítios
+&gt; J &lt;- 4         # n de visitas por sítio
+&gt; phi.sim &lt;- 0.6 # prob. de ocorrência
+&gt; p.sim &lt;- 0.3   # prob. de detecção
+&gt; ## Ocorrência (não observada)
+&gt; z &lt;- rbinom(M, size = 1, prob = phi.sim)
+&gt; ## Histórico de detecções (M x J)
+&gt; Y &lt;- matrix(rbinom(M * J, size = 1,
++                    prob = z * p.sim),
++             nrow = M)
+&gt; ## n de visitas com detecção
+&gt; y &lt;- rowSums(Y)
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+`$$\begin{aligned}
+z_i &amp;\sim \text{Bernoulli}(\phi) \\[0.5em]
+y_i &amp;\sim \text{Binomial}(J, \, z_i \, p) \\[0.5em]
+\text{logit}(\phi) &amp;= \alpha_\phi \\[0.5em]
+\text{logit}(p) &amp;= \alpha_p \\[0.5em]
+\alpha_\phi, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5)
+\end{aligned}$$`
+
+* `\(z_i\)`: ocorrência (1) ou não (0) no sítio `\(i\)`, **variável latente**
+  (não observada).
+
+* Se `\(z_i = 0\)`, a probabilidade de detecção é zero.
+]
+
+.pull-right[
+
+* É um modelo **hierárquico**: a distribuição de `\(y_i\)` depende de
+  `\(z_i\)`, que tem sua própria distribuição.
+
+* O Stan não amostra variáveis discretas como `\(z_i\)`. Por isso, somamos
+  (**marginalizamos**) as duas possibilidades para `\(z_i\)`:
+
+`$$\begin{aligned}
+\Pr(y_i) = \; &amp;\phi \; \text{Binomial}(y_i \mid J, p) \; + \\[0.3em]
+&amp;(1 - \phi) \; \mathbb{1}(y_i = 0)
+\end{aligned}$$`
+
+.f6[$\mathbb{1}(y_i = 0)$ vale 1 se não houve detecção e 0 caso contrário:
+se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
+**mistura** de duas distribuições, como os modelos inflados de zeros.]
+]
+
+---
+
+## O modelo no rethinking
+
+.pull-left[
+
+``` r
+&gt; dl1 &lt;- list(y = y, J = J,
++             det = as.integer(y &gt; 0))
+&gt; m.const &lt;- ulam(
++   alist(
++     y | det == 1 ~ custom(
++       log(phi) + binomial_lpmf(y | J, p)),
++     y | det == 0 ~ custom(log_sum_exp(
++       log(phi) + binomial_lpmf(y | J, p),
++       log1m(phi))),
++     logit(phi) &lt;- a_phi,
++     logit(p) &lt;- a_p,
++     c(a_phi, a_p) ~ dnorm(0, 1.5)
++   ),
++   data = dl1, chains = 4, cores = 4)
+```
+]
+
+.pull-right[
+
+* `det`: indicadora de pelo menos uma detecção no sítio.
+
+* `y | det == 1 ~ ...`: a linha vale só para os sítios com `det == 1`.
+  Cada tipo de sítio tem sua verossimilhança.
+
+* `custom(...)`: soma a expressão ao log da posterior. Ou seja, nós
+  escrevemos o **log da verossimilhança** de cada observação.
+
+* Os detalhes estão no próximo slide.
+]
+
+
+
+
+
+---
+
+## Do modelo teórico ao código
+
+.pull-left[
+
+**Sítios com detecção** ( `\(y_i &gt; 0\)` ):
+
+`$$\log \Pr(y_i) = \log \phi + \log \text{Binomial}(y_i \mid J, p)$$`
+
+
+``` r
+&gt; log(phi) + binomial_lpmf(y | J, p)
+```
+
+* `binomial_lpmf(y | J, p)`: log da função de probabilidade (*log
+  probability mass function*) da binomial, uma função do Stan.
+
+* O produto de probabilidades vira uma **soma** de logs.
+]
+
+.pull-right[
+
+**Sítios sem detecção** ( `\(y_i = 0\)` ):
+
+`$$\log \Pr(y_i) = \log \left[ \phi (1 - p)^J + (1 - \phi) \right]$$`
+
+
+``` r
+&gt; log_sum_exp(
++   log(phi) + binomial_lpmf(y | J, p),
++   log1m(phi))
+```
+
+* `log_sum_exp(a, b)` = `\(\log(e^a + e^b)\)`: o log de uma **soma** de
+  probabilidades, calculado a partir dos logs de cada parcela, de forma
+  numericamente estável.
+
+* `log1m(phi)` = `\(\log(1 - \phi)\)`.
+
+* Com `\(y_i = 0\)`, `binomial_lpmf(0 | J, p)` = `\(J \log(1 - p)\)`.
+]
+
+---
+
+## Premissas do modelo
+
+&lt;br&gt;
+
+* **População fechada**: a ocorrência ( `\(z_i\)` ) não muda durante o
+  período das visitas. Se a espécie entra e sai dos sítios, `\(\phi\)`
+  passa a ser a probabilidade de **uso** do sítio.
+
+* **Probabilidades constantes**: `\(\phi\)` é a mesma em todos os sítios e
+  `\(p\)` é a mesma em todos os sítios e visitas.
+
+* **Independência**: dada a ocorrência, as detecções em visitas
+  diferentes são independentes. A ocorrência em um sítio é independente
+  da ocorrência nos outros.
+
+* **Sem falsos positivos**: a espécie nunca é registrada onde não ocorre
+  (identificação correta).
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Variação não modelada na detecção entre sítios (heterogeneidade)
+tende a fazer o modelo **subestimar** `\(\phi\)`.
+]
+
+---
+
+## Resultados
+
+.pull-left[
+
+``` r
+&gt; precis(m.const, prob = 0.95)
+```
+
+|      | Média|   DP|  2,5%| 97,5%| Rhat|
+|:-----|-----:|----:|-----:|-----:|----:|
+|a_phi |  0,50| 0,23|  0,11|  0,99| 1,00|
+|a_p   | -0,82| 0,14| -1,10| -0,56| 1,01|
+
+.f6[Escala logito. Valores usados na simulação:
+`\(\alpha_\phi\)` = 0,41 e `\(\alpha_p\)` = -0,85.]
+
+
+``` r
+&gt; post &lt;- extract.samples(m.const)
+&gt; phi &lt;- inv_logit(post$a_phi)
+&gt; p &lt;- inv_logit(post$a_p)
+```
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/grafico-const-1.png" alt="" width="100%" /&gt;
+.f6[Ingênua: proporção de sítios com pelo menos uma detecção.]
+]
+
+---
+
+## Quantidade derivada: ocorrência onde não houve detecção
+
+.pull-left[
+
+Qual a probabilidade de a espécie ocorrer em um sítio sem nenhuma
+detecção?
+
+Pelo teorema de Bayes:
+
+`$$\begin{aligned}
+\Pr(z_i = 1 \mid y_i = 0) &amp;= \frac{\Pr(y_i = 0 \mid z_i = 1) \Pr(z_i = 1)}{\Pr(y_i = 0)} \\[0.5em]
+&amp;= \frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
+\end{aligned}$$`
+
+* **Numerador**: o caminho da árvore que gera um falso zero.
+
+* **Denominador**: todos os caminhos que geram um zero.
+]
+
+.pull-right[
+
+Calculamos a expressão para cada amostra da posterior:
+
+
+``` r
+&gt; ## P(ocorre | nenhuma detecção)
+&gt; phi0 &lt;- phi * (1 - p)^J /
++     (phi * (1 - p)^J + (1 - phi))
+&gt; ## n de sítios ocupados:
+&gt; ## sítios com detecção + um sorteio
+&gt; ## entre os sítios sem detecção
+&gt; n0 &lt;- sum(dl1$det == 0)
+&gt; N.ocup &lt;- sum(dl1$det) +
++     rbinom(length(phi0), n0, phi0)
+```
+
+.f6[O número de sítios ocupados na amostra é outra quantidade derivada:
+os sítios com detecção estão ocupados com certeza, e cada sítio sem
+detecção está ocupado com probabilidade `\(\Pr(z_i = 1 \mid y_i = 0)\)`.]
+]
+
+---
+
+## Quantidades derivadas: posteriores
+
+
+
+.pull-left[
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/grafico-phi0-1.png" alt="" width="100%" /&gt;
+.f6[Valor real: calculado com `\(\phi\)` e `\(p\)` da simulação. Na amostra
+simulada, 30 dos 105 sítios sem detecção estavam
+ocupados (29%).]
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/grafico-nocup-1.png" alt="" width="100%" /&gt;
+.f6[Ingênua: n de sítios com pelo menos uma detecção.]
+]
+
+---
+class: inverse, center, middle
+
+# Covariáveis na ocorrência e na detecção
+
+---
+
+## Uma variável que afeta os dois processos
+
+.pull-left[
+
+* Exemplo: a **densidade da vegetação** ( `\(x\)` ) de cada sítio.
+
+* A espécie prefere vegetação densa: `\(\phi\)` **aumenta** com `\(x\)`.
+
+* Mas na vegetação densa é mais difícil vê-la: `\(p\)` **diminui** com `\(x\)`.
+
+* Uma regressão logística dos registros mistura os dois efeitos.
+
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+
+``` r
+&gt; set.seed(2024)
+&gt; M &lt;- 300; J &lt;- 4
+&gt; x &lt;- rnorm(M) # densidade da vegetação
+&gt; ## Efeitos na escala logito
+&gt; phi.x &lt;- inv_logit(0.3 + 1 * x)
+&gt; p.x &lt;- inv_logit(-0.5 - 1 * x)
+&gt; z &lt;- rbinom(M, 1, phi.x)
+&gt; Y &lt;- matrix(rbinom(M * J, 1, z * p.x),
++             nrow = M)
+&gt; y &lt;- rowSums(Y)
+&gt; dl2 &lt;- list(y = y, J = J, x = x,
++             det = as.integer(y &gt; 0))
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+`$$\begin{aligned}
+z_i &amp;\sim \text{Bernoulli}(\phi_i) \\[0.5em]
+y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.5em]
+\text{logit}(\phi_i) &amp;= \alpha_\phi + \beta_\phi \, x_i \\[0.5em]
+\text{logit}(p_i) &amp;= \alpha_p + \beta_p \, x_i \\[0.5em]
+\alpha_\phi, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5) \\[0.5em]
+\beta_\phi, \, \beta_p &amp;\sim \text{Normal}(0, \, 1)
+\end{aligned}$$`
+
+* Cada sítio tem sua probabilidade de ocorrência ( `\(\phi_i\)` ) e de
+  detecção ( `\(p_i\)` ).
+
+* As covariáveis de `\(\phi\)` e de `\(p\)` podem ser as mesmas ou diferentes.
+]
+
+.pull-right[
+
+``` r
+&gt; m.cov &lt;- ulam(
++   alist(
++     y | det == 1 ~ custom(
++       log(phi) + binomial_lpmf(y | J, p)),
++     y | det == 0 ~ custom(log_sum_exp(
++       log(phi) + binomial_lpmf(y | J, p),
++       log1m(phi))),
++     logit(phi) &lt;- a_phi + b_phi * x,
++     logit(p) &lt;- a_p + b_p * x,
++     c(a_phi, a_p) ~ dnorm(0, 1.5),
++     c(b_phi, b_p) ~ dnorm(0, 1)
++   ),
++   data = dl2, chains = 4, cores = 4)
+```
+
+.f6[A verossimilhança é a mesma do modelo anterior: só mudam os preditores
+lineares de `phi` e `p`.]
+]
+
+---
+
+## Comparação com uma regressão logística ingênua
+
+.pull-left[
+
+`$$\begin{aligned}
+d_i &amp;\sim \text{Bernoulli}(q_i) \\[0.5em]
+\text{logit}(q_i) &amp;= a + b \, x_i \\[0.5em]
+a &amp;\sim \text{Normal}(0; \, 1{,}5) \\[0.5em]
+b &amp;\sim \text{Normal}(0, \, 1)
+\end{aligned}$$`
+
+* `\(d_i\)`: indicadora de pelo menos uma detecção no sítio `\(i\)`.
+
+* `\(q_i\)` não é a probabilidade de ocorrência. É a probabilidade de a
+  espécie **ocorrer e ser detectada** ao menos uma vez:
+  `\(q_i = \phi_i \left[ 1 - (1 - p_i)^J \right]\)`.
+]
+
+.pull-right[
+
+``` r
+&gt; m.ing &lt;- ulam(
++   alist(
++     det ~ dbern(q),
++     logit(q) &lt;- a + b * x,
++     a ~ dnorm(0, 1.5),
++     b ~ dnorm(0, 1)
++   ),
++   data = dl2, chains = 4, cores = 4)
+```
+]
+
+
+
+---
+
+## Resultados
+
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/grafico-cov-1.png" alt="" width="92%" /&gt;
+
+.right[.f6[Linhas e faixas: média e intervalo de 95% da posterior. Inclinação
+de `\(\phi\)` (escala logito): real = 1; modelo de ocupação = 1,02;
+logística ingênua = 0,14.]]
+
+---
+
+## Premissas do modelo com covariáveis
+
+&lt;br&gt;
+
+* As mesmas do modelo anterior, mas agora `\(\phi\)` e `\(p\)` são constantes
+  **condicionadas às covariáveis**: sítios com os mesmos valores das
+  covariáveis têm as mesmas probabilidades.
+
+* As relações são **lineares na escala logito**.
+
+* As covariáveis são medidas **sem erro**.
+
+* Covariáveis de `\(\phi\)` devem descrever o **sítio**, e não mudar entre
+  as visitas (população fechada).
+
+.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
+Quando a mesma variável afeta a ocorrência e a detecção, os dois efeitos
+só podem ser separados porque as visitas repetidas informam sobre `\(p\)`.
+É importante pensar *a priori* que variáveis podem afetar cada processo.
+]
+
+---
+
+## Covariáveis de detecção que mudam a cada visita
+
+.pull-left[
+
+* A detecção pode depender das condições de **cada visita**: horário,
+  temperatura, chuva, observador, esforço...
+
+* Agora `\(p_{ij}\)` varia entre as visitas `\(j\)` de um mesmo sítio `\(i\)`.
+
+* O número de detecções `\(y_i\)` **deixa de ser binomial** (as `\(J\)`
+  tentativas têm probabilidades diferentes).
+
+* Usamos o histórico de detecções completo: cada visita é uma
+  Bernoulli.
+]
+
+.pull-right[
+
+`$$\begin{aligned}
+z_i &amp;\sim \text{Bernoulli}(\phi_i) \\[0.5em]
+y_{ij} &amp;\sim \text{Bernoulli}(z_i \, p_{ij}) \\[0.5em]
+\text{logit}(\phi_i) &amp;= \alpha_\phi + \beta_\phi \, x_i \\[0.5em]
+\text{logit}(p_{ij}) &amp;= \alpha_p + \beta_p \, x_i + \gamma_p \, w_{ij}
+\end{aligned}$$`
+
+.f6[$w_{ij}$: covariável da visita `\(j\)` ao sítio `\(i\)` (por exemplo, a
+temperatura). Prioris como no modelo anterior, e $\gamma_p \sim
+\text{Normal}(0, 1)$.]
+
+**Verossimilhança marginal**:
+
+`$$\begin{aligned}
+\text{com detecção: } &amp;\phi_i \prod_j p_{ij}^{y_{ij}} (1 - p_{ij})^{1 - y_{ij}} \\[0.3em]
+\text{sem detecção: } &amp;\phi_i \prod_j (1 - p_{ij}) + (1 - \phi_i)
+\end{aligned}$$`
+]
+
+---
+
+## Estrutura dos dados
+
+.pull-left[
+
+* Duas **matrizes** sítios `\(\times\)` visitas: os registros ( `\(Y\)` ) e a
+  covariável de visita ( `\(W\)` ).
+
+* Covariáveis de sítio continuam como vetores.
+
+
+``` r
+&gt; set.seed(2025)
+&gt; ## temperatura (padronizada) de cada visita
+&gt; W &lt;- matrix(rnorm(M * J), nrow = M)
+&gt; p.xw &lt;- inv_logit(-0.5 - 1 * x + 0.8 * W)
+&gt; Y.v &lt;- matrix(rbinom(M * J, 1, z * p.xw),
++               nrow = M)
+&gt; dl3 &lt;- list(y = rowSums(Y.v), x = x,
++             det = as.integer(rowSums(Y.v) &gt; 0),
++             Y = Y.v, W = W)
+```
+
+.f6[Mesmos sítios ( `\(x\)` e `\(z\)` ) da simulação anterior.]
+]
+
+.pull-right[
+
+| Sítio|    x| Y1| Y2| Y3| Y4|  W1|   W2|   W3|   W4|
+|-----:|----:|--:|--:|--:|--:|---:|----:|----:|----:|
+|     1|  1,0|  0|  0|  0|  0| 0,6| -0,9| -0,9| -1,2|
+|     2|  0,5|  0|  0|  0|  0| 0,0| -0,3| -1,5| -1,3|
+|     3| -0,1|  1|  0|  0|  0| 0,8|  0,1|  1,0|  0,0|
+|     4| -0,2|  0|  0|  0|  0| 1,3| -1,0|  2,3|  1,2|
+|     5|  1,2|  0|  0|  1|  1| 0,4| -1,0|  0,7|  0,5|
+
+&lt;br&gt;
+
+.f6[`Y[i]` e `W[i]` são as linhas `\(i\)` das matrizes: o histórico de
+detecções e as temperaturas das `\(J\)` visitas ao sítio `\(i\)`.]
+]
+
+---
+
+## O modelo no rethinking
+
+.codigo-pequeno[
+
+``` r
+&gt; m.vis &lt;- ulam(
++   alist(
++     y | det == 1 ~ custom(log(phi) +
++       dot_product(Y[i], log_inv_logit(a_p + b_p * x[i] + c_p * W[i])) +
++       dot_product(1 - Y[i], log1m_inv_logit(a_p + b_p * x[i] + c_p * W[i]))),
++     y | det == 0 ~ custom(log_sum_exp(
++       log(phi) + sum(log1m_inv_logit(a_p + b_p * x[i] + c_p * W[i])),
++       log1m(phi))),
++     logit(phi) &lt;- a_phi + b_phi * x,
++     c(a_phi, a_p) ~ dnorm(0, 1.5),
++     c(b_phi, b_p, c_p) ~ dnorm(0, 1)
++   ),
++   data = dl3, chains = 4, cores = 4)
+```
+]
+
+.pull-left[
+* `a_p + b_p * x[i] + c_p * W[i]`: vetor com o logito de `\(p_{ij}\)` das
+  `\(J\)` visitas ao sítio `\(i\)`.
+
+* `log_inv_logit()` e `log1m_inv_logit()`: `\(\log p_{ij}\)` e
+  `\(\log(1 - p_{ij})\)`.
+]
+
+.pull-right[
+* `dot_product(Y[i], log p)` = `\(\sum_j y_{ij} \log p_{ij}\)`: soma os logs
+  das visitas com detecção.
+
+* Aqui o índice `[i]` é escrito explicitamente, pois `Y` e `W` são
+  matrizes.
+]
+
+
+
+---
+
+## Resultados
+
+.pull-left[
+
+|      | Valor real| Média|  2,5%| 97,5%| Rhat|
+|:-----|----------:|-----:|-----:|-----:|----:|
+|a_phi |        0,3|  0,34| -0,01|  0,74|    1|
+|b_phi |        1,0|  1,11|  0,70|  1,61|    1|
+|a_p   |       -0,5| -0,55| -0,79| -0,32|    1|
+|b_p   |       -1,0| -0,86| -1,11| -0,62|    1|
+|c_p   |        0,8|  0,89|  0,68|  1,11|    1|
+.f6[Escala logito. Saída do `precis(m.vis, prob = 0.95)`.]
+]
+
+.pull-right[
+
+* As estimativas recuperam os valores usados na simulação.
+
+* **Sítios com números diferentes de visitas**: complete as matrizes com
+  zeros e inclua uma matriz indicadora das visitas realizadas, que
+  multiplica os termos de cada visita.
+
+* Com covariáveis só de sítio, a versão binomial é equivalente e mais
+  rápida.
+]
+
+---
+class: inverse, center, middle
+
+# Efeitos aleatórios
+
+---
+
+## Sítios agrupados
+
+.pull-left[
+
+* Os sítios costumam estar agrupados: em paisagens, bacias, fragmentos,
+  regiões...
+
+* Sítios de um mesmo grupo podem ter ocorrência mais parecida, por
+  fatores não medidos: **dependência** entre as observações.
+
+* Como nos modelos hierárquicos que já vimos, cada grupo tem seu
+  intercepto, que vem de uma distribuição com parâmetros estimados
+  (**agregação parcial**).
+]
+
+.pull-right[
+
+**Simulação dos dados**
+
+
+``` r
+&gt; set.seed(42)
+&gt; R &lt;- 15; M &lt;- 300; J &lt;- 4
+&gt; reg &lt;- rep(1:R, length.out = M) # região
+&gt; a.reg &lt;- rnorm(R, 0.3, 1)  # interceptos
+&gt; x &lt;- rnorm(M)
+&gt; z &lt;- rbinom(M, 1,
++             inv_logit(a.reg[reg] + 1 * x))
+&gt; Y &lt;- matrix(rbinom(M * J, 1,
++                    z * inv_logit(-0.5 - 1 * x)),
++             nrow = M)
+&gt; y &lt;- rowSums(Y)
+&gt; dl4 &lt;- list(y = y, J = J, x = x, reg = reg,
++             det = as.integer(y &gt; 0))
+```
+]
+
+---
+
+## O modelo
+
+.pull-left[
+
+`$$\begin{aligned}
+z_i &amp;\sim \text{Bernoulli}(\phi_i) \\[0.4em]
+y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
+\text{logit}(\phi_i) &amp;= \alpha_{\text{REG}[i]} + \beta_\phi \, x_i \\[0.4em]
+\text{logit}(p_i) &amp;= \alpha_p + \beta_p \, x_i \\[0.4em]
+\alpha_r &amp;\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.4em]
+\bar\alpha, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5) \\[0.4em]
+\beta_\phi, \, \beta_p &amp;\sim \text{Normal}(0, \, 1) \\[0.4em]
+\sigma &amp;\sim \text{Exponencial}(1)
+\end{aligned}$$`
+]
+
+.pull-right[
+.codigo-pequeno[
+
+``` r
+&gt; m.ef &lt;- ulam(
++   alist(
++     y | det == 1 ~ custom(
++       log(phi) + binomial_lpmf(y | J, p)),
++     y | det == 0 ~ custom(log_sum_exp(
++       log(phi) + binomial_lpmf(y | J, p),
++       log1m(phi))),
++     logit(phi) &lt;- abar + u[reg] * sigma +
++       b_phi * x,
++     logit(p) &lt;- a_p + b_p * x,
++     u[reg] ~ dnorm(0, 1),
++     c(abar, a_p) ~ dnorm(0, 1.5),
++     c(b_phi, b_p) ~ dnorm(0, 1),
++     sigma ~ dexp(1),
++     gq&gt; vector[reg]:a_r &lt;&lt;- abar + u * sigma
++   ),
++   data = dl4, chains = 4, cores = 4)
+```
+]
+
+.f6[Parametrização **não centrada**: `\(\alpha_r = \bar\alpha + u_r \, \sigma\)`,
+com `\(u_r \sim \text{Normal}(0, 1)\)`. A linha `gq&gt;` calcula os `\(\alpha_r\)`
+como quantidade gerada.]
+]
+
+
+
+---
+
+## Ocorrência em cada região
+
+&lt;img src="Aula_modelos_ocupacao_files/figure-html/grafico-ef-1.png" alt="" width="92%" /&gt;
+
+.right[.f6[Modelo hierárquico: média e intervalo de 95% da posterior de
+`\(\text{logit}^{-1}(\alpha_r)\)`. Ingênua: proporção de sítios com detecção na
+região. Faixa cinza: intervalo de 95% de `\(\text{logit}^{-1}(\bar\alpha)\)`.
+Desvio-padrão entre regiões ( `\(\sigma\)` ): real = 1; estimado =
+0,97 [0,49; 1,66].]]
+
+---
+
+## Premissas adicionais e extensões
+
+.pull-left[
+
+**Premissas adicionais**
+
+* As regiões são uma amostra de uma **população de regiões**,
+  intercambiáveis entre si.
+
+* Os interceptos têm distribuição **normal na escala logito**.
+
+* Dada a região, os sítios são independentes.
+
+* Para estimar `\(\sigma\)` é preciso um número razoável de regiões.
+]
+
+.pull-right[
+
+**Extensões**
+
+* Efeitos aleatórios na **detecção** (p.ex., observadores).
+
+* Inclinações variáveis entre grupos, como no modelo de COVID-19.
+
+* **Comunidades**: modelos multiespécies, com `\(\phi\)` e `\(p\)` de cada
+  espécie vindos de uma distribuição comum.
+
+* **Dinâmica**: colonização e extinção entre estações.
+
+* **Abundância**: no modelo de Royle &amp; Nichols (2003), a variável
+  latente é o número de indivíduos, e não só a presença.
+]
+
+---
+
+## Para saber mais
+
+### Occupancy 
+
+* Kéry, M. &amp; Royle, J. A. (2016). *Applied Hierarchical Modeling in
+  Ecology*. Vol. 1. Academic Press.
+
+* MacKenzie, D. I. et al. (2018). *Occupancy Estimation and Modeling*.
+  2ª ed. Academic Press.
+
+### Outros
+
+* Williams, Nichols, &amp; Conroy (2002). Analysis and management of animal populations. Academic Press.
+* Buckland *et al.* (2004). Advanced distance sampling. Oxford University Press.
+* Thomas *et al.* (2015). Distance sampling: Methods and applications. Springer.
+* Kéry &amp; Royle (2016 e 2020). Applied hierarchical modeling in ecology (Vols. 1 e 2). Academic Press.
+
+---
+
+## Pacotes
+
+* `unmarked`: modelos de ocupação e outros sem marcação individual (ML)
+* `ubms`: implementação Bayesiana de modelos do `unmarked` e outros 
+* `spOccupancy`: idem, Bayesiano com estrutura espacial
+* `inlabru`: Bayesiano com INLA, modelos espaciais e outros
+* `secr`: dados de marcação e recaptura com estrutura espacial 
+* `RMark`: interface R para programa clássico e maduro de marcação e recaptura (ML)
+* `Distance`, `dsm`, `mrds` : métodos baseados em distância (ML)
+* E muito mais!
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
