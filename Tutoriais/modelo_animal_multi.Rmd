@@ -59,7 +59,10 @@ h5,h6{
 </script>
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      ## o código roda, mas as saídas e figuras ficam escondidas:
+                      ## rode o código para ver os resultados
+                      results = "hide", fig.show = "hide")
 ```
 
 # Base genética da relação agressividade-tamanho em esquilos
@@ -67,9 +70,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Agora sabemos que o tamanho dos esquilos é herdável, além de estar sob seleção positiva, de modo que a evolução para um tamanho maior é prevista sob modelos simples (equação do criador univariada). No entanto, a seleção no tamanho corporal pode ter consequências evolutivas para outros aspectos do fenótipo, dependendo de estarem ou não geneticamente correlacionados. Aqui, testaremos se existe uma base genética para a (hipotetizada) covariância entre tamanho corporal e agressividade. A priori, poderíamos esperar que essas características covariem positivamente em nível fenotípico se (i) indivíduos agressivos forem capazes de conquistar mais recursos alimentares em competição (e, assim, crescerem mais rápido) e/ou (ii) a expressão da agressividade em relação a conespecíficos for mediada pelo tamanho relativo (ou seja, indivíduos maiores podem se dar ao luxo de agir agressivamente contra rivais menores, pois correm menor risco de ferimentos caso um conflito se agrave).
 
-Retornaremos ao conjunto de dados que já vimos, estendendo nossa análise anterior de modelo animal para o caso bivariado. Como os programas gratuitos de REML que utilizamos anteriormente não executam modelos multivariados, mudaremos para uma abordagem MCMC usando o pacote MCMCglmm. Note que estaremos estimando uma matriz $\mathbf{G}$ aqui, mas apenas para duas características. A extensão para qualquer número de características é possível em princípio. Na prática, modelos com mais características tornam-se mais difíceis de ajustar e levam mais tempo para rodar.
+Retornaremos ao conjunto de dados que já vimos, estendendo nossa análise anterior de modelo animal para o caso bivariado. Vamos estimar uma matriz $\mathbf{G}$, a matriz de covariâncias genéticas aditivas, mas apenas para duas características. A extensão para qualquer número de características é possível em princípio. Na prática, modelos com mais características tornam-se mais difíceis de ajustar e levam mais tempo para rodar.
 
-# Preparação.
+Usaremos os mesmos pacotes do tutorial univariado: o `rethinking` para escrever um modelo animal nós mesmos, o `sommer` para ajustar o modelo bivariado por máxima verossimilhança restrita (REML), e o `stanimal` para ajustar o modelo bivariado bayesiano.
+
+# Preparação
 
 Antes de qualquer coisa, precisamos carregar os arquivos com os dados que vamos usar no resto do tutorial.
 
@@ -85,29 +90,34 @@ squirels$DAM<-as.factor(squirels$DAM)
 squirelsPED<-read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/squirelsPED.txt",header=T)
 ```
 
-Vamos também carregar os pacotes que vamos usar.
+Vamos também carregar os pacotes que vamos usar. As instruções de instalação do `stanimal` estão no tutorial univariado.
 
 ```{r, attr.message=FALSE, message=FALSE, warning=FALSE}
-#2. Instalar automaticamente os pacotes desta lista que ainda não estão instalados
+#2. Instalar automaticamente os pacotes do CRAN que ainda não estão instalados
 
-list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedigreemm")
+list_pkgs <- c("sommer", "bayesplot")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 
-library(MCMCglmm)
-library(lme4)
-library(lmerTest)
-library(pedigreemm)
+library(sommer)
+library(stanimal)
+library(rethinking)
+```
+
+E calcular a matriz de parentesco aditivo $\mathbf{A}$ a partir do pedigree, como no tutorial univariado:
+
+```{r}
+A <- makeA(squirelsPED[, c("ID", "SIRE", "DAM")])
 ```
 
 # Existe uma relação entre tamanho e agressividade?
 
-Vale a pena fazer um gráfico com os valores de agressividade e tamanhoe para verificar se existe uma relação simples entre os dois fenótipos.
+Vale a pena fazer um gráfico com os valores de agressividade e tamanho para verificar se existe uma relação simples entre os dois fenótipos.
 
 ```{r}
 #3. Testar a relação entre tamanho e agressividade
 mod_regression<-lm(aggression~size, data=squirels)
-plot(squirels$size,squirels$aggression, pch = 19)           
+plot(squirels$size,squirels$aggression, pch = 19)
 abline(mod_regression)
 ```
 
@@ -124,150 +134,193 @@ Poderíamos também olhar pra uma regressão múltipla, incluindo os efeitos de 
 summary(lm(aggression~size+sex+forage, data=squirels))
 ```
 
-A partir desse modelo, você poderia concluir que forrageadores melhores são, na verdade, menos agressivos quando condicionamos por tamanho e sexo; e que existe uma relação positiva entre tamanho e agressividade, mesmo quando condicionamos por sexo. Mas será que essa relação fenotípica que observamos é devida a efeitos genéticos? Vamos testar essa hipótese usando um modelo animal bivariado no pacote MCMCglmm.
+A partir desse modelo, você poderia concluir que forrageadores melhores são, na verdade, menos agressivos quando condicionamos por tamanho e sexo; e que existe uma relação positiva entre tamanho e agressividade, mesmo quando condicionamos por sexo. Mas será que essa relação fenotípica que observamos é devida a efeitos genéticos? Vamos testar essa hipótese usando um modelo animal bivariado.
 
-# Modelo animal no MCMCglmm
+# A agressividade é herdável?
 
-O MCMCglmm é um método bayesiano — precisamos especificar as distribuições a priori (priors) ou permitir que o pacote utilize seus priors padrão. A especificação de priors é uma questão complexa e não entraremos em detalhes aqui. As notas do curso de MCMCglmm de Jarrod Hadfield fornecem muito mais informações e a explicação completa dos parametros e opções disponíveis (uma leitura OBRIGATÓRIA se você deseja trabalhar com este pacote). Se você quiser saber mais MESMO, paga uma cerveja pro Diogo.
+Antes do modelo bivariado, vamos verificar se a agressividade é herdável (se não for, faz pouco sentido estimar uma correlação genética com o tamanho). Vamos usar o mesmo modelo animal que escrevemos no `rethinking` no tutorial univariado, trocando o tamanho pela agressividade:
 
-Vamos executar um modelo bivariado, mas, apenas para ver como o MCMCglmm funciona, vamos rodar primeiro um modelo univariado para a agressividade para verificar se ela é herdável (se não for, faz pouco sentido estimar uma correlação genética com o tamanho).
+```{r, results='hide'}
+#4. Modelo animal univariado para agressividade no rethinking
+A_ord <- A[as.character(squirels$ID), as.character(squirels$ID)]  # mesma ordem dos dados
 
-```{r}
-#4. Modelos animais univariados no mcmcglmm
+dados_agr <- list(
+  N = nrow(squirels),
+  id = seq_len(nrow(squirels)),
+  Ag = standardize(squirels$aggression),
+  sexo = as.integer(squirels$sex),
+  F = standardize(squirels$forage),
+  L_A = t(chol(A_ord))
+)
 
-# primeiro, vamos definir uma distribuição a priori para os componentes de variância
-prior_uni <- list(G = list(G1 = list(V = 1, nu = 0.002)), 
-            R = list(V = 1, nu = 0.002))
-
-# Acho que o pacote reserva ID para uma matriz identidade, então vamos duplicar
-# nossa coluna de identidade e chamá-la de “animal” no arquivo de dados
-squirels$animal<-as.factor(squirels$ID)
-
-# então, vamos ajustar o modelo
-
-model_uni <- MCMCglmm(aggression ~ 1+sex+forage, random = ~animal, pedigree = squirelsPED,
-            data = squirels, prior = prior_uni)
-```
-
-Novamente, usamos a função summary para obter os resultados do modelo.
-
-```{r}
-summary(model_uni)
-```
- 
-Acima, vemos as estimativas da variança associada aos efeitos genéticos no termo "animal", a variança residual no termo "units", e estimativas dos efeitos fixos associados ao efeito de sexo e forragamento. Todas essas estimativas acompanham intervalos de confiança que podem ser usados para teste de hipótese.
-
-# Estimando a herdabilidades para agressividade
-
-Uma vantagem grande de modelos bayesianos é que temos uma distribuição posterior e completa para os parâmetros. Portanto, é trivial calcular tanto a herdabilidade quanto o intervalo de confiança da herdabilidade, usando o resultado desse modelo.
-
-```{r}
-#5. Obter uma distribuição a posteriori para h2
-posterior.heritability<-model_uni$VCV[,1]/(model_uni$VCV[,1]+ model_uni$VCV[,2])
-```
-
-Você pode olhar pra essa distribuição a posteriori dos valores de herdabilidade usando um histograma, ou usar a média ou a mediana como uma estimativa da herdabilidade, e usar essa distribuição para obter intervalo de confiança.
-(Um cuidado necessário é que a herdabilidade neste modelo é restrita a valores positivos. Então, o intervalo de confiança nunca vai interceptar o zero e, portanto, não pode ser usado para um teste de hipótese clássico.)
-
-```{r}
-mean(posterior.heritability)   # estimador pontual
+m_agr <- ulam(
+  alist(
+    Ag ~ normal(mu, sigma_E),
+    mu <- a[sexo] + bF * F + u[id],
+    vector[N]: z ~ normal(0, 1),
+    transpars> vector[N]: u <<- sigma_A * (L_A * z),
+    a[sexo] ~ normal(0, 1),
+    bF ~ normal(0, 0.5),
+    c(sigma_A, sigma_E) ~ exponential(1)
+  ), data = dados_agr, chains = 4, cores = 4, iter = 2000)
 ```
 
 ```{r}
-HPDinterval(posterior.heritability) # intervalo de credibilidade
+precis(m_agr, depth = 2, pars = c("a", "bF", "sigma_A", "sigma_E"))
 ```
 
-## Complicações
+Acima, vemos as estimativas do desvio-padrão genético aditivo (`sigma_A`), do desvio-padrão residual (`sigma_E`) e dos efeitos fixos de sexo e forrageamento, todos na escala padronizada da agressividade.
 
-Ao usar MCMC, realmente precisamos realizar um trabalho de pós-ajuste do modelo para verificar se devemos confiar em seus resultados. Para que nossa a posteriori seja robusta, precisamos garantir que a cadeia de MCMC tenha convergido e que as distribuições a posteriori de nossas estimativas estejam estacionárias. Caso contrário, provavelmente precisaremos executar a cadeia por mais tempo do que o padrão e/ou alterar outras opções que controlam o processo de ajuste do modelo.
+## Estimando a herdabilidade da agressividade
 
-Provavelmente rodaríamos o modelo várias vezes para garantir que nossos resultados permaneçam consistentes (note que eles não serão idênticos como seriam sob REML, pois há variação de amostragem do MCMC aqui, e não uma solução única de máxima verossimilhança). Como bons bayesianos, provavelmente também deveríamos testar diferentes especificações de a priori, apenas para garantir que nossa a priori não esteja influenciando excessivamente a a posteriori (ou seja, que o resultado venha realmente dos dados, e não de nossa crença prévia sobre o que esperávamos obter).
-
-Embora os pontos acima sejam extremamente importantes para análises reais que se pretenda publicar, aqui vamos apenas plotar as distribuições a posteriori para fazer uma verificação visual rápida da execução do MCMC!
+Uma vantagem grande de modelos bayesianos é que temos uma distribuição posterior completa para os parâmetros. Portanto, é trivial calcular tanto a herdabilidade quanto o seu intervalo de credibilidade:
 
 ```{r}
-#6. Alguns gráficos de diagnóstico do modelo
-plot(model_uni$Sol)   # gráficos das cadeias e das distribuições a posteriori dos efeitos fixos
+#5. Distribuição a posteriori de h2
+post_agr <- extract.samples(m_agr)
+h2_agr <- with(post_agr, sigma_A^2 / (sigma_A^2 + sigma_E^2))
+mean(h2_agr)          # estimador pontual
+PI(h2_agr, 0.95)      # intervalo de credibilidade de 95%
+dens(h2_agr, xlab = "h2 da agressividade")
 ```
 
-Nos trace plots, o ideal é ver uma variação totalmente aleatória ao redor de uma média, e que não tenha nenhum ponto em que os valores fiquem estagnados em um único valor ou saltos entre valores médios diferentes. Da mesma forma, nos gráficos de densidade, o ideal é que tenhamos uma distribuição que se pareça com uma gaussiana, com apenas um valor máximo.
+Um cuidado necessário é que a herdabilidade neste modelo é restrita a valores entre 0 e 1. Então, o intervalo nunca vai incluir o zero e, portanto, não pode ser usado para um teste de hipótese clássico.
+
+## Diagnósticos do ajuste
+
+Ao usar MCMC, precisamos verificar se devemos confiar nos resultados: as cadeias precisam ter convergido para a mesma distribuição e ter amostras efetivas suficientes. O `precis` já mostra os dois diagnósticos principais:
+
+- `rhat`: compara a variação dentro e entre as cadeias. Valores acima de ~1,01 indicam que as cadeias não concordam;
+- `ess_bulk`: o número efetivo de amostras independentes. Algumas centenas bastam para médias e intervalos.
+
+Os gráficos das cadeias ajudam a ver problemas:
 
 ```{r}
-plot(model_uni$VCV)   # gráficos das cadeias e das distribuições a posteriori das (co)variâncias dos efeitos aleatórios
+#6. Gráficos de diagnóstico
+traceplot(m_agr, pars = c("sigma_A", "sigma_E", "bF"))
+trankplot(m_agr, pars = c("sigma_A", "sigma_E", "bF"))
 ```
 
-Se você obtiver médias a posteriori instáveis e/ou distribuições com aspecto estranho, o primeiro passo habitual seria alterar as opções de execução do MCMCglmm em relação aos valores padrão (comprimento total de 13.000 iterações, sendo as primeiras 3.000 descartadas como burn-in, e as 10.000 restantes amostradas a cada 10 iterações — o intervalo de thinning —, resultando em uma amostra a posteriori de tamanho 1.000).
+No *traceplot*, a região cinza é o aquecimento (*warmup*): as cadeias começam em valores aleatórios, às vezes bem longe da posterior, e o amostrador se ajusta. Essas amostras são descartadas, então olhe só a parte branca. Nela, o ideal é ver as quatro cadeias se misturando, variando de forma aleatória ao redor do mesmo valor, sem trechos em que ficam presas ou saltam entre valores diferentes. No *trankplot* (histogramas dos postos das amostras de cada cadeia), as cadeias devem se sobrepor e ficar próximas de uma linha horizontal: uma cadeia que fica sistematicamente acima ou abaixo das outras está explorando uma região diferente da posterior.
 
-Por exemplo, você poderia utilizar um período de burn-in mais longo e mais iterações, além de amostrar a parte não descartada da cadeia com menos frequência para reduzir a autocorrelação. Naturalmente, isso vai demorar mais pra rodar.
+O Stan também avisa quando há **transições divergentes**, um sinal de que o amostrador não conseguiu explorar bem alguma região da posterior. Se isso acontecer, o primeiro passo é reparametrizar o modelo (como a forma não centrada que estamos usando). Aumentar o número de iterações (`iter`) ou de cadeias (`chains`) ajuda quando o `ess` é baixo, mas não resolve divergências.
 
-```{r, eval=FALSE}
-#7. Uma rodada mais longa. Vamos obter as mesmas respostas?
-model_uni2 <- MCMCglmm(aggression ~ 1+sex+forage, random = ~animal, pedigree = squirelsPED,
-            data = squirels, nitt = 65000, thin = 50, burnin = 15000, prior = prior_uni)
+Como bons bayesianos, também deveríamos testar diferentes prioris, para garantir que o resultado venha realmente dos dados, e não da nossa crença prévia.
+
+# O modelo animal bivariado
+
+No modelo bivariado, cada indivíduo tem dois valores genéticos, um para cada característica, e os dois são correlacionados. Em vez de uma variância genética $\sigma^2_A$, temos uma matriz $2 \times 2$:
+
+$$
+\mathbf{G} = \begin{bmatrix} V_{A,\text{tamanho}} & \mathrm{Cov}_A \\ \mathrm{Cov}_A & V_{A,\text{agressividade}} \end{bmatrix},
+$$
+
+e da mesma forma uma matriz residual $\mathbf{E}$. A correlação genética é $r_G = \mathrm{Cov}_A / \sqrt{V_{A,\text{tamanho}}\, V_{A,\text{agressividade}}}$.
+
+## Ajustando o modelo bivariado no sommer
+
+O `sommer` precisa dos dados no formato longo: uma linha por indivíduo e característica, com uma coluna `trait` indicando a característica e uma coluna `y` com o valor.
+
+```{r, results='markup'}
+#7. Dados no formato longo
+squirels_longo <- reshape(squirels[, c("ID", "sex", "forage", "size", "aggression")],
+                          direction = "long", varying = c("size", "aggression"),
+                          v.names = "y", timevar = "trait",
+                          times = c("size", "aggression"), idvar = "ID")
+squirels_longo$trait <- factor(squirels_longo$trait, levels = c("size", "aggression"))
+head(squirels_longo)
 ```
 
-# Ajustando o modelo bivariado no MCMCglmm
-
-Agora que tivemos um gostinho dos modelos MCMCglmm, vamos estender o modelo e calcular a matriz G entre o tamanho e a agressividade. É possível que esse modelo demore alguns minutos pra rodar no computador de vocês.
+Na fórmula, `trait` e as interações `trait:sex` e `trait:forage` fazem com que cada característica tenha os seus próprios interceptos e efeitos fixos. O termo `usm(trait)` pede uma matriz de covariâncias não estruturada (*unstructured*) entre as características, tanto para o efeito genético quanto para o resíduo.
 
 ```{r}
-#8. Ajustar um modelo bivariado; primeiro, especificar uma distribuição a priori
+#8. Modelo animal bivariado no sommer
+A_inv <- solve(A)
+attr(A_inv, "inverse") <- TRUE
 
-prior_bi <- list(G = list(G1 = list(V = diag(2), nu = 1.002)),
-                          R = list(V = diag(2), nu = 1.002))
-
-# Aqui estamos usando a função cbind para definir uma resposta bivariada.
-# A variável "trait", que aparece do lado direito da fórmula, é importante para que os efeitos de sexo, forrageamento, e os interceptos sejam diferentes entre os dois fenótipos analisados.
-model_bi <- MCMCglmm(cbind(size, aggression) ~ trait + trait:sex +trait:forage - 1, 
-                    random = ~us(trait):animal,
-                    rcov = ~us(trait):units, family = c("gaussian", "gaussian"),
-                    pedigree = squirelsPED, data = squirels, prior = prior_bi, 
-                    nitt = 65000, thin = 50, burnin = 15000, verbose = TRUE)
+mod_biREML <- mmes(y ~ trait + trait:sex + trait:forage - 1,
+                   random = ~ vsm(usm(trait), ism(ID), Gu = A_inv),
+                   rcov = ~ vsm(usm(trait), ism(units)),
+                   data = squirels_longo,
+                   control = mmes_control(diagnostics = list(verbose = FALSE)))
+vc_bi <- summary(mod_biREML)$varcomp
+vc_bi
 ```
 
-UMA PEQUENA DIGRESSÃO — Esse modelo provavelmente levou um minuto (ou vários?) para rodar. Um programa rápido de REML teria encontrado a solução de máxima verossimilhança para o modelo em segundos. Isso ilustra que o tempo computacional é uma desvantagem relativa do MCMC. Para conjuntos de dados pequenos e modelos simples como este, raramente isso é um problema; já para grandes conjuntos de dados e modelos complexos (por exemplo, muitas características e/ou efeitos aleatórios), as análises de MCMC podem levar dias ou semanas. No entanto, você acaba obtendo distribuições a posteriori que são muito úteis para propagar a incerteza para análises subsequentes. O MCMCglmm também possui capacidades muito mais avançadas (e robustas) para ajustar modelos generalizados do que os métodos baseados em verossimilhança. Portanto, há vantagens e desvantagens a considerar!
-
-Vamos observar os gráficos das estimativas dos componentes de variância para ver se consideramos que a execução gerou resultados confiáveis. Reiterando: isso não é uma verificação de modelo suficiente para uma análise formal que gere resultados publicáveis. Leia a vignette e as notas do curso de MCMCglmm de Hadfield para entender o que deve ser feito adequadamente. Estamos pegando atalhos consideráveis aqui para economizar tempo.
-
-```{r, eval=FALSE}
-#9. Plotar estimativas de variância e covariância para diagnóstico
-plot(model_bi$VCV)   # gráficos das cadeias e das distribuições a posteriori das (co)variâncias dos efeitos aleatórios
-```
-
-Se os trace plots estiverem razoáveis, vamos continuar olhando o modelo.
+As três primeiras linhas são os elementos de $\mathbf{G}$, as três últimas, de $\mathbf{E}$. Montando a matriz $\mathbf{G}$ e calculando a correlação genética:
 
 ```{r}
-#10. Sumarizar o modelo bivariado
-summary(model_bi)
+#9. Matriz G e correlação genética (REML)
+G_REML <- matrix(c(vc_bi$estimate[1], vc_bi$estimate[2],
+                   vc_bi$estimate[2], vc_bi$estimate[3]), nrow = 2,
+                 dimnames = list(c("size", "aggression"), c("size", "aggression")))
+G_REML
+cov2cor(G_REML)
 ```
 
-Esta saída contém estimativas dos elementos de G, da matriz de variância-covariância residual (ambiental), que poderíamos chamar de R, e dos efeitos fixos. Em todos os casos, a média a posteriori é fornecida como estimativa pontual.
+O REML dá uma estimativa pontual de $r_G$, mas não uma medida simples da sua incerteza.
 
-Esse sumário contém estimativa de todos os elementos da matriz G, os elementos da matriz residual, das variações ambientais e todos os efeitos fixos. Em todos os casos, a média é a média da posteriori, que te dá uma estimativa do valor do parâmetro.
+## Ajustando o modelo bivariado no stanimal
 
-
-# Fazendo uma matriz G e calculando a correlação genética.
-
-Na parte de "G-Structure" da tabela de sumário, os elementos estão na ordem: variância aditiva de tamanho, covariância entre tamanho e agressividade, covariância entre agressividade e tamanho, e variância aditiva de agressividade. Escrever o termo de covariança duas vezes pode parecer desnecessário, mas essa duplicidade facilita o trabalho com os objetos nas análises posteriores.
+No `stanimal`, o modelo bivariado tem a mesma interface do univariado: basta colocar as duas características num `cbind()` do lado esquerdo da fórmula. Cada característica ganha os seus próprios efeitos fixos automaticamente.
 
 ```{r}
-#11. Construir uma matriz G e calcular rG
-
-G_elements<-c(mean(model_bi$VCV[,1]), mean(model_bi$VCV[,2]), 
-              mean(model_bi$VCV[,3]), mean(model_bi$VCV[,4]))
-                        
-              # model_bi$VCV contém as distribuições a posteriori (com 1000 valores cada) dos
-              # oito parâmetros de variância e covariância (VA1, COVA12, COVA12, VA2, VR1, COVR12, COVR12, VR2).
-              # Aqui obtemos as médias das colunas 1:4 para obter estimativas pontuais dos
-              # parâmetros genéticos e então organizá-los em uma matriz
-
-G<-matrix(G_elements, nrow=2)
-
-# Transformar G na matriz de correlação correspondente
-(Gcor<-cov2cor(G))
+#10. Modelo animal bivariado no stanimal
+rownames(squirels) <- squirels$ID
+desenho_bi <- animal_design(cbind(size, aggression) ~ sex + forage, squirels,
+                            pedigree = squirelsPED[, c("ID", "SIRE", "DAM")])
+fit_bi <- lmm_animal(desenho_bi$Y, desenho_bi$X, desenho_bi$A, refresh = 0)
 ```
 
+UMA PEQUENA DIGRESSÃO — Esse modelo rodou em poucos segundos. O `stanimal` integra os valores genéticos para fora da verossimilhança, então não precisa amostrar 1000 valores genéticos (500 indivíduos $\times$ 2 características), como faria um modelo escrito diretamente no `rethinking`. Mesmo assim, um programa de REML encontra a solução de máxima verossimilhança mais rápido, e o tempo computacional é uma desvantagem relativa do MCMC: para muitos indivíduos e muitas características, uma análise bayesiana pode levar horas. Em troca, você obtém distribuições a posteriori completas, muito úteis para propagar a incerteza para análises subsequentes. Há vantagens e desvantagens a considerar!
+
+Antes de olhar os resultados, os diagnósticos: divergências, `rhat` e `ess`.
+
+```{r}
+#11. Diagnósticos
+fit_bi$diagnostic_summary()
+fit_bi$summary(c("G", "E"))
+```
+
+E os gráficos das cadeias, com o pacote `bayesplot`, que funciona diretamente com o objeto do `stanimal`:
+
+```{r}
+bayesplot::mcmc_trace(fit_bi$draws(c("G[1,1]", "G[2,1]", "G[2,2]")))
+```
+
+Se os diagnósticos estiverem razoáveis, vamos continuar olhando o modelo. Este sumário contém as estimativas dos elementos de $\mathbf{G}$, da matriz de variância-covariância residual (ambiental) $\mathbf{E}$, das herdabilidades e das correlações genéticas. Em todos os casos, a média é a média da posterior, que te dá uma estimativa do valor do parâmetro.
+
+```{r}
+#12. Sumarizar o modelo bivariado
+fit_bi$summary(c("h2", "corrG"))
+```
+
+# Fazendo uma matriz G e calculando a correlação genética
+
+A função `draws_mean()` monta a matriz com as médias da posterior, e `fit_draws()` devolve todas as amostras, com uma matriz $\mathbf{G}$ por amostra da posterior:
+
+```{r}
+#13. Matriz G e correlação genética (bayesiano)
+G_bayes <- draws_mean(fit_bi, "G")
+G_bayes
+draws_mean(fit_bi, "corrG")
+
+amostras <- fit_draws(fit_bi)
+dim(amostras$G)                       # característica x característica x amostra
+rG <- amostras$corrG["size", "aggression", ]
+mean(rG)
+PI(rG, 0.95)
+```
+
+Com as amostras, é fácil ver a incerteza sobre a correlação genética, e compará-la com a estimativa REML:
+
+```{r}
+dens(rG, xlab = "Correlação genética tamanho-agressividade", xlim = c(0, 1))
+abline(v = cov2cor(G_REML)[1, 2], lty = 2)
+```
+
+A estimativa REML (linha tracejada) é maior que a média da posterior. Correlações perto de 1 estão perto do limite do espaço de parâmetros, onde a estimativa REML é pouco estável, e a priori do `stanimal` sobre as correlações (uma LKJ) encolhe as correlações levemente em direção a zero. As duas abordagens concordam que a correlação genética é alta e positiva, e a posterior mostra o quanto ainda não sabemos sobre o seu valor exato.
 
 # Comentários finais
 
-No final, chegamos a uma estimativa de mais ou menos 0,85 para a correlação genética entre agressividade e tamanho. Essa é uma correlação genética bastante alta, compatível com dados usados num tutorial simples para uma disciplina introdutória. Alguns comentários aqui. Primeiro, note como, apesar do nome "Covariância Genética", nós não usamos nenhuma informação genética sobre os indivíduos, apenas as suas relações de parentesco. Nesse sentido, esse é um modelo puramente correlativo: estamos atribuindo a similaridade entre indivíduos aparentados a uma similaridade genética ao chamar essa correlação de "correlação genética". É sempre possível, e precisamos considerar essa possibilidade, que a similaridade entre parentes venha de outras causas, por exemplo, ambientes correlacionados. Isso é fundamental no estudo de populações humanas, por exemplo, em que uma fração grande da similaridade entre parentes vem de ambientes compartilhados. Você herda os genes e a biblioteca dos seus pais. 
+No final, chegamos a uma estimativa de mais ou menos `r format(round(mean(rG), 2), decimal.mark = ",")` para a correlação genética entre agressividade e tamanho. Essa é uma correlação genética bastante alta, compatível com dados usados num tutorial simples para uma disciplina introdutória. Alguns comentários aqui. Primeiro, note como, apesar do nome "Covariância Genética", nós não usamos nenhuma informação genética sobre os indivíduos, apenas as suas relações de parentesco. Nesse sentido, esse é um modelo puramente correlativo: estamos atribuindo a similaridade entre indivíduos aparentados a uma similaridade genética ao chamar essa correlação de "correlação genética". É sempre possível, e precisamos considerar essa possibilidade, que a similaridade entre parentes venha de outras causas, por exemplo, ambientes correlacionados. Isso é fundamental no estudo de populações humanas, por exemplo, em que uma fração grande da similaridade entre parentes vem de ambientes compartilhados. Você herda os genes e a biblioteca dos seus pais.
