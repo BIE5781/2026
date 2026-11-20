@@ -64,7 +64,7 @@ A disciplina apresenta fundamentos e aplicações da modelagem estatística em p
 | 11/11 | **12. Pensamento causal II**: [slides](Aulas/Aula_Inferencia_Causal_II.html) | Estimando efeitos causais e o critério *backdoor* | [Construção de modelos causais](Tutoriais/10_pensamento_causal.html) | Diogo | Sala 5 Centro Didático|
 | 13/11 | **13. Modelos avançados** |Modelo hierárquico de resultado eleitorais |[Página do projeto](https://petapura.eleicoes-pet.workers.dev/)  | Manoel Galdino (FFLCH-USP) |Sala 5 Centro Didático |
 | 18/11 | **14. Discussão de projetos** | Primeira discussão dos projetos |  |  | Multimída 2 Centro Didático|
-| 25/11 | **15. Modelos avançados**: [slides](Aulas/Aula_modelos_filogeneticos_animal.html) | Modelos filogenéticos e animais, modelos de ocupação de manchas |  | Diogo e Paulo Inácio | Sala 5 Centro Didático|
+| 25/11 | **15. Modelos avançados**: [slides](Aulas/Aula_modelos_filogeneticos_animal.html) | Modelos filogenéticos e animais, modelos de ocupação de manchas | Modelo animal [univariado](Tutoriais/modelo_animal_uni.html) e [multivariado](Tutoriais/modelo_animal_multi.html) | Diogo e Paulo Inácio | Sala 5 Centro Didático|
 | 27/11 | **Fechamento** | Segunda discussão dos projetos |  |  | Sala 5 Centro Didático|
 
 # Avaliação
