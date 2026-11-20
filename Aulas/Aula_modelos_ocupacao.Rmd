@@ -133,8 +133,10 @@ ajusta_ou_le <- function(arquivo, rotulos, objetos, dados) {
         mods <- lapply(setNames(objetos, objetos), get, envir = globalenv())
         list(post = lapply(mods, extract.samples),
              precis = lapply(mods, precis, depth = 2, prob = 0.95),
+             ## Não usamos rethinking::divergent(): com o cmdstanr atual ela
+             ## soma a coluna stepsize__ em vez de divergent__
              diag = sapply(mods, function(m)
-                 c(divergencias = divergent(m),
+                 c(divergencias = sum(attr(m, "cstanfit")$sampler_diagnostics()[, , "divergent__"]),
                    rhat.max = max(precis(m, depth = 2)$rhat, na.rm = TRUE))))
     }
     if (!isTRUE(getOption("knitr.in.progress"))) {

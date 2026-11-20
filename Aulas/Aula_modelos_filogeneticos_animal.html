@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelos filogenéticos e modelo animal</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Diogo Melo" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/shareon/shareon.min.css" rel="stylesheet" />
+    <script src="libs/shareon/shareon.min.js"></script>
+    <link href="libs/xaringanExtra-shareagain/shareagain.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-shareagain/shareagain.js"></script>
+    <script src="libs/xaringanExtra_fit-screen/fit-screen.js"></script>
+    <link href="libs/tachyons/tachyons.min.css" rel="stylesheet" />
+    <link href="libs/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view/tile-view.js"></script>
+    <!-- Configuração do MathJax 3 para slides xaringan.
+         Uso no YAML:
+           output:
+             xaringan::moon_reader:
+               mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+               includes:
+                 in_header: mathjax3.html
+         Precisa ser definida antes de o MathJax carregar, por isso vai no <head>. -->
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        packages: {'[+]': ['color']}
+      },
+      loader: {load: ['[tex]/color']},
+      options: {
+        // o padrão; código R (com $) nunca é lido como equação
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    };
+    </script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelos filogenéticos e modelo animal
+]
+.subtitle[
+## Quando a covariância entre observações é conhecida
+]
+.author[
+### Diogo Melo
+]
+.date[
+### 25 de novembro de 2026
+]
+
+---
+
+
+
+
+
+
+&lt;style type="text/css"&gt;
+/* Colunas desiguais para slides com código: a coluna do código fica mais
+   larga. Definido aqui, e não no xaringan-themer.css, porque esse arquivo é
+   reescrito por todas as aulas que usam o mesmo tema.
+   Os nomes das classes não podem ter números: o remark só aceita letras,
+   "-" e "_" (com números, o bloco não vira coluna e a matemática quebra). */
+.codigo-esq, .texto-esq { float: left; }
+.codigo-dir, .texto-dir { float: right; }
+.codigo-esq, .codigo-dir { width: 53%; }
+.texto-esq, .texto-dir { width: 44%; }
+.codigo-esq &gt; :first-child, .texto-esq &gt; :first-child,
+.codigo-dir &gt; :first-child, .texto-dir &gt; :first-child { margin-top: 0; }
+.codigo-esq .remark-code, .codigo-dir .remark-code { font-size: 0.85rem; }
+&lt;/style&gt;
+
+
+
+
+
+## De onde viemos
+
+- Na aula de modelos hierárquicos, observações do mesmo **grupo** compartilhavam um intercepto aleatório:
+
+`$$\alpha_k \sim \mathrm{Normal}(\alpha_0, \sigma_g)$$`
+
+- Observações do mesmo grupo são correlacionadas; observações de grupos diferentes, independentes.
+
+- Mas e se a semelhança entre observações não for "tudo ou nada"?
+  - Espécies são mais ou menos aparentadas, dependendo de quando divergiram.
+  - Indivíduos são irmãos, primos, meio-irmãos ou não aparentados.
+
+- Hoje: modelos em que a **covariância entre as observações** é dada por uma matriz conhecida — a filogenia ou o pedigree.
+
+---
+
+class: inverse, middle, center
+
+# Parte 1: Regressão filogenética
+
+---
+
+## Cérebro e vida social em primatas
+
+.pull-left[
+- **Hipótese do cérebro social:** viver em grupos maiores exige mais capacidade cognitiva, e por isso seleciona cérebros maiores.
+
+- Dados `Primates301` do pacote `rethinking`: 301 espécies de primatas, com massa corporal, tamanho do cérebro e tamanho médio do grupo.
+
+- 151 espécies têm as três medidas.
+
+- Pergunta: **o tamanho do grupo prediz o tamanho do cérebro, controlando a massa corporal?**
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/dag-primatas-1.png" alt="" width="100%" /&gt;
+.f6[M: massa corporal; G: tamanho do grupo; B: cérebro; U: história compartilhada (não observada).]
+]
+
+---
+
+## Por que controlar a massa não basta
+
+- A massa corporal `\(M\)` é uma causa comum de `\(G\)` e `\(B\)`: o caminho `\(G \leftarrow M \rightarrow B\)` é fechado incluindo `\(M\)` no modelo.
+
+- Mas espécies aparentadas se parecem em **tudo**: dieta, hábitat, fisiologia, ecologia... Chamamos de `\(U\)` tudo o que é herdado junto com a história evolutiva.
+
+- `\(U\)` abre outro caminho, `\(G \leftarrow U \rightarrow B\)`, e não foi medido.
+
+- **Ideia da regressão filogenética:** usar a filogenia como um *proxy* de `\(U\)`. Espécies próximas devem ter resíduos parecidos.
+
+- Atenção: a filogenia não é uma causa. Ela é uma descrição de quanto tempo de história duas espécies compartilham.
+
+---
+
+## Preparando os dados
+
+
+``` r
+data(Primates301)
+data(Primates301_nex)
+d &lt;- Primates301
+d$name &lt;- as.character(d$name)
+dstan &lt;- d[complete.cases(d$group_size, d$body, d$brain), ]
+spp_obs &lt;- dstan$name
+
+dat_list &lt;- list(
+  N_spp = nrow(dstan),
+  M = standardize(log(dstan$body)),       # massa corporal
+  B = standardize(log(dstan$brain)),      # tamanho do cérebro
+  G = standardize(log(dstan$group_size)), # tamanho do grupo
+  Imat = diag(nrow(dstan))
+)
+```
+
+---
+
+## Os dados
+
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-dados-1.png" alt="" width="100%" /&gt;
+
+- Cérebro e massa corporal são fortemente associados. Será que o grupo ainda importa?
+
+---
+
+## Modelo 1: regressão linear comum
+
+.texto-esq[
+`$$\begin{aligned}
+B_i &amp;\sim \mathrm{Normal}(\mu_i, \sigma) \\
+\mu_i &amp;= \alpha + \beta_M M_i + \beta_G G_i \\
+\alpha &amp;\sim \mathrm{Normal}(0, 1) \\
+\beta_M, \beta_G &amp;\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+
+- Cada espécie é uma observação **independente**.
+]
+
+.codigo-dir[
+
+``` r
+m_reg &lt;- ulam(
+  alist(
+    B ~ normal(mu, sigma),
+    mu &lt;- a + bM * M + bG * G,
+    a ~ normal(0, 1),
+    c(bM, bG) ~ normal(0, 0.5),
+    sigma ~ exponential(1)
+  ), data = dat_list, chains = 4, cores = 4)
+```
+]
+
+---
+
+## Modelo 1: resultados
+
+
+```
+      média   dp  2,5% 97,5% rhat
+a      0.00 0.02 -0.04  0.03    1
+bG     0.12 0.02  0.08  0.17    1
+bM     0.89 0.02  0.85  0.93    1
+sigma  0.22 0.01  0.19  0.24    1
+```
+
+- Controlando a massa corporal, espécies que vivem em grupos maiores têm cérebros maiores: `\(\beta_G =\)` 0,12 [0,08; 0,17].
+
+- Mas esse modelo trata 151 espécies de primatas como 151 sorteios independentes. Será?
+
+---
+
+## Modelo 2: a regressão em forma matricial
+
+Podemos escrever as `\(N\)` observações juntas, como **um único sorteio** de uma normal multivariada:
+
+.pull-left[
+`$$\begin{aligned}
+\mathbf{B} &amp;\sim \mathrm{MVNormal}(\boldsymbol{\mu}, \boldsymbol{\Sigma}) \\
+\mu_i &amp;= \alpha + \beta_M M_i + \beta_G G_i \\
+\boldsymbol{\Sigma} &amp;= \sigma^2 \mathbf{I}
+\end{aligned}$$`
+]
+
+.pull-right[
+$$
+\sigma^2 \mathbf{I} =
+`\begin{bmatrix}
+\sigma^2 &amp; 0 &amp; \cdots &amp; 0 \\
+0 &amp; \sigma^2 &amp; \cdots &amp; 0 \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+0 &amp; 0 &amp; \cdots &amp; \sigma^2
+\end{bmatrix}`
+$$
+]
+
+- Diagonal: variância residual de cada espécie.
+- Fora da diagonal: **covariância** entre os resíduos de duas espécies. Os zeros dizem que as espécies são independentes.
+- É exatamente o modelo 1, escrito de outra forma.
+
+---
+
+## Modelo 2: no `ulam`
+
+.codigo-esq[
+
+``` r
+m_mvn &lt;- ulam(
+  alist(
+    B ~ multi_normal(mu, SIGMA),
+    mu &lt;- a + bM * M + bG * G,
+    matrix[N_spp, N_spp]: SIGMA &lt;- Imat * sigma_sq,
+    a ~ normal(0, 1),
+    c(bM, bG) ~ normal(0, 0.5),
+    sigma_sq ~ exponential(1)
+  ), data = dat_list, chains = 4, cores = 4)
+```
+]
+
+.texto-dir[
+- `Imat` é a matriz identidade `\(N \times N\)`, passada nos dados.
+
+- `matrix[N_spp, N_spp]: SIGMA &lt;- ...` declara e calcula a matriz de covariância dentro do modelo.
+
+- O parâmetro agora é a **variância** `sigma_sq` `\(= \sigma^2\)`.
+
+- Esse modelo é bem mais lento: a cada passo do HMC, o Stan decompõe uma matriz `\(151 \times 151\)`.
+]
+
+---
+
+## Modelo 2: mesmos resultados
+
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-reg-mvn-1.png" alt="" width="100%" /&gt;
+
+- As posteriores coincidem (a menos de erro de Monte Carlo). Para o `\(\sigma\)` do modelo 2, usamos `\(\sqrt{\sigma^2}\)`.
+
+- Ganhamos o lugar certo para colocar a dependência entre espécies: **fora da diagonal de** `\(\boldsymbol{\Sigma}\)`.
+
+---
+
+## As espécies não são independentes
+
+.pull-left[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/arvore-1.png" alt="" width="95%" /&gt;
+]
+
+.pull-right[
+- Filogenia das 151 espécies com dados.
+
+- Espécies de um mesmo gênero tiveram pouco tempo para divergir: devem ser parecidas mesmo depois de controlar `\(M\)` e `\(G\)`.
+
+- Precisamos de um modelo para **como** o parentesco gera covariância.
+
+- O mais simples: **movimento browniano**.
+]
+
+---
+
+## Movimento browniano
+
+.pull-left[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/arvore-exemplo-1.png" alt="" width="95%" /&gt;
+]
+
+.pull-right[
+- O caráter evolui como um passeio aleatório: em cada intervalo de tempo, uma mudança com média 0 e variância proporcional ao tempo.
+
+- Duas espécies compartilham todas as mudanças que ocorreram **antes** de divergirem.
+
+- **Covariância = comprimento de ramo compartilhado** (da raiz até o ancestral comum).
+
+
+```
+  A B   C   D
+A 3 2 0.0 0.0
+B 2 3 0.0 0.0
+C 0 0 3.0 0.5
+D 0 0 0.5 3.0
+```
+]
+
+---
+
+## A matriz filogenética
+
+.codigo-esq[
+
+``` r
+arvore &lt;- keep.tip(Primates301_nex, spp_obs)
+## covariâncias sob movimento browniano
+V &lt;- vcv(corBrownian(phy = arvore))
+## na mesma ordem dos dados
+V &lt;- V[spp_obs, spp_obs]
+## matriz de correlação
+dat_list$R &lt;- V / max(V)
+```
+
+- `corBrownian` e `vcv` (pacote `ape`) calculam a matriz para a filogenia.
+- Dividindo pelo máximo, a diagonal fica igual a 1 e `\(\mathbf{R}\)` é uma matriz de **correlação**.
+]
+
+.texto-dir[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-R-1.png" alt="" width="90%" /&gt;
+]
+
+---
+
+## Modelo 3: regressão filogenética
+
+.texto-esq[
+`$$\begin{aligned}
+\mathbf{B} &amp;\sim \mathrm{MVNormal}(\boldsymbol{\mu}, \boldsymbol{\Sigma}) \\
+\mu_i &amp;= \alpha + \beta_M M_i + \beta_G G_i \\
+\boldsymbol{\Sigma} &amp;= \sigma^2 \textcolor{#cb4b16}{\mathbf{R}} \\
+\alpha &amp;\sim \mathrm{Normal}(0, 1) \\
+\beta_M, \beta_G &amp;\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma^2 &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+
+- A única mudança: `\(\mathbf{I} \to \mathbf{R}\)`.
+- É o modelo dos *PGLS* (*phylogenetic generalized least squares*).
+]
+
+.codigo-dir[
+
+``` r
+m_bm &lt;- ulam(
+  alist(
+    B ~ multi_normal(mu, SIGMA),
+    mu &lt;- a + bM * M + bG * G,
+    matrix[N_spp, N_spp]: SIGMA &lt;- R * sigma_sq,
+    a ~ normal(0, 1),
+    c(bM, bG) ~ normal(0, 0.5),
+    sigma_sq ~ exponential(1)
+  ), data = dat_list, chains = 4, cores = 4)
+```
+]
+
+---
+
+## Modelo 3: resultados
+
+
+```
+         média   dp  2,5% 97,5% rhat
+a        -0.19 0.17 -0.53  0.13    1
+bG       -0.01 0.02 -0.05  0.03    1
+bM        0.70 0.04  0.62  0.77    1
+sigma_sq  0.16 0.02  0.13  0.20    1
+```
+
+- O efeito do tamanho do grupo praticamente **desaparece**: `\(\beta_G =\)` -0,01 [-0,05; 0,03].
+
+- A associação entre `\(G\)` e `\(B\)` no modelo 1 vinha de diferenças **entre clados**. Comparando espécies aparentadas, a associação é fraca.
+
+- Note também que `\(\beta_M\)` diminui e que a variância residual aumenta: parte do que era "explicado" pela massa era semelhança filogenética.
+
+---
+
+## Modelo 4: browniano + resíduo independente
+
+O modelo browniano supõe que **toda** a variação residual segue a filogenia. Uma alternativa mais flexível soma uma parte filogenética e uma parte independente:
+
+.texto-esq[
+`$$\begin{aligned}
+\boldsymbol{\Sigma} &amp;= \sigma^2_F\,\mathbf{R} + \sigma^2_E\,\mathbf{I} \\
+\lambda &amp;= \frac{\sigma^2_F}{\sigma^2_F + \sigma^2_E}
+\end{aligned}$$`
+
+- `\(\lambda\)`: fração da variância residual explicada pela filogenia. É análogo ao `\(\lambda\)` de Pagel.
+- `\(\lambda = 0\)`: modelo 2. `\(\lambda = 1\)`: modelo 3.
+- Também chamado de "herdabilidade filogenética" (Lynch 1991; Housworth et al. 2004).
+]
+
+.codigo-dir[
+.codigo-pequeno[
+
+``` r
+m_lambda &lt;- ulam(
+  alist(
+    B ~ multi_normal(mu, SIGMA),
+    mu &lt;- a + bM * M + bG * G,
+    matrix[N_spp, N_spp]: SIGMA &lt;-
+      R * sigma_F_sq + Imat * sigma_E_sq,
+    a ~ normal(0, 1),
+    c(bM, bG) ~ normal(0, 0.5),
+    c(sigma_F_sq, sigma_E_sq) ~ exponential(1)
+  ), data = dat_list, chains = 4, cores = 4)
+```
+
+`\(\lambda\)` é uma quantidade derivada, calculada para cada amostra da posterior:
+
+
+``` r
+post_lambda &lt;- extract.samples(m_lambda)
+lambda &lt;- with(post_lambda,
+  sigma_F_sq / (sigma_F_sq + sigma_E_sq))
+```
+]
+]
+
+---
+
+## Modelo 4: resultados
+
+.pull-left[
+
+```
+           média   dp  2,5% 97,5% rhat
+a          -0.12 0.12 -0.35  0.12    1
+bM          0.76 0.03  0.70  0.82    1
+bG          0.03 0.02 -0.01  0.07    1
+sigma_F_sq  0.08 0.01  0.05  0.11    1
+sigma_E_sq  0.00 0.00  0.00  0.01    1
+lambda      0.96 0.02  0.92  0.98   NA
+```
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-lambda-1.png" alt="" width="100%" /&gt;
+]
+
+- Os dados indicam que a maior parte da variância residual é filogenética: `\(\lambda =\)` 0,96 [0,92; 0,98].
+
+---
+
+## Comparando os quatro modelos
+
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-modelos-1.png" alt="" width="100%" /&gt;
+
+- Os modelos 1 e 2 são idênticos. Incluir a filogenia muda a conclusão sobre `\(\beta_G\)`.
+
+---
+
+## Cuidados com a regressão filogenética
+
+- "Controlar a filogenia" não é uma correção automática. O movimento browniano é **um modelo** de evolução, com premissas fortes:
+  - mudanças com variância constante ao longo do tempo e entre linhagens;
+  - comprimentos de ramo corretos;
+  - a covariância residual é a mesma para as variáveis que causam `\(B\)` e para `\(B\)`.
+
+- A filogenia não diz **qual** variável `\(U\)` está confundindo a relação. Ela só descreve a estrutura esperada da semelhança.
+
+- A árvore também é estimada: incerteza na topologia e nos comprimentos de ramo pode ser incorporada (ex.: ajustar o modelo a uma amostra de árvores).
+
+- **Outros modelos de covariância** são possíveis. Por exemplo, um processo de Ornstein-Uhlenbeck, em que a covariância cai exponencialmente com a distância filogenética. No `rethinking`, isso é um processo gaussiano: `SIGMA &lt;- cov_GPL1(Dmat, etasq, rhosq, 0.01)` (McElreath 2020, seção 14.5.2, modelo `m14.11`).
+
+---
+
+class: inverse, middle, center
+
+# Parte 2: Modelo animal
+
+---
+
+## O mesmo modelo, outra matriz
+
+Na regressão filogenética do modelo 4:
+
+`$$\boldsymbol{\Sigma} = \sigma^2_F\,\textcolor{#cb4b16}{\mathbf{R}} + \sigma^2_E\,\mathbf{I}$$`
+
+Troque **espécies** por **indivíduos** e **filogenia** por **pedigree**:
+
+`$$\boldsymbol{\Sigma} = \sigma^2_A\,\textcolor{#cb4b16}{\mathbf{A}} + \sigma^2_E\,\mathbf{I}$$`
+
+| | Regressão filogenética | Modelo animal |
+|:--|:--|:--|
+| Unidade | Espécie | Indivíduo |
+| Matriz | `\(\mathbf{R}\)`: história compartilhada | `\(\mathbf{A}\)`: parentesco aditivo |
+| Variância estruturada | `\(\sigma^2_F\)` | `\(\sigma^2_A\)`: variância genética aditiva |
+| Proporção | `\(\lambda\)` | `\(h^2\)`: herdabilidade |
+
+Os dois modelos são formalmente o mesmo (Lynch 1991; Hadfield &amp; Nakagawa 2010).
+
+---
+
+## A matriz de parentesco aditivo
+
+.pull-left[
+- `\(A_{ij}\)` é o dobro do coeficiente de coancestria entre `\(i\)` e `\(j\)`: a fração esperada de alelos idênticos por descendência.
+
+| Relação | `\(A_{ij}\)` |
+|:--|:--:|
+| O próprio indivíduo | 1 |
+| Pai/mãe e filho(a) | 1/2 |
+| Irmãos completos | 1/2 |
+| Meio-irmãos | 1/4 |
+| Não aparentados | 0 |
+
+- A matriz é calculada a partir do pedigree (ex.: `nadiv::makeA`).
+]
+
+.pull-right[
+- **Valor genético aditivo** `\(u_i\)` ("breeding value"): o efeito médio dos alelos de `\(i\)` sobre o fenótipo.
+
+`$$\mathbf{u} \sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A})$$`
+
+- Parentes têm valores genéticos correlacionados. Quanto mais aparentados, maior a correlação.
+
+- **Herdabilidade:**
+
+`$$h^2 = \frac{\sigma^2_A}{\sigma^2_A + \sigma^2_E}$$`
+
+- `\(h^2\)` determina a resposta à seleção (equação do criador: `\(R = h^2 S\)`).
+]
+
+---
+
+## Exemplo: tamanho corporal em esquilos
+
+- Dados simulados de 500 esquilos de uma população natural: 100 pais e 400 filhos, com tamanho corporal, sexo e qualidade do forrageamento no local de coleta.
+- O pedigree (quem é pai e mãe de quem) foi reconstruído com marcadores moleculares.
+- O tamanho está sob seleção. Quanto da variação em tamanho é genética, e portanto pode responder à seleção?
+
+
+``` r
+esquilos &lt;- read.table("../Tutoriais/squirels2.txt", header = TRUE)
+pedigree &lt;- read.table("../Tutoriais/squirelsPED.txt", header = TRUE)
+
+## Matriz de parentesco aditivo A (2 x coeficiente de coancestria)
+A &lt;- as.matrix(nadiv::makeA(pedigree[, c("ID", "DAM", "SIRE")]))
+A &lt;- A[as.character(esquilos$ID), as.character(esquilos$ID)]
+
+dat_esq &lt;- list(
+  N = nrow(esquilos),
+  id = seq_len(nrow(esquilos)),
+  S = standardize(esquilos$size),
+  sexo = esquilos$sex,               # 1 ou 2
+  F = standardize(esquilos$forage),  # qualidade do forrageamento
+  L_A = t(chol(A))                   # A = L_A %*% t(L_A)
+)
+```
+
+---
+
+## A matriz A dos esquilos
+
+.pull-left[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-A-1.png" alt="" width="90%" /&gt;
+]
+
+.pull-right[
+- 80 filhos, ordenados por pai e mãe.
+
+- Blocos escuros: irmãos completos (`\(A_{ij} = 1/2\)`).
+
+- Blocos claros ao redor: meio-irmãos por parte de pai (`\(A_{ij} = 1/4\)`).
+
+- Fora dos blocos: não aparentados.
+
+- Diferente da filogenia, a matriz é **esparsa**: a maioria dos pares não é aparentada.
+]
+
+---
+
+## O modelo animal
+
+.pull-left[
+`$$\begin{aligned}
+S_i &amp;\sim \mathrm{Normal}(\mu_i, \sigma_E) \\
+\mu_i &amp;= \alpha_{\mathrm{sexo}[i]} + \beta_F F_i + \textcolor{#cb4b16}{u_i} \\
+\textcolor{#cb4b16}{\mathbf{u}} &amp;\sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A}) \\
+\alpha_k &amp;\sim \mathrm{Normal}(0, 1) \\
+\beta_F &amp;\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma_A, \sigma_E &amp;\sim \mathrm{Exponential}(1)
+\end{aligned}$$`
+
+- É um modelo com **interceptos aleatórios por indivíduo**, como na aula de modelos hierárquicos, mas os interceptos são correlacionados pelo parentesco.
+]
+
+.pull-right[
+**Forma não centrada**
+
+- Com 500 valores genéticos, a versão centrada é lenta e tem problemas de ajuste.
+
+- Como na aula de modelos hierárquicos, reescrevemos com variáveis padronizadas, usando a decomposição de Cholesky `\(\mathbf{A} = \mathbf{L}_A \mathbf{L}_A^\top\)`:
+
+`$$z_i \sim \mathrm{Normal}(0, 1), \qquad \mathbf{u} = \sigma_A\,\mathbf{L}_A\,\mathbf{z}$$`
+
+- E então `\(\mathbf{u} \sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A})\)`.
+]
+
+---
+
+## O modelo animal no `ulam`
+
+.codigo-esq[
+
+``` r
+m_animal &lt;- ulam(
+  alist(
+    S ~ normal(mu, sigma_E),
+    mu &lt;- a[sexo] + bF * F + u[id],
+    ## u ~ MVNormal(0, sigma_A^2 A), na forma
+    ## não centrada: u = sigma_A * L_A * z
+    vector[N]: z ~ normal(0, 1),
+    transpars&gt; vector[N]: u &lt;&lt;- sigma_A * (L_A * z),
+    a[sexo] ~ normal(0, 1),
+    bF ~ normal(0, 0.5),
+    c(sigma_A, sigma_E) ~ exponential(1)
+  ), data = dat_esq, chains = 4, cores = 4)
+```
+]
+
+.texto-dir[
+- `L_A` é calculada uma vez, fora do modelo, e passada nos dados.
+
+- `transpars&gt;` calcula `u` a partir de `z` a cada passo.
+
+- O tamanho foi padronizado; `\(h^2\)` não depende da escala.
+
+Herdabilidade, para cada amostra da posterior:
+
+
+``` r
+post_animal &lt;- extract.samples(m_animal)
+h2 &lt;- with(post_animal,
+  sigma_A^2 / (sigma_A^2 + sigma_E^2))
+```
+]
+
+---
+
+## Resultados
+
+.pull-left[
+
+```
+        média   dp  2,5% 97,5% rhat
+a[1]    -0.17 0.08 -0.33 -0.01    1
+a[2]     0.18 0.10 -0.02  0.37    1
+bF       0.12 0.04  0.04  0.20    1
+sigma_A  0.65 0.06  0.53  0.78    1
+sigma_E  0.70 0.04  0.62  0.78    1
+h2       0.46 0.07  0.33  0.59   NA
+```
+]
+
+.pull-right[
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-h2-1.png" alt="" width="100%" /&gt;
+]
+
+- `\(h^2 =\)` 0,46 [0,33; 0,59]: cerca de metade da variação em tamanho, depois de descontar sexo e forrageamento, é genética aditiva.
+
+---
+
+## Valores genéticos e *shrinkage*
+
+&lt;img src="Aula_modelos_filogeneticos_animal_files/figure-html/plot-u-1.png" alt="" width="95%" /&gt;
+
+- Os valores genéticos são desvios fenotípicos **encolhidos** em direção a 0, como os interceptos aleatórios da aula de modelos hierárquicos. A informação dos parentes ajuda a estimar cada um.
+
+---
+
+## Resumo
+
+- Um único modelo:
+
+`$$\mathbf{y} \sim \mathrm{MVNormal}\left(\mathbf{X}\boldsymbol{\beta},\; \sigma^2_K\,\mathbf{K} + \sigma^2_E\,\mathbf{I}\right)$$`
+
+- `\(\mathbf{K}\)` é uma matriz **conhecida** de semelhança entre observações:
+  - `\(\mathbf{K} = \mathbf{I}\)`: observações independentes (regressão comum);
+  - `\(\mathbf{K} = \mathbf{R}\)`: filogenia (regressão filogenética);
+  - `\(\mathbf{K} = \mathbf{A}\)`: pedigree (modelo animal);
+  - também: matrizes de distância espacial, de parentesco genômico, etc.
+
+- **Custo computacional:** a matriz `\(N \times N\)` precisa ser decomposta a cada passo. Para milhares de observações, use pacotes especializados que exploram a esparsidade de `\(\mathbf{A}^{-1}\)`: `MCMCglmm`, `brms` (`gr(..., cov = A)`), ASReml, `sommer`.
+
+- **Várias características** (matriz `\(\mathbf{G}\)`): [`stanimal`](https://github.com/diogro/stanimal), modelos animais multivariados em Stan; [`indri`](https://github.com/diogro/indri), `\(\mathbf{G}\)` para dezenas de características, combinando modelos ajustados em subconjuntos delas.
+---
+
+## Referências
+
+- McElreath, R. (2020). *Statistical Rethinking*, 2ª ed., seção 14.5. CRC Press.
+- Lynch, M. (1991). Methods for the analysis of comparative data in evolutionary biology. *Evolution* 45: 1065–1080.
+- Housworth, E. A., Martins, E. P. &amp; Lynch, M. (2004). The phylogenetic mixed model. *The American Naturalist* 163: 84–96.
+- Hadfield, J. D. &amp; Nakagawa, S. (2010). General quantitative genetic methods for comparative biology: phylogenies, taxonomies and multi-trait models for continuous and categorical characters. *Journal of Evolutionary Biology* 23: 494–508.
+- Kruuk, L. E. B. (2004). Estimating genetic parameters in natural populations using the "animal model". *Phil. Trans. R. Soc. B* 359: 873–890.
+- Wilson, A. J. et al. (2010). An ecologist's guide to the animal model. *Journal of Animal Ecology* 79: 13–26.
+- Freckleton, R. P., Harvey, P. H. &amp; Pagel, M. (2002). Phylogenetic analysis and comparative data: a test and review of evidence. *The American Naturalist* 160: 712–726.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
