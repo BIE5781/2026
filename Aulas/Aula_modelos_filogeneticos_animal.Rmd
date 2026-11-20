@@ -1,0 +1,812 @@
+---
+title: "Modelos filogenéticos e modelo animal"
+subtitle: "Quando a covariância entre observações é conhecida"
+author: "Diogo Melo"
+date: "25 de novembro de 2026"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    css: xaringan-themer.css
+    includes:
+      in_header: mathjax3.html
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+self-contained: true
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+options(htmltools.dir.version = FALSE)
+options(servr.daemon = TRUE)
+knitr::opts_chunk$set(
+  prompt = FALSE, comment = "", eval = FALSE, echo = TRUE,
+  warning = FALSE, message = FALSE, out.width = "85%"
+)
+library(xaringanthemer)
+library(rethinking)
+library(ape)
+library(ggplot2)
+```
+
+```{r xaringan-themer, include=FALSE, eval=TRUE}
+style_solarized_light(
+  title_slide_background_color = "#586e75",
+  header_color = "#586e75",
+  text_bold_color = "#cb4b16",
+  background_color = "#fdf6e3",
+  header_font_google = google_font("DM Sans"),
+  text_font_google = google_font("Roboto Condensed", "300", "300i"),
+  code_font_google = google_font("Fira Mono"),
+  text_font_size = "24px",
+  code_font_size = "1rem",
+  ## mesmo extra_css da aula de ocupação: as duas escrevem o xaringan-themer.css
+  extra_css = list(
+    ".pull-left > :first-child, .pull-right > :first-child" = list("margin-top" = "0"),
+    ".destaque" = list("color" = "#dc322f", "font-size" = "3em",
+                       "font-weight" = "bold", "text-align" = "center"),
+    ".codigo-pequeno .remark-code" = list("font-size" = "0.8rem")
+  )
+)
+xaringanExtra::use_share_again()
+xaringanExtra::use_fit_screen()
+xaringanExtra::use_tachyons()
+xaringanExtra::use_tile_view()
+```
+
+```{css estilo-colunas, echo=FALSE, eval=TRUE}
+/* Colunas desiguais para slides com código: a coluna do código fica mais
+   larga. Definido aqui, e não no xaringan-themer.css, porque esse arquivo é
+   reescrito por todas as aulas que usam o mesmo tema.
+   Os nomes das classes não podem ter números: o remark só aceita letras,
+   "-" e "_" (com números, o bloco não vira coluna e a matemática quebra). */
+.codigo-esq, .texto-esq { float: left; }
+.codigo-dir, .texto-dir { float: right; }
+.codigo-esq, .codigo-dir { width: 53%; }
+.texto-esq, .texto-dir { width: 44%; }
+.codigo-esq > :first-child, .texto-esq > :first-child,
+.codigo-dir > :first-child, .texto-dir > :first-child { margin-top: 0; }
+.codigo-esq .remark-code, .codigo-dir .remark-code { font-size: 0.85rem; }
+```
+
+```{r leitura, include=FALSE, eval=TRUE}
+## Todo o código dos modelos está em modelos_filo_animal.R, que ajusta os
+## modelos e guarda os resultados em cache/. Aqui só lemos os blocos de código
+## (para mostrá-los nos slides) e os resultados salvos. Para reajustar:
+##   Rscript modelos_filo_animal.R
+knitr::read_chunk("modelos_filo_animal.R")
+filo <- readRDS("cache/filo_primatas.rds")
+animal <- readRDS("cache/animal_esquilos.rds")
+
+## Tabela de um precis salvo, só com as colunas principais
+tab_precis <- function(tab, pars = rownames(tab), digitos = 2) {
+  tab <- as.data.frame(tab)[pars, c("mean", "sd", "2.5%", "97.5%", "rhat")]
+  colnames(tab) <- c("média", "dp", "2,5%", "97,5%", "rhat")
+  round(tab, digitos)
+}
+## Média e intervalo de 95% de uma amostra da posterior
+resumo <- function(x) c(media = mean(x), inf = unname(PI(x, 0.95)[1]),
+                        sup = unname(PI(x, 0.95)[2]))
+fmt <- function(x, d = 2) format(round(x, d), decimal.mark = ",", nsmall = d)
+
+tema <- ggplot2::theme_minimal(base_size = 14) +
+  ggplot2::theme(
+    panel.background = ggplot2::element_rect(fill = "transparent", color = NA),
+    plot.background = ggplot2::element_rect(fill = "transparent", color = NA),
+    legend.background = ggplot2::element_rect(fill = "transparent", color = NA),
+    text = ggplot2::element_text(color = "#586e75")
+  )
+cores_mod <- c("Regressão" = "#586e75", "MVN independente" = "#268bd2",
+               "Browniano" = "#cb4b16", "Browniano + resíduo" = "#859900")
+```
+
+```{r funcao-plot-dag, include=FALSE, eval=TRUE}
+## Mesma função usada nas aulas de inferência causal
+plot_dag <- function(dag, labels = NULL, node_size = 26, label_size = 11,
+                     node_radius = NULL, padding = 0.7, arrow_mm = 4,
+                     latent = NULL,
+                     fig_width = knitr::opts_current$get("fig.width"),
+                     fig_height = knitr::opts_current$get("fig.height"),
+                     node_fill = "#eee8d5", node_color = "#586e75",
+                     edge_color = "#657b83", text_color = "#073642") {
+  if (is.character(dag)) dag <- dagitty::dagitty(dag)
+  coords <- dagitty::coordinates(dag)
+  nodes <- data.frame(node = names(coords$x), x = unname(coords$x),
+                      y = unname(coords$y))
+  if (is.null(latent)) latent <- dagitty::latents(dag)
+  nodes$latent <- nodes$node %in% latent
+  nodes$label <- nodes$node
+  if (!is.null(labels)) nodes$label[match(names(labels), nodes$node)] <- labels
+  raio_pol <- 0.375 * (node_size * ggplot2::.pt + 1.2 * ggplot2::.stroke / 2) / 72
+  if (is.null(fig_width)) fig_width <- 7
+  if (is.null(fig_height)) fig_height <- 5
+  pol_por_unid <- min(fig_width / (diff(range(nodes$x)) + 2 * padding),
+                      fig_height / (diff(range(nodes$y)) + 2 * padding))
+  if (is.null(node_radius)) node_radius <- (raio_pol + 0.08) / pol_por_unid
+  edges <- dagitty::edges(dag)
+  edges <- edges[edges$e == "->", ]
+  from <- match(edges$v, nodes$node)
+  to <- match(edges$w, nodes$node)
+  dx <- nodes$x[to] - nodes$x[from]
+  dy <- nodes$y[to] - nodes$y[from]
+  len <- sqrt(dx^2 + dy^2)
+  edges <- data.frame(
+    x = nodes$x[from] + node_radius * dx / len,
+    y = nodes$y[from] + node_radius * dy / len,
+    xend = nodes$x[to] - node_radius * dx / len,
+    yend = nodes$y[to] - node_radius * dy / len,
+    dashed = nodes$latent[from]
+  )
+  ggplot2::ggplot() +
+    ggplot2::geom_segment(
+      data = edges,
+      ggplot2::aes(x = x, y = y, xend = xend, yend = yend,
+                   linetype = dashed),
+      linewidth = 1.1, color = edge_color,
+      arrow = grid::arrow(type = "closed", length = grid::unit(arrow_mm, "mm"))
+    ) +
+    ggplot2::scale_linetype_manual(values = c(`FALSE` = "solid", `TRUE` = "22"),
+                                   guide = "none") +
+    ggplot2::geom_point(
+      data = nodes, ggplot2::aes(x = x, y = y),
+      shape = 21, size = node_size, stroke = 1.2, color = node_color,
+      fill = ifelse(nodes$latent, "transparent", node_fill),
+      linetype = ifelse(nodes$latent, "dotted", "solid")
+    ) +
+    ggplot2::geom_text(data = nodes, ggplot2::aes(x = x, y = y, label = label),
+                       size = label_size, fontface = "bold", color = text_color) +
+    ggplot2::coord_equal(clip = "off") +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(add = padding)) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(add = padding)) +
+    ggplot2::theme_void() +
+    ggplot2::theme(
+      panel.background = ggplot2::element_rect(fill = "transparent", color = NA),
+      plot.background = ggplot2::element_rect(fill = "transparent", color = NA)
+    )
+}
+```
+
+## De onde viemos
+
+- Na aula de modelos hierárquicos, observações do mesmo **grupo** compartilhavam um intercepto aleatório:
+
+$$\alpha_k \sim \mathrm{Normal}(\alpha_0, \sigma_g)$$
+
+- Observações do mesmo grupo são correlacionadas; observações de grupos diferentes, independentes.
+
+- Mas e se a semelhança entre observações não for "tudo ou nada"?
+  - Espécies são mais ou menos aparentadas, dependendo de quando divergiram.
+  - Indivíduos são irmãos, primos, meio-irmãos ou não aparentados.
+
+- Hoje: modelos em que a **covariância entre as observações** é dada por uma matriz conhecida — a filogenia ou o pedigree.
+
+---
+
+class: inverse, middle, center
+
+# Parte 1: Regressão filogenética
+
+---
+
+## Cérebro e vida social em primatas
+
+.pull-left[
+- **Hipótese do cérebro social:** viver em grupos maiores exige mais capacidade cognitiva, e por isso seleciona cérebros maiores.
+
+- Dados `Primates301` do pacote `rethinking`: 301 espécies de primatas, com massa corporal, tamanho do cérebro e tamanho médio do grupo.
+
+- 151 espécies têm as três medidas.
+
+- Pergunta: **o tamanho do grupo prediz o tamanho do cérebro, controlando a massa corporal?**
+]
+
+.pull-right[
+```{r dag-primatas, echo=FALSE, eval=TRUE, fig.width=5, fig.height=4.5, out.width="100%", dpi=300, dev="png", dev.args=list(bg="transparent")}
+plot_dag("dag {
+  M [pos=\"0,1\"]
+  G [pos=\"1,0\"]
+  B [pos=\"2,1\"]
+  U [latent, pos=\"1,2\"]
+  M -> G
+  M -> B
+  G -> B
+  U -> M
+  U -> G
+  U -> B
+}")
+```
+.f6[M: massa corporal; G: tamanho do grupo; B: cérebro; U: história compartilhada (não observada).]
+]
+
+---
+
+## Por que controlar a massa não basta
+
+- A massa corporal $M$ é uma causa comum de $G$ e $B$: o caminho $G \leftarrow M \rightarrow B$ é fechado incluindo $M$ no modelo.
+
+- Mas espécies aparentadas se parecem em **tudo**: dieta, hábitat, fisiologia, ecologia... Chamamos de $U$ tudo o que é herdado junto com a história evolutiva.
+
+- $U$ abre outro caminho, $G \leftarrow U \rightarrow B$, e não foi medido.
+
+- **Ideia da regressão filogenética:** usar a filogenia como um *proxy* de $U$. Espécies próximas devem ter resíduos parecidos.
+
+- Atenção: a filogenia não é uma causa. Ela é uma descrição de quanto tempo de história duas espécies compartilham.
+
+---
+
+## Preparando os dados
+
+```{r dados-primatas, eval=TRUE}
+```
+
+---
+
+## Os dados
+
+```{r plot-dados, echo=FALSE, eval=TRUE, fig.width=10, fig.height=4.3, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
+dd <- data.frame(M = dat_list$M, B = dat_list$B, G = dat_list$G)
+p1 <- ggplot2::ggplot(dd, ggplot2::aes(M, B)) +
+  ggplot2::geom_point(color = "#268bd2", alpha = 0.7, size = 2) +
+  ggplot2::labs(x = "log massa corporal (z)", y = "log cérebro (z)") + tema
+p2 <- ggplot2::ggplot(dd, ggplot2::aes(G, B)) +
+  ggplot2::geom_point(color = "#cb4b16", alpha = 0.7, size = 2) +
+  ggplot2::labs(x = "log tamanho do grupo (z)", y = "log cérebro (z)") + tema
+patchwork::wrap_plots(p1, p2, nrow = 1)
+```
+
+- Cérebro e massa corporal são fortemente associados. Será que o grupo ainda importa?
+
+---
+
+## Modelo 1: regressão linear comum
+
+.texto-esq[
+$$\begin{aligned}
+B_i &\sim \mathrm{Normal}(\mu_i, \sigma) \\
+\mu_i &= \alpha + \beta_M M_i + \beta_G G_i \\
+\alpha &\sim \mathrm{Normal}(0, 1) \\
+\beta_M, \beta_G &\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma &\sim \mathrm{Exponential}(1)
+\end{aligned}$$
+
+- Cada espécie é uma observação **independente**.
+]
+
+.codigo-dir[
+```{r m-reg}
+```
+]
+
+---
+
+## Modelo 1: resultados
+
+```{r res-reg, echo=FALSE, eval=TRUE}
+tab_precis(filo$precis$m_reg)
+```
+
+- Controlando a massa corporal, espécies que vivem em grupos maiores têm cérebros maiores: $\beta_G =$ `r fmt(mean(filo$post$m_reg$bG))` [`r fmt(PI(filo$post$m_reg$bG, 0.95)[1])`; `r fmt(PI(filo$post$m_reg$bG, 0.95)[2])`].
+
+- Mas esse modelo trata 151 espécies de primatas como 151 sorteios independentes. Será?
+
+---
+
+## Modelo 2: a regressão em forma matricial
+
+Podemos escrever as $N$ observações juntas, como **um único sorteio** de uma normal multivariada:
+
+.pull-left[
+$$\begin{aligned}
+\mathbf{B} &\sim \mathrm{MVNormal}(\boldsymbol{\mu}, \boldsymbol{\Sigma}) \\
+\mu_i &= \alpha + \beta_M M_i + \beta_G G_i \\
+\boldsymbol{\Sigma} &= \sigma^2 \mathbf{I}
+\end{aligned}$$
+]
+
+.pull-right[
+$$
+\sigma^2 \mathbf{I} =
+\begin{bmatrix}
+\sigma^2 & 0 & \cdots & 0 \\
+0 & \sigma^2 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & \sigma^2
+\end{bmatrix}
+$$
+]
+
+- Diagonal: variância residual de cada espécie.
+- Fora da diagonal: **covariância** entre os resíduos de duas espécies. Os zeros dizem que as espécies são independentes.
+- É exatamente o modelo 1, escrito de outra forma.
+
+---
+
+## Modelo 2: no `ulam`
+
+.codigo-esq[
+```{r m-mvn}
+```
+]
+
+.texto-dir[
+- `Imat` é a matriz identidade $N \times N$, passada nos dados.
+
+- `matrix[N_spp, N_spp]: SIGMA <- ...` declara e calcula a matriz de covariância dentro do modelo.
+
+- O parâmetro agora é a **variância** `sigma_sq` $= \sigma^2$.
+
+- Esse modelo é bem mais lento: a cada passo do HMC, o Stan decompõe uma matriz $151 \times 151$.
+]
+
+---
+
+## Modelo 2: mesmos resultados
+
+```{r plot-reg-mvn, echo=FALSE, eval=TRUE, fig.width=10, fig.height=3.6, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
+pr <- filo$post
+dens <- rbind(
+  data.frame(modelo = "Regressão", par = "beta[G]", valor = pr$m_reg$bG),
+  data.frame(modelo = "MVN independente", par = "beta[G]", valor = pr$m_mvn$bG),
+  data.frame(modelo = "Regressão", par = "beta[M]", valor = pr$m_reg$bM),
+  data.frame(modelo = "MVN independente", par = "beta[M]", valor = pr$m_mvn$bM),
+  data.frame(modelo = "Regressão", par = "sigma", valor = pr$m_reg$sigma),
+  data.frame(modelo = "MVN independente", par = "sigma", valor = sqrt(pr$m_mvn$sigma_sq))
+)
+ggplot2::ggplot(dens, ggplot2::aes(valor, color = modelo, linetype = modelo)) +
+  ggplot2::geom_density(linewidth = 1) +
+  ggplot2::facet_wrap(~par, scales = "free", labeller = ggplot2::label_parsed) +
+  ggplot2::scale_color_manual(values = cores_mod, name = NULL) +
+  ggplot2::scale_linetype_manual(values = c("Regressão" = "solid",
+                                            "MVN independente" = "22"), name = NULL) +
+  ggplot2::labs(x = NULL, y = "Densidade") + tema +
+  ggplot2::theme(legend.position = "bottom")
+```
+
+- As posteriores coincidem (a menos de erro de Monte Carlo). Para o $\sigma$ do modelo 2, usamos $\sqrt{\sigma^2}$.
+
+- Ganhamos o lugar certo para colocar a dependência entre espécies: **fora da diagonal de** $\boldsymbol{\Sigma}$.
+
+---
+
+## As espécies não são independentes
+
+.pull-left[
+```{r arvore, echo=FALSE, eval=TRUE, fig.width=6, fig.height=6, out.width="95%", dpi=300, dev.args=list(bg="transparent")}
+par(mar = c(0, 0, 0, 0), bg = "transparent")
+plot(ladderize(keep.tip(Primates301_nex, spp_obs)), type = "fan",
+     show.tip.label = FALSE, edge.color = "#586e75", edge.width = 1.2)
+```
+]
+
+.pull-right[
+- Filogenia das `r length(spp_obs)` espécies com dados.
+
+- Espécies de um mesmo gênero tiveram pouco tempo para divergir: devem ser parecidas mesmo depois de controlar $M$ e $G$.
+
+- Precisamos de um modelo para **como** o parentesco gera covariância.
+
+- O mais simples: **movimento browniano**.
+]
+
+---
+
+## Movimento browniano
+
+.pull-left[
+```{r arvore-exemplo, echo=FALSE, eval=TRUE, fig.width=5, fig.height=4, out.width="95%", dpi=300, dev.args=list(bg="transparent")}
+arv_ex <- read.tree(text = "((A:1,B:1):2,(C:2.5,D:2.5):0.5);")
+par(mar = c(2, 0.5, 0.5, 0.5), bg = "transparent")
+plot(arv_ex, edge.width = 2.5, edge.color = "#586e75", label.offset = 0.08,
+     cex = 1.5, font = 2, tip.color = "#cb4b16")
+axisPhylo(col = "#586e75", col.axis = "#586e75")
+```
+]
+
+.pull-right[
+- O caráter evolui como um passeio aleatório: em cada intervalo de tempo, uma mudança com média 0 e variância proporcional ao tempo.
+
+- Duas espécies compartilham todas as mudanças que ocorreram **antes** de divergirem.
+
+- **Covariância = comprimento de ramo compartilhado** (da raiz até o ancestral comum).
+
+```{r vcv-exemplo, echo=FALSE, eval=TRUE}
+vcv(arv_ex)
+```
+]
+
+---
+
+## A matriz filogenética
+
+.codigo-esq[
+```{r matriz-filo, eval=TRUE}
+```
+
+- `corBrownian` e `vcv` (pacote `ape`) calculam a matriz para a filogenia.
+- Dividindo pelo máximo, a diagonal fica igual a 1 e $\mathbf{R}$ é uma matriz de **correlação**.
+]
+
+.texto-dir[
+```{r plot-R, echo=FALSE, eval=TRUE, fig.width=5, fig.height=5, out.width="90%", dpi=300, dev.args=list(bg="transparent")}
+arv_lad <- ladderize(arvore)
+ordem <- arv_lad$tip.label[arv_lad$edge[arv_lad$edge[, 2] <= Ntip(arv_lad), 2]]
+Rord <- dat_list$R[ordem, ordem]
+Rlong <- data.frame(i = as.vector(row(Rord)), j = as.vector(col(Rord)),
+                    r = as.vector(Rord))
+ggplot2::ggplot(Rlong, ggplot2::aes(i, j, fill = r)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_gradient(low = "#fdf6e3", high = "#cb4b16",
+                               name = "Correlação") +
+  ggplot2::scale_y_reverse() +
+  ggplot2::coord_equal() +
+  ggplot2::labs(x = "Espécie", y = "Espécie") + tema +
+  ggplot2::theme(axis.text = ggplot2::element_blank(), legend.position = "bottom",
+                 panel.grid = ggplot2::element_blank())
+```
+]
+
+---
+
+## Modelo 3: regressão filogenética
+
+.texto-esq[
+$$\begin{aligned}
+\mathbf{B} &\sim \mathrm{MVNormal}(\boldsymbol{\mu}, \boldsymbol{\Sigma}) \\
+\mu_i &= \alpha + \beta_M M_i + \beta_G G_i \\
+\boldsymbol{\Sigma} &= \sigma^2 \textcolor{#cb4b16}{\mathbf{R}} \\
+\alpha &\sim \mathrm{Normal}(0, 1) \\
+\beta_M, \beta_G &\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma^2 &\sim \mathrm{Exponential}(1)
+\end{aligned}$$
+
+- A única mudança: $\mathbf{I} \to \mathbf{R}$.
+- É o modelo dos *PGLS* (*phylogenetic generalized least squares*).
+]
+
+.codigo-dir[
+```{r m-bm}
+```
+]
+
+---
+
+## Modelo 3: resultados
+
+```{r res-bm, echo=FALSE, eval=TRUE}
+tab_precis(filo$precis$m_bm)
+```
+
+- O efeito do tamanho do grupo praticamente **desaparece**: $\beta_G =$ `r fmt(mean(filo$post$m_bm$bG))` [`r fmt(PI(filo$post$m_bm$bG, 0.95)[1])`; `r fmt(PI(filo$post$m_bm$bG, 0.95)[2])`].
+
+- A associação entre $G$ e $B$ no modelo 1 vinha de diferenças **entre clados**. Comparando espécies aparentadas, a associação é fraca.
+
+- Note também que $\beta_M$ diminui e que a variância residual aumenta: parte do que era "explicado" pela massa era semelhança filogenética.
+
+---
+
+## Modelo 4: browniano + resíduo independente
+
+O modelo browniano supõe que **toda** a variação residual segue a filogenia. Uma alternativa mais flexível soma uma parte filogenética e uma parte independente:
+
+.texto-esq[
+$$\begin{aligned}
+\boldsymbol{\Sigma} &= \sigma^2_F\,\mathbf{R} + \sigma^2_E\,\mathbf{I} \\
+\lambda &= \frac{\sigma^2_F}{\sigma^2_F + \sigma^2_E}
+\end{aligned}$$
+
+- $\lambda$: fração da variância residual explicada pela filogenia. É análogo ao $\lambda$ de Pagel.
+- $\lambda = 0$: modelo 2. $\lambda = 1$: modelo 3.
+- Também chamado de "herdabilidade filogenética" (Lynch 1991; Housworth et al. 2004).
+]
+
+.codigo-dir[
+.codigo-pequeno[
+```{r m-lambda}
+```
+
+$\lambda$ é uma quantidade derivada, calculada para cada amostra da posterior:
+
+```{r lambda}
+```
+]
+]
+
+---
+
+## Modelo 4: resultados
+
+.pull-left[
+```{r res-lambda, echo=FALSE, eval=TRUE}
+tab_precis(filo$precis$m_lambda,
+           c("a", "bM", "bG", "sigma_F_sq", "sigma_E_sq", "lambda"))
+```
+]
+
+.pull-right[
+```{r plot-lambda, echo=FALSE, eval=TRUE, fig.width=5, fig.height=4, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
+ggplot2::ggplot(data.frame(lambda = filo$post$m_lambda$lambda),
+                ggplot2::aes(lambda)) +
+  ggplot2::geom_density(fill = "#859900", alpha = 0.4, color = "#859900",
+                        linewidth = 1) +
+  ggplot2::scale_x_continuous(limits = c(0, 1)) +
+  ggplot2::labs(x = expression(lambda), y = "Densidade") + tema
+```
+]
+
+- Os dados indicam que a maior parte da variância residual é filogenética: $\lambda =$ `r fmt(mean(filo$post$m_lambda$lambda))` [`r fmt(PI(filo$post$m_lambda$lambda, 0.95)[1])`; `r fmt(PI(filo$post$m_lambda$lambda, 0.95)[2])`].
+
+---
+
+## Comparando os quatro modelos
+
+```{r plot-modelos, echo=FALSE, eval=TRUE, fig.width=10, fig.height=4, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
+nomes <- c(m_reg = "Regressão", m_mvn = "MVN independente",
+           m_bm = "Browniano", m_lambda = "Browniano + resíduo")
+coefs <- do.call(rbind, lapply(names(nomes), function(m) {
+  do.call(rbind, lapply(c("bM", "bG"), function(p) {
+    r <- resumo(filo$post[[m]][[p]])
+    data.frame(modelo = nomes[[m]], par = p, media = r["media"],
+               inf = r["inf"], sup = r["sup"])
+  }))
+}))
+coefs$modelo <- factor(coefs$modelo, levels = rev(nomes))
+coefs$par <- factor(coefs$par, levels = c("bM", "bG"),
+                    labels = c("beta[M]~(massa)", "beta[G]~(grupo)"))
+ggplot2::ggplot(coefs, ggplot2::aes(x = media, y = modelo, color = modelo)) +
+  ggplot2::geom_vline(xintercept = 0, linetype = "dashed", color = "#93a1a1") +
+  ggplot2::geom_pointrange(ggplot2::aes(xmin = inf, xmax = sup),
+                           linewidth = 1.2, size = 0.8) +
+  ggplot2::facet_wrap(~par, scales = "free_x", labeller = ggplot2::label_parsed) +
+  ggplot2::scale_color_manual(values = cores_mod, guide = "none") +
+  ggplot2::labs(x = "Média e intervalo de 95% da posterior", y = NULL) + tema
+```
+
+- Os modelos 1 e 2 são idênticos. Incluir a filogenia muda a conclusão sobre $\beta_G$.
+
+---
+
+## Cuidados com a regressão filogenética
+
+- "Controlar a filogenia" não é uma correção automática. O movimento browniano é **um modelo** de evolução, com premissas fortes:
+  - mudanças com variância constante ao longo do tempo e entre linhagens;
+  - comprimentos de ramo corretos;
+  - a covariância residual é a mesma para as variáveis que causam $B$ e para $B$.
+
+- A filogenia não diz **qual** variável $U$ está confundindo a relação. Ela só descreve a estrutura esperada da semelhança.
+
+- A árvore também é estimada: incerteza na topologia e nos comprimentos de ramo pode ser incorporada (ex.: ajustar o modelo a uma amostra de árvores).
+
+- **Outros modelos de covariância** são possíveis. Por exemplo, um processo de Ornstein-Uhlenbeck, em que a covariância cai exponencialmente com a distância filogenética. No `rethinking`, isso é um processo gaussiano: `SIGMA <- cov_GPL1(Dmat, etasq, rhosq, 0.01)` (McElreath 2020, seção 14.5.2, modelo `m14.11`).
+
+---
+
+class: inverse, middle, center
+
+# Parte 2: Modelo animal
+
+---
+
+## O mesmo modelo, outra matriz
+
+Na regressão filogenética do modelo 4:
+
+$$\boldsymbol{\Sigma} = \sigma^2_F\,\textcolor{#cb4b16}{\mathbf{R}} + \sigma^2_E\,\mathbf{I}$$
+
+Troque **espécies** por **indivíduos** e **filogenia** por **pedigree**:
+
+$$\boldsymbol{\Sigma} = \sigma^2_A\,\textcolor{#cb4b16}{\mathbf{A}} + \sigma^2_E\,\mathbf{I}$$
+
+| | Regressão filogenética | Modelo animal |
+|:--|:--|:--|
+| Unidade | Espécie | Indivíduo |
+| Matriz | $\mathbf{R}$: história compartilhada | $\mathbf{A}$: parentesco aditivo |
+| Variância estruturada | $\sigma^2_F$ | $\sigma^2_A$: variância genética aditiva |
+| Proporção | $\lambda$ | $h^2$: herdabilidade |
+
+Os dois modelos são formalmente o mesmo (Lynch 1991; Hadfield & Nakagawa 2010).
+
+---
+
+## A matriz de parentesco aditivo
+
+.pull-left[
+- $A_{ij}$ é o dobro do coeficiente de coancestria entre $i$ e $j$: a fração esperada de alelos idênticos por descendência.
+
+| Relação | $A_{ij}$ |
+|:--|:--:|
+| O próprio indivíduo | 1 |
+| Pai/mãe e filho(a) | 1/2 |
+| Irmãos completos | 1/2 |
+| Meio-irmãos | 1/4 |
+| Não aparentados | 0 |
+
+- A matriz é calculada a partir do pedigree (ex.: `nadiv::makeA`).
+]
+
+.pull-right[
+- **Valor genético aditivo** $u_i$ ("breeding value"): o efeito médio dos alelos de $i$ sobre o fenótipo.
+
+$$\mathbf{u} \sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A})$$
+
+- Parentes têm valores genéticos correlacionados. Quanto mais aparentados, maior a correlação.
+
+- **Herdabilidade:**
+
+$$h^2 = \frac{\sigma^2_A}{\sigma^2_A + \sigma^2_E}$$
+
+- $h^2$ determina a resposta à seleção (equação do criador: $R = h^2 S$).
+]
+
+---
+
+## Exemplo: tamanho corporal em esquilos
+
+- Dados simulados de 500 esquilos de uma população natural: 100 pais e 400 filhos, com tamanho corporal, sexo e qualidade do forrageamento no local de coleta.
+- O pedigree (quem é pai e mãe de quem) foi reconstruído com marcadores moleculares.
+- O tamanho está sob seleção. Quanto da variação em tamanho é genética, e portanto pode responder à seleção?
+
+```{r dados-esquilos, eval=TRUE}
+```
+
+---
+
+## A matriz A dos esquilos
+
+.pull-left[
+```{r plot-A, echo=FALSE, eval=TRUE, fig.width=5, fig.height=5, out.width="90%", dpi=300, dev.args=list(bg="transparent")}
+filhos <- which(!is.na(esquilos$DAM))[1:80]
+filhos <- filhos[order(esquilos$SIRE[filhos], esquilos$DAM[filhos])]
+Asub <- A[filhos, filhos]
+Along <- data.frame(i = as.vector(row(Asub)), j = as.vector(col(Asub)),
+                    a = factor(as.vector(Asub)))
+ggplot2::ggplot(Along, ggplot2::aes(i, j, fill = a)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_manual(values = c("0" = "#fdf6e3", "0.25" = "#e9b48a",
+                                        "0.5" = "#cb4b16", "1" = "#586e75"),
+                             name = expression(A[ij])) +
+  ggplot2::scale_y_reverse() +
+  ggplot2::coord_equal() +
+  ggplot2::labs(x = "Indivíduo", y = "Indivíduo") + tema +
+  ggplot2::theme(axis.text = ggplot2::element_blank(), legend.position = "bottom",
+                 panel.grid = ggplot2::element_blank())
+```
+]
+
+.pull-right[
+- 80 filhos, ordenados por pai e mãe.
+
+- Blocos escuros: irmãos completos ($A_{ij} = 1/2$).
+
+- Blocos claros ao redor: meio-irmãos por parte de pai ($A_{ij} = 1/4$).
+
+- Fora dos blocos: não aparentados.
+
+- Diferente da filogenia, a matriz é **esparsa**: a maioria dos pares não é aparentada.
+]
+
+---
+
+## O modelo animal
+
+.pull-left[
+$$\begin{aligned}
+S_i &\sim \mathrm{Normal}(\mu_i, \sigma_E) \\
+\mu_i &= \alpha_{\mathrm{sexo}[i]} + \beta_F F_i + \textcolor{#cb4b16}{u_i} \\
+\textcolor{#cb4b16}{\mathbf{u}} &\sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A}) \\
+\alpha_k &\sim \mathrm{Normal}(0, 1) \\
+\beta_F &\sim \mathrm{Normal}(0, 0{,}5) \\
+\sigma_A, \sigma_E &\sim \mathrm{Exponential}(1)
+\end{aligned}$$
+
+- É um modelo com **interceptos aleatórios por indivíduo**, como na aula de modelos hierárquicos, mas os interceptos são correlacionados pelo parentesco.
+]
+
+.pull-right[
+**Forma não centrada**
+
+- Com 500 valores genéticos, a versão centrada é lenta e tem problemas de ajuste.
+
+- Como na aula de modelos hierárquicos, reescrevemos com variáveis padronizadas, usando a decomposição de Cholesky $\mathbf{A} = \mathbf{L}_A \mathbf{L}_A^\top$:
+
+$$z_i \sim \mathrm{Normal}(0, 1), \qquad \mathbf{u} = \sigma_A\,\mathbf{L}_A\,\mathbf{z}$$
+
+- E então $\mathbf{u} \sim \mathrm{MVNormal}(\mathbf{0}, \sigma^2_A\,\mathbf{A})$.
+]
+
+---
+
+## O modelo animal no `ulam`
+
+.codigo-esq[
+```{r m-animal}
+```
+]
+
+.texto-dir[
+- `L_A` é calculada uma vez, fora do modelo, e passada nos dados.
+
+- `transpars>` calcula `u` a partir de `z` a cada passo.
+
+- O tamanho foi padronizado; $h^2$ não depende da escala.
+
+Herdabilidade, para cada amostra da posterior:
+
+```{r h2}
+```
+]
+
+---
+
+## Resultados
+
+.pull-left[
+```{r res-animal, echo=FALSE, eval=TRUE}
+tab_precis(animal$precis$m_animal)
+```
+]
+
+.pull-right[
+```{r plot-h2, echo=FALSE, eval=TRUE, fig.width=5, fig.height=4, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
+ggplot2::ggplot(data.frame(h2 = animal$post$m_animal$h2), ggplot2::aes(h2)) +
+  ggplot2::geom_density(fill = "#cb4b16", alpha = 0.35, color = "#cb4b16",
+                        linewidth = 1) +
+  ggplot2::scale_x_continuous(limits = c(0, 1)) +
+  ggplot2::labs(x = expression(h^2), y = "Densidade") + tema
+```
+]
+
+- $h^2 =$ `r fmt(mean(animal$post$m_animal$h2))` [`r fmt(PI(animal$post$m_animal$h2, 0.95)[1])`; `r fmt(PI(animal$post$m_animal$h2, 0.95)[2])`]: cerca de metade da variação em tamanho, depois de descontar sexo e forrageamento, é genética aditiva.
+
+---
+
+## Valores genéticos e *shrinkage*
+
+```{r plot-u, echo=FALSE, eval=TRUE, fig.width=10, fig.height=4, out.width="95%", dpi=300, dev.args=list(bg="transparent")}
+u_med <- colMeans(animal$post$m_animal$u)
+res_fixos <- dat_esq$S - (colMeans(animal$post$m_animal$a)[dat_esq$sexo] +
+                          mean(animal$post$m_animal$bF) * dat_esq$F)
+du <- data.frame(res = res_fixos, u = u_med,
+                 geracao = ifelse(is.na(esquilos$DAM), "Pais", "Filhos"))
+ggplot2::ggplot(du, ggplot2::aes(res, u, color = geracao)) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+                       color = "#93a1a1") +
+  ggplot2::geom_point(alpha = 0.6, size = 2) +
+  ggplot2::scale_color_manual(values = c("Pais" = "#cb4b16", "Filhos" = "#268bd2"),
+                              name = NULL) +
+  ggplot2::coord_equal() +
+  ggplot2::labs(x = "Desvio fenotípico (tamanho - efeitos fixos)",
+                y = "Valor genético estimado (u)") + tema
+```
+
+- Os valores genéticos são desvios fenotípicos **encolhidos** em direção a 0, como os interceptos aleatórios da aula de modelos hierárquicos. A informação dos parentes ajuda a estimar cada um.
+
+---
+
+## Resumo
+
+- Um único modelo:
+
+$$\mathbf{y} \sim \mathrm{MVNormal}\left(\mathbf{X}\boldsymbol{\beta},\; \sigma^2_K\,\mathbf{K} + \sigma^2_E\,\mathbf{I}\right)$$
+
+- $\mathbf{K}$ é uma matriz **conhecida** de semelhança entre observações:
+  - $\mathbf{K} = \mathbf{I}$: observações independentes (regressão comum);
+  - $\mathbf{K} = \mathbf{R}$: filogenia (regressão filogenética);
+  - $\mathbf{K} = \mathbf{A}$: pedigree (modelo animal);
+  - também: matrizes de distância espacial, de parentesco genômico, etc.
+
+- **Custo computacional:** a matriz $N \times N$ precisa ser decomposta a cada passo. Para milhares de observações, use pacotes especializados que exploram a esparsidade de $\mathbf{A}^{-1}$: `MCMCglmm`, `brms` (`gr(..., cov = A)`), ASReml, `sommer`.
+
+- **Várias características** (matriz $\mathbf{G}$): [`stanimal`](https://github.com/diogro/stanimal), modelos animais multivariados em Stan; [`indri`](https://github.com/diogro/indri), $\mathbf{G}$ para dezenas de características, combinando modelos ajustados em subconjuntos delas.
+---
+
+## Referências
+
+- McElreath, R. (2020). *Statistical Rethinking*, 2ª ed., seção 14.5. CRC Press.
+- Lynch, M. (1991). Methods for the analysis of comparative data in evolutionary biology. *Evolution* 45: 1065–1080.
+- Housworth, E. A., Martins, E. P. & Lynch, M. (2004). The phylogenetic mixed model. *The American Naturalist* 163: 84–96.
+- Hadfield, J. D. & Nakagawa, S. (2010). General quantitative genetic methods for comparative biology: phylogenies, taxonomies and multi-trait models for continuous and categorical characters. *Journal of Evolutionary Biology* 23: 494–508.
+- Kruuk, L. E. B. (2004). Estimating genetic parameters in natural populations using the "animal model". *Phil. Trans. R. Soc. B* 359: 873–890.
+- Wilson, A. J. et al. (2010). An ecologist's guide to the animal model. *Journal of Animal Ecology* 79: 13–26.
+- Freckleton, R. P., Harvey, P. H. & Pagel, M. (2002). Phylogenetic analysis and comparative data: a test and review of evidence. *The American Naturalist* 160: 712–726.

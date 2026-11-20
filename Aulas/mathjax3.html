@@ -1,0 +1,23 @@
+<!-- Configuração do MathJax 3 para slides xaringan.
+     Uso no YAML:
+       output:
+         xaringan::moon_reader:
+           mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+           includes:
+             in_header: mathjax3.html
+     Precisa ser definida antes de o MathJax carregar, por isso vai no <head>. -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true,
+    packages: {'[+]': ['color']}
+  },
+  loader: {load: ['[tex]/color']},
+  options: {
+    // o padrão; código R (com $) nunca é lido como equação
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+</script>
