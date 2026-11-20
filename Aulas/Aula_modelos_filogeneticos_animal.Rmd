@@ -372,9 +372,50 @@ ggplot2::ggplot(dens, ggplot2::aes(valor, color = modelo, linetype = modelo)) +
 
 .pull-left[
 ```{r arvore, echo=FALSE, eval=TRUE, fig.width=6, fig.height=6, out.width="95%", dpi=300, dev.args=list(bg="transparent")}
+grupos <- list(
+  "Macacos do\nNovo Mundo" = list(cor = "#268bd2", generos = c(
+    "Alouatta", "Aotus", "Ateles", "Brachyteles", "Cacajao", "Callicebus",
+    "Callimico", "Callithrix", "Cebus", "Chiropotes", "Lagothrix",
+    "Leontopithecus", "Pithecia", "Saguinus", "Saimiri")),
+  "Macacos do\nVelho Mundo" = list(cor = "#cb4b16", generos = c(
+    "Allenopithecus", "Cercocebus", "Cercopithecus", "Chlorocebus", "Colobus",
+    "Erythrocebus", "Lophocebus", "Macaca", "Mandrillus", "Miopithecus",
+    "Nasalis", "Papio", "Piliocolobus", "Presbytis", "Procolobus", "Pygathrix",
+    "Rhinopithecus", "Rungwecebus", "Semnopithecus", "Theropithecus",
+    "Trachypithecus")),
+  "Hominoides" = list(cor = "#6c71c4", generos = c(
+    "Bunopithecus", "Gorilla", "Homo", "Hylobates", "Nomascus", "Pan",
+    "Pongo", "Symphalangus")),
+  "Lêmures" = list(cor = "#859900", generos = c(
+    "Allocebus", "Archaeolemur", "Avahi", "Cheirogaleus", "Daubentonia",
+    "Eulemur", "Hapalemur", "Indri", "Lemur", "Lepilemur", "Microcebus",
+    "Mirza", "Phaner", "Propithecus", "Varecia")),
+  "Lóris e\ngálagos" = list(cor = "#b58900", generos = c(
+    "Arctocebus", "Euoticus", "Galago", "Galagoides", "Loris",
+    "Nycticebus", "Otolemur", "Perodicticus")),
+  "Társios" = list(cor = "#2aa198", generos = "Tarsius")
+)
+arv_plot <- ladderize(keep.tip(Primates301_nex, spp_obs))
+genero <- as.character(dstan$genus)[match(arv_plot$tip.label, dstan$name)]
+cor_ramos <- rep("#93a1a1", nrow(arv_plot$edge))
+for (g in grupos)
+  cor_ramos[which.edge(arv_plot, arv_plot$tip.label[genero %in% g$generos])] <- g$cor
+raio <- max(node.depth.edgelength(arv_plot))
 par(mar = c(0, 0, 0, 0), bg = "transparent")
-plot(ladderize(keep.tip(Primates301_nex, spp_obs)), type = "fan",
-     show.tip.label = FALSE, edge.color = "#586e75", edge.width = 1.2)
+plot(arv_plot, type = "fan", show.tip.label = FALSE, edge.color = cor_ramos,
+     edge.width = 1.4, x.lim = c(-1.6, 1.6) * raio, y.lim = c(-1.6, 1.6) * raio)
+pos <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+ang_tip <- atan2(pos$yy, pos$xx)[seq_along(arv_plot$tip.label)] %% (2 * pi)
+for (nome in names(grupos)) {
+  a <- ang_tip[genero %in% grupos[[nome]]$generos]
+  if (diff(range(a)) > pi) a[a < pi] <- a[a < pi] + 2 * pi  # arco cruza o 0
+  th <- seq(min(a), max(a), length.out = 100)
+  lines(1.06 * raio * cos(th), 1.06 * raio * sin(th),
+        col = grupos[[nome]]$cor, lwd = 5, lend = 1)
+  m <- mean(range(a))
+  text(1.1 * raio * cos(m), 1.1 * raio * sin(m), nome, col = grupos[[nome]]$cor,
+       font = 2, cex = 1.1, adj = as.numeric(c(cos(m) < 0, sin(m) < 0)))
+}
 ```
 ]
 
@@ -427,21 +468,36 @@ vcv(arv_ex)
 ]
 
 .texto-dir[
-```{r plot-R, echo=FALSE, eval=TRUE, fig.width=5, fig.height=5, out.width="90%", dpi=300, dev.args=list(bg="transparent")}
+```{r plot-R, echo=FALSE, eval=TRUE, fig.width=6, fig.height=4.9, out.width="100%", dpi=300, dev.args=list(bg="transparent")}
 arv_lad <- ladderize(arvore)
 ordem <- arv_lad$tip.label[arv_lad$edge[arv_lad$edge[, 2] <= Ntip(arv_lad), 2]]
 Rord <- dat_list$R[ordem, ordem]
 Rlong <- data.frame(i = as.vector(row(Rord)), j = as.vector(col(Rord)),
                     r = as.vector(Rord))
+## faixas com os mesmos grupos da árvore (as espécies estão na mesma ordem)
+genero_ord <- genero[match(ordem, arv_plot$tip.label)]
+faixas <- do.call(rbind, lapply(names(grupos), function(nome) {
+  k <- which(genero_ord %in% grupos[[nome]]$generos)
+  data.frame(nome = nome, cor = grupos[[nome]]$cor,
+             ini = min(k) - 0.5, fim = max(k) + 0.5)
+}))
 ggplot2::ggplot(Rlong, ggplot2::aes(i, j, fill = r)) +
   ggplot2::geom_raster() +
-  ggplot2::scale_fill_gradient(low = "#fdf6e3", high = "#cb4b16",
-                               name = "Correlação") +
-  ggplot2::scale_y_reverse() +
-  ggplot2::coord_equal() +
-  ggplot2::labs(x = "Espécie", y = "Espécie") + tema +
-  ggplot2::theme(axis.text = ggplot2::element_blank(), legend.position = "bottom",
-                 panel.grid = ggplot2::element_blank())
+  ggplot2::annotate("segment", x = faixas$ini, xend = faixas$fim, y = -3, yend = -3,
+                    colour = faixas$cor, linewidth = 2.5) +
+  ggplot2::annotate("segment", x = -3, xend = -3, y = faixas$ini, yend = faixas$fim,
+                    colour = faixas$cor, linewidth = 2.5) +
+  ggplot2::annotate("text", x = -7, y = (faixas$ini + faixas$fim) / 2,
+                    label = faixas$nome, colour = faixas$cor, hjust = 1,
+                    fontface = "bold", size = 3.6, lineheight = 0.9) +
+  ggplot2::scale_fill_gradient(low = "#fdf6e3", high = "#cb4b16", guide = "none") +
+  ggplot2::scale_x_continuous(expand = c(0, 0)) +
+  ggplot2::scale_y_reverse(expand = c(0, 0)) +
+  ggplot2::coord_equal(clip = "off") +
+  ggplot2::labs(x = "Espécie", y = NULL) + tema +
+  ggplot2::theme(axis.text = ggplot2::element_blank(),
+                 panel.grid = ggplot2::element_blank(),
+                 plot.margin = ggplot2::margin(15, 5, 5, 95))
 ```
 ]
 
