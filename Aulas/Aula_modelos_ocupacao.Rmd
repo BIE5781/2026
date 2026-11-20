@@ -7,7 +7,10 @@ date: '25 de novembro de 2026'
 output:
   xaringan::moon_reader:
     lib_dir: libs
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
     css: xaringan-themer.css
+    includes:
+      in_header: mathjax3.html
     nature:
       highlightStyle: github
       highlightLines: true
@@ -286,7 +289,7 @@ $$\begin{aligned}
 \Pr(\text{não detecção}) &= \underbrace{\phi \, (1 - p)}_{\text{falso zero}} + \underbrace{(1 - \phi)}_{\text{zero verdadeiro}}
 \end{aligned}$$
 
-.f6[Na literatura a probabilidade de ocorrência costuma ser chamada de $\psi$.]
+<span class="f6">Na literatura a probabilidade de ocorrência costuma ser chamada de $\psi$.</span>
 ]
 
 .pull-right[
@@ -392,9 +395,9 @@ $$\begin{aligned}
 &(1 - \phi) \; \mathbb{1}(y_i = 0)
 \end{aligned}$$
 
-.f6[$\mathbb{1}(y_i = 0)$ vale 1 se não houve detecção e 0 caso contrário:
+<span class="f6">$\mathbb{1}(y_i = 0)$ vale 1 se não houve detecção e 0 caso contrário:
 se a espécie não ocorre, a única possibilidade é $y_i = 0$. É uma
-**mistura** de duas distribuições, como os modelos inflados de zeros.]
+**mistura** de duas distribuições, como os modelos inflados de zeros.</span>
 ]
 
 ---
@@ -520,8 +523,8 @@ precis(m.const, prob = 0.95)
 tab_precis(aj.const$precis$m.const, c("a_phi", "a_p"))
 ```
 
-.f6[Escala logito. Valores usados na simulação:
-$\alpha_\phi$ = `r fmt(logit(phi.sim), 2)` e $\alpha_p$ = `r fmt(logit(p.sim), 2)`.]
+<span class="f6">Escala logito. Valores usados na simulação:
+$\alpha_\phi$ = `r fmt(logit(phi.sim), 2)` e $\alpha_p$ = `r fmt(logit(p.sim), 2)`.</span>
 
 ```{r, eval = FALSE, echo = TRUE}
 post <- extract.samples(m.const)
@@ -592,9 +595,9 @@ N.ocup <- sum(dl1$det) +
     rbinom(length(phi0), n0, phi0)
 ```
 
-.f6[O número de sítios ocupados na amostra é outra quantidade derivada:
+<span class="f6">O número de sítios ocupados na amostra é outra quantidade derivada:
 os sítios com detecção estão ocupados com certeza, e cada sítio sem
-detecção está ocupado com probabilidade $\Pr(z_i = 1 \mid y_i = 0)$.]
+detecção está ocupado com probabilidade $\Pr(z_i = 1 \mid y_i = 0)$.</span>
 ]
 
 ---
@@ -622,9 +625,9 @@ ggplot(data.frame(phi0 = phi0), aes(phi0)) +
     theme_Publication(16) +
     theme(legend.key.size = unit(0.8, "cm"))
 ```
-.f6[Valor real: calculado com $\phi$ e $p$ da simulação. Na amostra
+<span class="f6">Valor real: calculado com $\phi$ e $p$ da simulação. Na amostra
 simulada, `r sum(z[y == 0])` dos `r n0` sítios sem detecção estavam
-ocupados (`r fmt(100 * mean(z[y == 0]))`%).]
+ocupados (`r fmt(100 * mean(z[y == 0]))`%).</span>
 ]
 
 .pull-right[
@@ -802,9 +805,9 @@ ggplot(d.cov, aes(x)) +
     theme(legend.key.size = unit(0.8, "cm"))
 ```
 
-.right[.f6[Linhas e faixas: média e intervalo de 95% da posterior. Inclinação
+.right[<span class="f6">Linhas e faixas: média e intervalo de 95% da posterior. Inclinação
 de $\phi$ (escala logito): real = 1; modelo de ocupação = `r fmt(mean(post.cov$b_phi), 2)`;
-logística ingênua = `r fmt(mean(post.ing$b), 2)`.]]
+logística ingênua = `r fmt(mean(post.ing$b), 2)`.</span>]
 
 ---
 
@@ -856,9 +859,9 @@ y_{ij} &\sim \text{Bernoulli}(z_i \, p_{ij}) \\[0.5em]
 \text{logit}(p_{ij}) &= \alpha_p + \beta_p \, x_i + \gamma_p \, w_{ij}
 \end{aligned}$$
 
-.f6[$w_{ij}$: covariável da visita $j$ ao sítio $i$ (por exemplo, a
+<span class="f6">$w_{ij}$: covariável da visita $j$ ao sítio $i$ (por exemplo, a
 temperatura). Prioris como no modelo anterior, e $\gamma_p \sim
-\text{Normal}(0, 1)$.]
+\text{Normal}(0, 1)$.</span>
 
 **Verossimilhança marginal**:
 
@@ -891,7 +894,7 @@ dl3 <- list(y = rowSums(Y.v), x = x,
             Y = Y.v, W = W)
 ```
 
-.f6[Mesmos sítios ( $x$ e $z$ ) da simulação anterior.]
+<span class="f6">Mesmos sítios ( $x$ e $z$ ) da simulação anterior.</span>
 ]
 
 .pull-right[
@@ -903,8 +906,8 @@ kable(tab.vis, digits = 1, format.args = list(decimal.mark = ","),
 
 <br>
 
-.f6[`Y[i]` e `W[i]` são as linhas $i$ das matrizes: o histórico de
-detecções e as temperaturas das $J$ visitas ao sítio $i$.]
+<span class="f6">`Y[i]` e `W[i]` são as linhas $i$ das matrizes: o histórico de
+detecções e as temperaturas das $J$ visitas ao sítio $i$.</span>
 ]
 
 ---
@@ -1059,9 +1062,9 @@ m.ef <- ulam(
 ```
 ]
 
-.f6[Parametrização **não centrada**: $\alpha_r = \bar\alpha + u_r \, \sigma$,
+<span class="f6">Parametrização **não centrada**: $\alpha_r = \bar\alpha + u_r \, \sigma$,
 com $u_r \sim \text{Normal}(0, 1)$. A linha `gq>` calcula os $\alpha_r$
-como quantidade gerada.]
+como quantidade gerada.</span>
 ]
 
 ```{r ajuste-ef, include = FALSE}
@@ -1094,11 +1097,11 @@ ggplot(est.reg, aes(indice)) +
     theme(legend.key.size = unit(0.8, "cm"))
 ```
 
-.right[.f6[Modelo hierárquico: média e intervalo de 95% da posterior de
+.right[<span class="f6">Modelo hierárquico: média e intervalo de 95% da posterior de
 $\text{logit}^{-1}(\alpha_r)$. Ingênua: proporção de sítios com detecção na
 região. Faixa cinza: intervalo de 95% de $\text{logit}^{-1}(\bar\alpha)$.
 Desvio-padrão entre regiões ( $\sigma$ ): real = 1; estimado =
-`r med_ic(post.ef$sigma)`.]]
+`r med_ic(post.ef$sigma)`.</span>]
 
 ---
 
