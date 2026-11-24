@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>Modelos de ocorrência com detecção imperfeita</title>
+    <title>Modelos de ocupação com detecção imperfeita</title>
     <meta charset="utf-8" />
     <meta name="author" content="PI (Paulo Inácio Prado)" />
     <script src="libs/header-attrs/header-attrs.js"></script>
@@ -26,7 +26,7 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# Modelos de ocorrência com detecção imperfeita
+# Modelos de ocupação com detecção imperfeita
 ]
 .subtitle[
 ## Disciplina BIE5781 - IB - USP
@@ -35,7 +35,7 @@ class: center, middle, inverse, title-slide
 ### PI (Paulo Inácio Prado)
 ]
 .date[
-### 23 de novembro de 2026
+### 25 de novembro de 2026
 ]
 
 ---
@@ -61,7 +61,7 @@ class: center, middle, inverse, title-slide
   * Em que fração dos sítios a espécie ocorre?
   * Quais características dos sítios afetam a ocorrência?
 
-* A análise padrão seria uma regressão logística dos 0 e 1.
+* Análise ingênua: regressão logística para estimar a probabilidade de **registro**.
 ]
 
 .pull-right[
@@ -86,12 +86,14 @@ class: center, middle, inverse, title-slide
 
 .pull-left[
 
-* Um **1** é inequívoco: a espécie está no sítio (assumindo que não há erros de
-  identificação).
+* A ocorrência (**1**) é inequívoca (assumindo que não há erros de
+  identificação): a espécie está no sítio .
 
-* Um **0** pode acontecer por duas razões:
-  1. a espécie **não ocorre** no sítio (zero verdadeiro);
-  2. a espécie **ocorre, mas não foi detectada** (falso zero).
+* A falta de registro em uma visita (**0**) pode acontecer por duas razões:
+
+1. a espécie **não ocorre** no sítio (ausência verdadeira);
+
+2. a espécie **ocorre, mas não foi detectada** (falsa ausência).
 
 * Detecção é afetada por variáveis das espécies, do ambiente e dos observadores.
 ]
@@ -101,12 +103,12 @@ class: center, middle, inverse, title-slide
 &lt;br&gt;
 
 .bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-**Consequências** de ignorar a detecção imperfeita:
+### Consequências de ignorar a detecção imperfeita
 
-* A proporção de sítios com registro **subestima** a ocorrência.
+* A proporção de sítios com registro **subestima** a occupação.
 
 * Se uma variável afeta a detecção, seu efeito se mistura com o efeito
-  sobre a ocorrência: as estimativas dos efeitos ficam **enviesadas**,
+  sobre a ocupação/ocorrência: as estimativas dos efeitos ficam **enviesadas**,
   podendo até inverter de sinal.
 ]
 ]
@@ -117,12 +119,12 @@ class: center, middle, inverse, title-slide
 
 .pull-left[
 
-* Cada sítio é visitado mais de uma vez, num período em que se assume que **a ocupação
+* Cada sítio é visitado mais de uma vez, num período em que se assume que **a ocupação de cada sítio
   não muda**.
 
-* O registro de cada sítio passa a ser um **histórico de detecções**.
+* Os registros e ausência deles em cada sítio passa a ser um **histórico de detecções**.
 
-* Sítios com detecção têm ocorrẽncias (1) e podem ter zeros no histórico: a frequência dos zeros nestes
+* Sítios com detecção têm ocorrências (1) e podem ter zeros no histórico: a frequência dos zeros nestes
   sítios informa sobre a **probabilidade de detecção**.
 
 * Com isso, é possível separar a **probabilidade de ocorrência** e a
@@ -142,8 +144,7 @@ class: center, middle, inverse, title-slide
 | 5     | 0        | 0        | 0        | 0        |
 | ...   | ...      | ...      | ...      | ...      |
 
-.f6[Os sítios 1, 3 e 4 seriam zeros com qualquer uma das visitas sozinha.
-Com uma única visita, só é possível estimar o produto das duas
+.f6[Com uma única visita, só é possível estimar o produto das duas
 probabilidades (probabilidade de **registros**).]
 ]
 
@@ -167,8 +168,8 @@ Em **uma visita** a um sítio:
 Os dois resultados possíveis:
 
 `$$\begin{aligned}
-\Pr(\text{detecção}) &amp;= \phi \, p \\[0.5em]
-\Pr(\text{não detecção}) &amp;= \underbrace{\phi \, (1 - p)}_{\text{falso zero}} + \underbrace{(1 - \phi)}_{\text{zero verdadeiro}}
+P(\text{detect}) &amp;= \phi \, p \\[0.5em]
+P(\text{no detect}) &amp;= \underbrace{\phi \, (1 - p)}_{\text{falso zero}} \, + \, \underbrace{(1 - \phi)}_{\text{zero verdadeiro}}
 \end{aligned}$$`
 
 .f6[Na literatura a probabilidade de ocorrência costuma ser chamada também de ψ (psi).]
@@ -188,11 +189,11 @@ Com `\(J\)` visitas **independentes** a cada sítio, seja `\(y_i\)` o número de
 visitas com detecção no sítio `\(i\)`:
 
 * Se `\(y_i &gt; 0\)`, a espécie certamente ocorre:
-`$$\Pr(y_i) = \phi \, \binom{J}{y_i} p^{y_i} (1 - p)^{J - y_i}$$`
+`$$P(y_i) = \phi \, \binom{J}{y_i} p^{y_i} (1 - p)^{J - y_i}$$`
 
 * Se `\(y_i = 0\)`, a espécie ocorre e não foi detectada em nenhuma visita,
-  ou não ocorre:
-`$$\Pr(y_i = 0) = \phi \, (1 - p)^J \, + \, (1 - \phi)$$`
+  **ou** não ocorre:
+`$$P(y_i = 0) = \phi \, (1 - p)^J \, + \, (1 - \phi)$$`
 
 * Com mais visitas, `\((1 - p)^J\)` diminui: menos falsos zeros.
 ]
@@ -248,7 +249,7 @@ y_i &amp;\sim \text{Binomial}(J, \, z_i \, p) \\[0.5em]
   (**marginalizamos**) as duas possibilidades para `\(z_i\)`:
 
 `$$\begin{aligned}
-\Pr(y_i) = \; &amp;\phi \; \text{Binomial}(y_i \mid J, p) \; + \\[0.3em]
+P(y_i) = \; &amp;\phi \; \text{Binomial}(y_i \mid J, p) \; + \\[0.3em]
 &amp;(1 - \phi) \; \mathbb{1}(y_i = 0)
 \end{aligned}$$`
 
@@ -262,26 +263,26 @@ se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
 ## O modelo no rethinking
 
 .pull-left[
-.codigo-pequeno[
+
 
 ``` r
-&gt; dl1 &lt;- list(y = y, J = J,
-+             det = as.integer(y &gt; 0))
-&gt; m.const &lt;- ulam(
-+   alist(
+&gt; f1 &lt;- alist(
 +     y | det == 1 ~ custom(
-+       log(phi) + binomial_lpmf(y | J, p)),
++                    log(phi) + binomial_lpmf(y | J, p)),
 +     y | det == 0 ~ custom(log_sum_exp(
-+       log(phi) + binomial_lpmf(y | J, p),
-+       log1m(phi))),
++                    log(phi) + binomial_lpmf(y | J, p),
++                    log1m(phi))),
 +     logit(phi) &lt;- a_phi,
 +     logit(p) &lt;- a_p,
 +     c(a_phi, a_p) ~ dnorm(0, 1.5)
-+   ),
-+   data = dl1, chains = 4, cores = 4)
++ )
+&gt; 
+&gt; dl1 &lt;- list(y = y, J = J,
++             det = as.integer(y &gt; 0))
+&gt; m.const &lt;- ulam( f1, data = dl1, chains = 4, cores = 4)
 ```
 ]
-]
+
 
 .pull-right[
 
@@ -304,34 +305,37 @@ se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
 
 ## Do modelo teórico ao código
 
-.pull-left[
+### Sítios com detecção ( `\(y_i &gt; 0\)` ):
 
-**Sítios com detecção** ( `\(y_i &gt; 0\)` ):
-
-`$$\log \Pr(y_i) = \log \phi + \log \text{Binomial}(y_i \mid J, p)$$`
+`$$\log P(y_i) = \log \phi + \log \text{Binomial}(y_i \mid J, p)$$`
 
 
 ``` r
-&gt; log(phi) + binomial_lpmf(y | J, p)
+y | det == 1 ~ custom(
+               log(phi) + binomial_lpmf(y | J, p)
+           )
 ```
 
 * `binomial_lpmf(y | J, p)`: log da função de probabilidade (*log
   probability mass function*) da binomial, uma função do Stan.
 
 * O produto de probabilidades vira uma **soma** de logs.
-]
 
-.pull-right[
+---
 
-**Sítios sem detecção** ( `\(y_i = 0\)` ):
+## Do modelo teórico ao código
 
-`$$\log \Pr(y_i) = \log \left[ \phi (1 - p)^J + (1 - \phi) \right]$$`
+### Sítios sem detecção ( `\(y_i = 0\)` ):
+
+`$$\log P(y_i) = \log \left[ \phi (1 - p)^J + (1 - \phi) \right]$$`
 
 
 ``` r
-&gt; log_sum_exp(
-+   log(phi) + binomial_lpmf(y | J, p),
-+   log1m(phi))
+y | det == 0 ~ custom(
+               log_sum_exp(
+                   log(phi) + binomial_lpmf(y | J, p),
+                   log1m(phi)
+               ))
 ```
 
 * `log_sum_exp(a, b)` = `\(\log(e^a + e^b)\)`: o log de uma **soma** de
@@ -341,7 +345,7 @@ se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
 * `log1m(phi)` = `\(\log(1 - \phi)\)`.
 
 * Com `\(y_i = 0\)`, `binomial_lpmf(0 | J, p)` = `\(J \log(1 - p)\)`.
-]
+
 
 ---
 
@@ -351,7 +355,7 @@ se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
 
 * **População fechada**: a ocorrência ( `\(z_i\)` ) não muda durante o
   período das visitas. Se a espécie entra e sai dos sítios, `\(\phi\)`
-  passa a ser a probabilidade de **uso** do sítio.
+  passa a ser a probabilidade de **uso** de cada sítio (constante).
 
 * **Probabilidades constantes**: `\(\phi\)` é a mesma em todos os sítios e
   `\(p\)` é a mesma em todos os sítios e visitas.
@@ -363,10 +367,6 @@ se a espécie não ocorre, a única possibilidade é `\(y_i = 0\)`. É uma
 * **Sem falsos positivos**: a espécie nunca é registrada onde não ocorre
   (identificação correta).
 
-.bg-washed-blue.b--navy.ba.bw2.br3.shadow-5.ph4.mt1[
-Variação não modelada na detecção entre sítios (heterogeneidade)
-tende a fazer o modelo **subestimar** `\(\phi\)`.
-]
 
 ---
 
@@ -408,14 +408,13 @@ tende a fazer o modelo **subestimar** `\(\phi\)`.
 Pelo teorema de Bayes:
 
 `$$\begin{aligned}
-&amp;\Pr(z_i = 1 \mid y_i = 0) = \\[0.3em]
-&amp;= \frac{\Pr(y_i = 0 \mid z_i = 1) \Pr(z_i = 1)}{\Pr(y_i = 0)} \\[0.5em]
-&amp;= \frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
+&amp;P(z_i = 1 \mid y_i = 0) = \\[0.5em]
+&amp;\frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
 \end{aligned}$$`
 
-* **Numerador**: o caminho da árvore que gera um falso zero.
+* **Numerador**: o caminho da árvore que gera um falso zero: probabilidade de não registrar a espécie em `\(J\)` tentativas, sendo que ela ocorre no sítio.
 
-* **Denominador**: todos os caminhos que geram um zero.
+* **Denominador**: todos os caminhos que geram um zero: probabilidade anterior somada à probabilidade de que o sítio não é ocupado.
 ]
 
 .pull-right[
@@ -437,7 +436,7 @@ Calculamos a expressão para cada amostra da posterior:
 
 .f6[O número de sítios ocupados na amostra é outra quantidade derivada:
 os sítios com detecção estão ocupados com certeza, e cada sítio sem
-detecção está ocupado com probabilidade `\(\Pr(z_i = 1 \mid y_i = 0)\)`.]
+detecção está ocupado com probabilidade `\(P(z_i = 1 \mid y_i = 0)\)`.]
 ]
 
 ---
@@ -522,7 +521,7 @@ y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.5em]
 ]
 
 .pull-right[
-.codigo-pequeno[
+
 
 ``` r
 &gt; m.cov &lt;- ulam(
@@ -539,10 +538,57 @@ y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.5em]
 +   ),
 +   data = dl2, chains = 4, cores = 4)
 ```
-]
+
 
 .f6[A verossimilhança é a mesma do modelo anterior: só mudam os preditores
 lineares de `phi` e `p`.]
+]
+
+---
+
+## O modelo no ubms
+
+.pull-left[
+
+
+``` r
+&gt; library(ubms)
+&gt; ## Dados: detecções e covariáveis
+&gt; umf2 &lt;- unmarkedFrameOccu(
++   y = Y,
++   siteCovs = data.frame(x = x))
+&gt; ## Ajuste
+&gt; m.cov.u &lt;- stan_occu(
++   ~ x ~ x,
++   data = umf2,
++   prior_intercept_state = normal(0, 1.5),
++   prior_coef_state = normal(0, 1),
++   prior_intercept_det = normal(0, 1.5),
++   prior_coef_det = normal(0, 1),
++   chains = 4, cores = 4)
+&gt; ## Resumo das posteriores
+&gt; m.cov.u
+```
+]
+
+.pull-right[
+
+* `unmarkedFrameOccu()`: organiza os dados. `y` é a **matriz de
+  detecções** (sítios `\(\times\)` visitas, com 0 e 1), e não o número de
+  detecções por sítio.
+
+* `~ x ~ x`: fórmula com **dois lados direitos**: primeiro o modelo da
+  **detecção**, depois o da **ocupação**. O logito é o link implícito.
+
+* O pacote monta e marginaliza a verossimilhança, como fizemos com o
+  `custom()`.
+
+* `prior_...`: prioris dos interceptos e coeficientes. O padrão é
+  `logistic(0, 1)`.
+
+* Imprimir o ajuste mostra as posteriores dos dois **submodelos**, na
+  escala logito. `summary(m.cov.u, "state")` ou `"det"` retorna o
+  resumo de cada um como um data frame.
 ]
 
 ---
@@ -566,7 +612,7 @@ b &amp;\sim \text{Normal}(0, \, 1)
 ]
 
 .pull-right[
-.codigo-pequeno[
+
 
 ``` r
 &gt; m.ing &lt;- ulam(
@@ -578,7 +624,7 @@ b &amp;\sim \text{Normal}(0, \, 1)
 +   ),
 +   data = dl2, chains = 4, cores = 4)
 ```
-]
+
 ]
 
 
@@ -628,7 +674,7 @@ só podem ser separados porque as visitas repetidas informam sobre `\(p\)`.
 * Agora `\(p_{ij}\)` varia entre as visitas `\(j\)` de um mesmo sítio `\(i\)`.
 
 * O número de detecções `\(y_i\)` **deixa de ser binomial** (as `\(J\)`
-  tentativas têm probabilidades diferentes).
+  tentativas têm probabilidades de detecção diferentes).
 
 * Usamos o histórico de detecções completo: cada visita é uma
   Bernoulli.
@@ -701,7 +747,85 @@ detecções e as temperaturas das `\(J\)` visitas ao sítio `\(i\)`.]
 
 ---
 
-## O modelo no rethinking
+## Dados no formato do unmarked
+
+.codigo-pequeno[
+
+``` r
+&gt; umf3 &lt;- unmarkedFrameOccu(
++   y = Y.v,                      # detecções
++   siteCovs = data.frame(x = x), # covariáveis de sítio
++   obsCovs = list(temp = W))     # covariáveis de visita
+&gt; head(umf3, 3)
+```
+
+```
+Data frame representation of unmarkedFrame object.
+  y.1 y.2 y.3 y.4     x temp.1 temp.2 temp.3 temp.4
+1   0   0   0   0  0.98  0.621 -0.895  -0.85 -1.156
+2   0   0   0   0  0.47  0.036 -0.338  -1.52 -1.348
+3   1   0   0   0 -0.11  0.773  0.095   1.03  0.027
+```
+]
+
+.pull-left[
+
+* `y`: matriz sítios `\(\times\)` visitas, com 1 (detecção), 0 (não
+  detecção) ou `NA` (visita não realizada).
+
+* `siteCovs`: data frame com uma linha por sítio e uma coluna por
+  covariável.
+]
+
+.pull-right[
+
+* `obsCovs`: lista de matrizes sítios `\(\times\)` visitas, uma por
+  covariável de visita. O nome na lista ( `temp` ) é usado na fórmula
+  do modelo.
+
+* `summary(umf3)` resume os dados: n de sítios, visitas, detecções e as
+  covariáveis.
+]
+
+---
+
+## Ajuste com o ubms
+
+.pull-left[
+
+
+``` r
+&gt; m.vis.u &lt;- stan_occu(
++   ~ x + temp ~ x,
++   data = umf3,
++   prior_intercept_state = normal(0, 1.5),
++   prior_coef_state = normal(0, 1),
++   prior_intercept_det = normal(0, 1.5),
++   prior_coef_det = normal(0, 1),
++   chains = 4, cores = 4)
+&gt; summary(m.vis.u, "state")
+&gt; summary(m.vis.u, "det")
+```
+
+]
+
+.pull-right[
+
+* Na fórmula da **detecção** podem entrar covariáveis de sítio ( `x` ) e
+  de visita ( `temp` ).
+
+* Na fórmula da **ocupação**, só covariáveis de sítio (população
+  fechada).
+
+* O pacote usa o histórico de detecções completo, como no modelo do
+  próximo slide, feito com o `ulam()`.
+]
+
+
+
+---
+
+## O mesmo modelo no rethinking
 
 .codigo-pequeno[
 
@@ -746,26 +870,27 @@ detecções e as temperaturas das `\(J\)` visitas ao sítio `\(i\)`.]
 
 .pull-left[
 
-|      | Valor real| Média|  2,5%| 97,5%| Rhat|
-|:-----|----------:|-----:|-----:|-----:|----:|
-|a_phi |        0,3|  0,34| -0,01|  0,74|    1|
-|b_phi |        1,0|  1,11|  0,70|  1,61|    1|
-|a_p   |       -0,5| -0,55| -0,79| -0,32|    1|
-|b_p   |       -1,0| -0,86| -1,11| -0,62|    1|
-|c_p   |        0,8|  0,89|  0,68|  1,11|    1|
-.f6[Escala logito. Saída do `precis(m.vis, prob = 0.95)`.]
+|              | Real|  ulam|  ubms|  2,5%| 97,5%| Rhat|
+|:-------------|----:|-----:|-----:|-----:|-----:|----:|
+|φ: intercepto |  0,3|  0,34|  0,33| -0,02|  0,72|    1|
+|φ: x          |  1,0|  1,11|  1,11|  0,69|  1,58|    1|
+|p: intercepto | -0,5| -0,55| -0,54| -0,77| -0,31|    1|
+|p: x          | -1,0| -0,86| -0,86| -1,11| -0,60|    1|
+|p: temp       |  0,8|  0,89|  0,89|  0,68|  1,10|    1|
+.f6[Escala logito. Valor real, média da posterior do `ulam` e média e
+intervalo de 95% do `ubms` ( `summary(m.vis.u, "state")` e
+`summary(m.vis.u, "det")` ).]
 ]
 
 .pull-right[
 
 * As estimativas recuperam os valores usados na simulação.
 
-* **Sítios com números diferentes de visitas**: complete as matrizes com
-  zeros e inclua uma matriz indicadora das visitas realizadas, que
-  multiplica os termos de cada visita.
+* Os dois ajustes, com o `ulam()` e com o `stan_occu()`, dão as mesmas
+  posteriores, a menos do erro de Monte Carlo.
 
-* Com covariáveis só de sítio, a versão binomial é equivalente e mais
-  rápida.
+* **Sítios com números diferentes de visitas**: no `unmarked`, basta
+  colocar `NA` nas visitas não realizadas.
 ]
 
 ---
@@ -800,15 +925,13 @@ class: inverse, center, middle
 &gt; set.seed(42)
 &gt; R &lt;- 15; M &lt;- 300; J &lt;- 4
 &gt; reg &lt;- rep(1:R, length.out = M) # região
-&gt; a.reg &lt;- rnorm(R, 0.3, 1)  # interceptos
-&gt; x &lt;- rnorm(M)
-&gt; z &lt;- rbinom(M, 1,
-+             inv_logit(a.reg[reg] + 1 * x))
-&gt; Y &lt;- matrix(rbinom(M * J, 1,
-+                    z * inv_logit(-0.5 - 1 * x)),
+&gt; a.reg &lt;- rnorm(R, 0.3, 1) # interceptos
+&gt; p.sim &lt;- 0.4              # detecção
+&gt; z &lt;- rbinom(M, 1, inv_logit(a.reg[reg]))
+&gt; Y &lt;- matrix(rbinom(M * J, 1, z * p.sim),
 +             nrow = M)
 &gt; y &lt;- rowSums(Y)
-&gt; dl4 &lt;- list(y = y, J = J, x = x, reg = reg,
+&gt; dl4 &lt;- list(y = y, J = J, reg = reg,
 +             det = as.integer(y &gt; 0))
 ```
 ]
@@ -821,15 +944,17 @@ class: inverse, center, middle
 .pull-left[
 
 `$$\begin{aligned}
-z_i &amp;\sim \text{Bernoulli}(\phi_i) \\[0.4em]
-y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
-\text{logit}(\phi_i) &amp;= \alpha_{\text{REG}[i]} + \beta_\phi \, x_i \\[0.4em]
-\text{logit}(p_i) &amp;= \alpha_p + \beta_p \, x_i \\[0.4em]
-\alpha_r &amp;\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.4em]
-\bar\alpha, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5) \\[0.4em]
-\beta_\phi, \, \beta_p &amp;\sim \text{Normal}(0, \, 1) \\[0.4em]
+z_i &amp;\sim \text{Bernoulli}(\phi_i) \\[0.2em]
+y_i &amp;\sim \text{Binomial}(J, \, z_i \, p) \\[0.2em]
+\text{logit}(\phi_i) &amp;= \alpha_{\text{REG}[i]} \\[0.2em]
+\text{logit}(p) &amp;= \alpha_p \\[0.2em]
+\alpha_r &amp;\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.2em]
+\bar\alpha, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5) \\[0.2em]
 \sigma &amp;\sim \text{Exponencial}(1)
 \end{aligned}$$`
+
+* Só os interceptos da ocupação variam entre regiões: `\(\bar\alpha\)` é o
+  logito da ocupação na região típica e `\(\sigma\)`, a variação entre elas.
 ]
 
 .pull-right[
@@ -838,17 +963,14 @@ y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
 ``` r
 &gt; m.ef &lt;- ulam(
 +   alist(
-+     y | det == 1 ~ custom(
-+       log(phi) + binomial_lpmf(y | J, p)),
++     y | det == 1 ~ custom(log(phi) +
++       binomial_logit_lpmf(y | J, a_p)),
 +     y | det == 0 ~ custom(log_sum_exp(
-+       log(phi) + binomial_lpmf(y | J, p),
++       log(phi) + binomial_logit_lpmf(y | J, a_p),
 +       log1m(phi))),
-+     logit(phi) &lt;- abar + u[reg] * sigma +
-+       b_phi * x,
-+     logit(p) &lt;- a_p + b_p * x,
++     logit(phi) &lt;- abar + u[reg] * sigma,
 +     u[reg] ~ dnorm(0, 1),
 +     c(abar, a_p) ~ dnorm(0, 1.5),
-+     c(b_phi, b_p) ~ dnorm(0, 1),
 +     sigma ~ dexp(1),
 +     gq&gt; vector[reg]:a_r &lt;&lt;- abar + u * sigma
 +   ),
@@ -858,7 +980,52 @@ y_i &amp;\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
 
 .f6[Parametrização **não centrada**: `\(\alpha_r = \bar\alpha + u_r \, \sigma\)`,
 com `\(u_r \sim \text{Normal}(0, 1)\)`. A linha `gq&gt;` calcula os `\(\alpha_r\)`
-como quantidade gerada.]
+como quantidade gerada. Como `\(p\)` é constante, `binomial_logit_lpmf()`
+recebe direto o seu logito, `a_p`.]
+]
+
+
+
+---
+
+## Ajuste com o ubms
+
+.pull-left[
+
+
+``` r
+&gt; umf4 &lt;-
++     unmarkedFrameOccu(
++         y = Y,
++         siteCovs = data.frame(
++             reg = factor(reg) )
++     )
+&gt; m.ef.u &lt;- stan_occu(
++   ~ 1 ~ (1 | reg),
++   data = umf4,
++   prior_intercept_state = normal(0, 1.5),
++   prior_intercept_det = normal(0, 1.5),
++   prior_sigma = gamma(1, 1),
++   chains = 4, cores = 4)
+&gt; summary(m.ef.u, "state")
+&gt; ## intercepto de cada região
+&gt; ranef(m.ef.u, "state", summary = TRUE)
+```
+
+]
+
+.pull-right[
+
+* `(1 | reg)`: intercepto aleatório para cada região, com a sintaxe do
+  pacote `lme4`. A variável de agrupamento deve ser um **fator**.
+
+* `prior_sigma`: priori do desvio-padrão entre regiões. A Gama(1, 1) é
+  a mesma Exponencial(1) do modelo do `ulam()`.
+
+* `summary(m.ef.u, "state")`: `\(\bar\alpha\)` (intercepto) e `\(\sigma\)`.
+
+* `ranef()`: interceptos de cada região, `\(\alpha_r\)`, com a média
+  `\(\bar\alpha\)` já somada.
 ]
 
 
@@ -869,11 +1036,10 @@ como quantidade gerada.]
 
 &lt;img src="Aula_10_modelos_ocupacao_files/figure-html/grafico-ef-1.png" alt="" width="92%" /&gt;
 
-.right[.f6[Modelo hierárquico: média e intervalo de 95% da posterior de
-`\(\text{logit}^{-1}(\alpha_r)\)`. Ingênua: proporção de sítios com detecção na
-região. Faixa cinza: intervalo de 95% de `\(\text{logit}^{-1}(\bar\alpha)\)`.
-Desvio-padrão entre regiões ( `\(\sigma\)` ): real = 1; estimado =
-0,97 [0,49; 1,66].]]
+.right[.f6[ulam e ubms: média e IC 95% de `\(\text{logit}^{-1}(\alpha_r)\)`.
+Ingênua: proporção de sítios com detecção. Faixa: IC 95% de
+`\(\text{logit}^{-1}(\bar\alpha)\)`. `\(\sigma\)`: real = 1; ulam =
+1,49 [0,82; 2,45]; ubms = 1,50 [0,83; 2,55].]]
 
 ---
 
@@ -943,23 +1109,16 @@ class: inverse, center, middle
 
 .pull-left[
 
-Entre duas temporadas, o estado de um sítio muda com as probabilidades:
+Probabilidades de mudança de estado entre duas temporadas (matriz `\(\mathbf{P}\)`):
 
-`$$\mathbf{P} = \begin{pmatrix} 1 - \gamma &amp; \gamma \\ \varepsilon &amp; 1 - \varepsilon \end{pmatrix}$$`
+&lt;img src="Aula_10_modelos_ocupacao_files/figure-html/matriz-transicao-1.png" alt="" width="85%" /&gt;
 
-.f6[Linhas: estado na temporada anterior (não ocupado, ocupado). Colunas:
-estado na temporada atual.]
+Ocupação esperada e seu **equilíbrio**:
 
-A ocupação esperada muda como:
-
-`$$\psi_{t+1} = \psi_t \, (1 - \varepsilon) + (1 - \psi_t) \, \gamma$$`
-
-e tende ao **equilíbrio**:
-
-`$$\psi^{\ast} = \frac{\gamma}{\gamma + \varepsilon}$$`
-
-.f6[É um modelo de metapopulação com "chuva de propágulos": a colonização
-não depende da fração de sítios ocupados.]
+`$$\begin{aligned}
+\psi_{t+1} &amp;= \psi_t \, (1 - \varepsilon) + (1 - \psi_t) \, \gamma \\[0.3em]
+\psi^{\ast} &amp;= \gamma / (\gamma + \varepsilon)
+\end{aligned}$$`
 ]
 
 .pull-right[
@@ -981,11 +1140,16 @@ não depende da fração de sítios ocupados.]
 +   z[, t] &lt;- rbinom(M, 1,
 +     z[, t - 1] * (1 - eps.sim) +
 +     (1 - z[, t - 1]) * gama.sim)
-&gt; ## n de detecções em cada temporada
-&gt; y &lt;- matrix(rbinom(M * n.temp, J, z * p.sim),
-+             nrow = M)
+&gt; ## Detecções: colunas com as J visitas de
+&gt; ## cada temporada, em sequência
+&gt; z.vis &lt;- z[, rep(1:n.temp, each = J)]
+&gt; Y &lt;- matrix(rbinom(M * n.temp * J, 1,
++                    z.vis * p.sim), nrow = M)
 ```
 ]
+
+.f6[É um modelo de metapopulação com "chuva de propágulos": a colonização
+não depende da fração de sítios ocupados.]
 ]
 
 ---
@@ -998,7 +1162,7 @@ não depende da fração de sítios ocupados.]
 z_{i1} &amp;\sim \text{Bernoulli}(\psi_1) \\[0.4em]
 z_{it} &amp;\sim \text{Bernoulli}(\pi_{it}) \\[0.4em]
 \pi_{it} &amp;= z_{i,t-1} (1 - \varepsilon) + (1 - z_{i,t-1}) \, \gamma \\[0.4em]
-y_{it} &amp;\sim \text{Binomial}(J, \, z_{it} \, p) \\[0.4em]
+y_{itj} &amp;\sim \text{Bernoulli}(z_{it} \, p) \\[0.4em]
 \text{logit}(\psi_1) &amp;= \alpha_\psi \quad \text{logit}(\gamma) = \alpha_\gamma \\[0.4em]
 \text{logit}(\varepsilon) &amp;= \alpha_\varepsilon \quad \text{logit}(p) = \alpha_p \\[0.4em]
 \alpha_\psi, \, \alpha_\gamma, \, \alpha_\varepsilon, \, \alpha_p &amp;\sim \text{Normal}(0; \, 1{,}5)
@@ -1009,215 +1173,129 @@ y_{it} &amp;\sim \text{Binomial}(J, \, z_{it} \, p) \\[0.4em]
 
 * `\(z_{it}\)`: ocupação do sítio `\(i\)` na temporada `\(t\)` (latente).
 
-* `\(y_{it}\)`: n de visitas com detecção na temporada `\(t\)`.
+* `\(y_{itj}\)`: detecção (1) ou não (0) na visita `\(j\)` da temporada `\(t\)`.
 
 * A ocupação segue uma **cadeia de Markov** que não observamos
   diretamente: é um **modelo oculto de Markov** (*hidden Markov model*),
   ou modelo de **espaço de estados** (Royle &amp; Kéry 2007).
 
-* A parte de observação ( `\(y_{it}\)` dado `\(z_{it}\)` ) é igual à do modelo
+* A parte de observação ( `\(y_{itj}\)` dado `\(z_{it}\)` ) é igual à do modelo
   de uma temporada.
 ]
 
 ---
 
-## Marginalização: o algoritmo progressivo
+## Dados no formato do unmarked
 
-.pull-left[
-
-* Cada sítio tem `\(2^T\)` históricos possíveis de ocupação. Em vez de
-  somar todos, acumulamos as probabilidades temporada a temporada
-  (*forward algorithm*).
-
-* Seja `\(\boldsymbol{\alpha}_{it}\)` o vetor com as probabilidades conjuntas
-  de cada estado na temporada `\(t\)` e das detecções até `\(t\)`:
-
-`$$\boldsymbol{\alpha}_{it} = \big(\Pr(z_{it} = 0, \, \mathbf{y}_{i,1:t}), \; \Pr(z_{it} = 1, \, \mathbf{y}_{i,1:t})\big)$$`
-
-* `\(\mathbf{y}_{i,1:t}\)`: detecções no sítio `\(i\)` da temporada 1 até a `\(t\)`.
-
-* Verossimilhança das detecções na temporada `\(t\)`, para cada estado (como
-  no modelo de uma temporada):
-
-`$$\mathbf{L}_{it} = \big(\mathbb{1}(y_{it} = 0), \; \text{Binomial}(y_{it} \mid J, p)\big)$$`
-]
-
-.pull-right[
-
-**Recursão**
-
-`$$\begin{aligned}
-\boldsymbol{\alpha}_{i1} &amp;= (1 - \psi_1, \; \psi_1) \circ \mathbf{L}_{i1} \\[0.5em]
-\boldsymbol{\alpha}_{it} &amp;= (\boldsymbol{\alpha}_{i,t-1} \, \mathbf{P}) \circ \mathbf{L}_{it} \\[0.5em]
-\Pr(\mathbf{y}_{i,1:T}) &amp;= \alpha_{iT,0} + \alpha_{iT,1}
-\end{aligned}$$`
-
-* `\(\circ\)`: produto elemento a elemento.
-
-* `\(\boldsymbol{\alpha}_{i,t-1} \mathbf{P}\)`: **projeta** as probabilidades
-  dos estados para a próxima temporada (colonização e extinção).
-
-* `\(\circ \, \mathbf{L}_{it}\)`: **atualiza** com as detecções da temporada.
-]
-
----
-
-## Por que não o `ulam`?
-
-&lt;br&gt;
-
-* No `ulam`, cada linha da fórmula descreve **uma observação**. Aqui, a
-  verossimilhança de um sítio envolve um laço pelas temporadas, que
-  carrega o vetor `\(\boldsymbol{\alpha}\)` de uma temporada para a outra.
-
-* Por isso escrevemos o modelo diretamente em **Stan**, e o ajustamos com
-  a função `cstan()` do rethinking.
-
-* O código Stan tem a mesma estrutura do que o `ulam` gera (veja
-  `stancode(m.const)`): blocos `data`, `parameters` e `model`.
-
-* O ajuste retornado pelo `cstan()` pode ser usado com `precis()` e
-  `extract.samples()`, como os do `ulam`.
-
----
-
-## O modelo em Stan (1)
-
-.pull-left[
 .codigo-pequeno[
 
-``` stan
-functions {
-  // Verossimilhança das detecções em uma
-  // temporada: (não ocupado, ocupado)
-  row_vector verossim(int y, int J, real p) {
-    return [y == 0, exp(binomial_lpmf(y | J, p))];
-  }
-}
-data {
-  int&lt;lower=1&gt; M;  // n de sítios
-  int&lt;lower=2&gt; T;  // n de temporadas
-  int&lt;lower=1&gt; J;  // n de visitas por temporada
-  array[M, T] int&lt;lower=0, upper=J&gt; y;
-}
-parameters {
-  real a_psi1;  // logitos
-  real a_gama;
-  real a_eps;
-  real a_p;
-}
-transformed parameters {
-  real psi1 = inv_logit(a_psi1);
-  real gama = inv_logit(a_gama);
-  real eps = inv_logit(a_eps);
-  real p = inv_logit(a_p);
-}
+``` r
+&gt; umf5 &lt;- unmarkedMultFrame(
++   y = Y,              # sítios x (temporadas x visitas)
++   numPrimary = n.temp # n de temporadas
++ )
 ```
 ]
+
+
+| Sítio | T1.1 | T1.2 | T1.3 | T2.1 | T2.2 | T2.3 | T3.1 | T3.2 | T3.3 | ... |
+|:-----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:---:|
+|   1   |  0   |  0   |  0   |  0   |  0   |  0   |  0   |  0   |  0   | ... |
+|   2   |  0   |  1   |  1   |  0   |  0   |  0   |  0   |  0   |  0   | ... |
+|   3   |  0   |  0   |  0   |  0   |  0   |  1   |  0   |  0   |  0   | ... |
+|   4   |  1   |  1   |  0   |  0   |  0   |  0   |  0   |  1   |  0   | ... |
+
+.pull-left[
+
+* `y`: uma linha por sítio e as visitas de cada temporada em sequência
+  (T1.1, T1.2...). Visitas não realizadas são `NA`.
+
+* `numPrimary`: número de temporadas.
 ]
 
 .pull-right[
 
-* `functions`: funções definidas por nós. A função `verossim()` retorna
-  o vetor `\(\mathbf{L}_{it}\)`.
-
-* `data`: declara os dados e seus tipos. `y` é uma matriz de inteiros,
-  sítios `\(\times\)` temporadas.
-
-* `parameters`: os parâmetros, na escala logito.
-
-* `transformed parameters`: as probabilidades, calculadas a partir dos
-  logitos. São guardadas junto com as amostras da posterior.
+* Covariáveis: `siteCovs` (sítio), `yearlySiteCovs` (sítio em cada
+  temporada) e `obsCovs` (visita).
 ]
 
 ---
 
-## O modelo em Stan (2)
+## Ajuste com o ubms
 
 .pull-left[
+
+
+``` r
+&gt; m.din &lt;- stan_colext(
++   psiformula = ~ 1,     # ocupação inicial
++   gammaformula = ~ 1,   # colonização
++   epsilonformula = ~ 1, # extinção
++   pformula = ~ 1,       # detecção
++   data = umf5,
++   prior_intercept_psi = normal(0, 1.5),
++   prior_intercept_gamma = normal(0, 1.5),
++   prior_intercept_eps = normal(0, 1.5),
++   prior_intercept_det = normal(0, 1.5),
++   chains = 4, cores = 4)
+&gt; m.din
+```
+
+]
+
+.pull-right[
+
+* Uma fórmula para cada submodelo. `~ 1`: só o intercepto, ou seja,
+  probabilidade constante.
+
+* Covariáveis e efeitos aleatórios entram nas fórmulas como no
+  `stan_occu()`.
+
+* O pacote marginaliza as ocupações latentes `\(z_{it}\)` com o **algoritmo
+  progressivo** (*forward algorithm*): temporada a temporada, projeta as
+  probabilidades de cada estado com a matriz `\(\mathbf{P}\)` e as atualiza
+  com as detecções.
+
+* Submodelos: `"state"` ( `\(\psi_1\)` ), `"col"` ( `\(\gamma\)` ), `"ext"`
+  ( `\(\varepsilon\)` ) e `"det"` ( `\(p\)` ).
+]
+
+
+
+---
+
+## Resultados
+
+.pull-left[
+
+
+``` r
+&gt; ## Amostras das posteriores (logitos)
+&gt; post &lt;- extract(m.din)
+&gt; gama &lt;- inv_logit(post$beta_col[, 1])
+&gt; eps &lt;- inv_logit(post$beta_ext[, 1])
+```
+
+
+|   | Valor real| Média| 2,5%| 97,5%|
+|:--|----------:|-----:|----:|-----:|
+|ψ1 |        0,7|  0,64| 0,54|  0,75|
+|γ  |        0,2|  0,25| 0,19|  0,32|
+|ε  |        0,3|  0,33| 0,25|  0,41|
+|p  |        0,4|  0,40| 0,36|  0,44|
+.f6[Escala de probabilidade.]
+]
+
+.pull-right[
+
+**Estimativas ingênuas** das taxas:
+
 .codigo-pequeno[
 
-``` stan
-model {
-  // Matriz de transição P
-  matrix[2, 2] P = [[1 - gama, gama],
-                    [eps, 1 - eps]];
-  for (i in 1:M) {
-    row_vector[2] alfa = [1 - psi1, psi1] .*
-                         verossim(y[i, 1], J, p);
-    for (t in 2:T)
-      alfa = (alfa * P) .* verossim(y[i, t], J, p);
-    target += log(sum(alfa));
-  }
-  a_psi1 ~ normal(0, 1.5);
-  a_gama ~ normal(0, 1.5);
-  a_eps ~ normal(0, 1.5);
-  a_p ~ normal(0, 1.5);
-}
-generated quantities {
-  // Ocupação esperada por temporada
-  vector[T] psi;
-  psi[1] = psi1;
-  for (t in 2:T)
-    psi[t] = psi[t - 1] * (1 - eps) +
-             (1 - psi[t - 1]) * gama;
-  real psi_eq = gama / (gama + eps);
-}
-```
-]
-]
-
-.pull-right[
-
-* `alfa`: o vetor `\(\boldsymbol{\alpha}_{it}\)` da recursão. `*` é o
-  produto de matrizes e `.*` o produto elemento a elemento.
-
-* `target += log(sum(alfa))`: soma o log da verossimilhança de cada
-  sítio ao log da posterior, como o `custom()` do `ulam`.
-
-* `generated quantities`: quantidades derivadas, calculadas para cada
-  amostra da posterior. Aqui, a trajetória esperada da ocupação e o seu
-  equilíbrio.
-]
-
-
-
-
-
----
-
-## Ajuste com o rethinking
-
-.pull-left[
-
 ``` r
-&gt; dl5 &lt;- list(M = M, T = n.temp,
-+             J = J, y = y)
-&gt; m.din &lt;- cstan(
-+   file = "ocupacao_dinamica.stan",
-+   data = dl5, chains = 4, cores = 4)
-```
-
-``` r
-&gt; precis(m.din, prob = 0.95,
-+   pars = c("psi1", "gama", "eps", "p"))
-```
-
-|     | Média|   DP| 2,5%| 97,5%| Rhat|
-|:----|-----:|----:|----:|-----:|----:|
-|psi1 |  0,67| 0,05| 0,57|  0,78|    1|
-|gama |  0,20| 0,03| 0,15|  0,27|    1|
-|eps  |  0,27| 0,04| 0,20|  0,35|    1|
-|p    |  0,39| 0,02| 0,35|  0,43|    1|
-]
-
-.pull-right[
-
-**Estimativas ingênuas** das taxas, calculadas com os registros:
-
-
-``` r
-&gt; D &lt;- y &gt; 0 # registros
+&gt; ## registro em cada temporada (M x T)
+&gt; D &lt;- sapply(1:n.temp, function(t)
++   rowSums(Y[, (t - 1) * J + 1:J]) &gt; 0)
 &gt; antes &lt;- D[, -n.temp]
 &gt; depois &lt;- D[, -1]
 &gt; ## colonização aparente
@@ -1225,7 +1303,7 @@ generated quantities {
 ```
 
 ```
-[1] 0.2471396
+[1] 0.2711111
 ```
 
 ``` r
@@ -1234,12 +1312,12 @@ generated quantities {
 ```
 
 ```
-[1] 0.4472843
+[1] 0.5
 ```
+]
 
-.f6[Valores reais: `\(\gamma\)` = 0,20 e `\(\varepsilon\)` =
-0,30. Uma não detecção depois de uma detecção parece uma
-extinção, e uma detecção depois de um falso zero parece uma colonização.]
+.f6[Uma não detecção depois de uma detecção parece uma extinção, e uma
+detecção depois de um falso zero parece uma colonização.]
 ]
 
 ---
@@ -1261,15 +1339,16 @@ e colonização e extinção aparentes (slide anterior).]]
 
 .pull-right[
 
-* **Modelo**: média e intervalo de 95% da posterior de `\(\psi_t\)` (bloco
-  `generated quantities`).
+* **Modelo**: média e intervalo de 95% da posterior de `\(\psi_t\)`,
+  calculada com a recursão `\(\psi_{t+1} = \psi_t (1 - \varepsilon) + (1 - \psi_t) \gamma\)`
+  para cada amostra da posterior.
 
 * **Valor real**: proporção de sítios ocupados na simulação.
 
 * **Ingênua**: proporção de sítios com registro em cada temporada.
 
 * Faixa cinza: intervalo de 95% da ocupação de equilíbrio,
-  `\(\psi^{\ast} = \gamma / (\gamma + \varepsilon)\)` = 0,43 [0,35; 0,50].
+  `\(\psi^{\ast} = \gamma / (\gamma + \varepsilon)\)` = 0,44 [0,37; 0,50].
   Valor real: 0,40.
 ]
 
@@ -1309,7 +1388,12 @@ e colonização e extinção aparentes (slide anterior).]]
 
 ## Referências
 
-.f5[
+.f6[
+
+* Kellner, K. F. et al. (2022). ubms: An R package for fitting
+  hierarchical occupancy and N-mixture abundance models in a Bayesian
+  framework. *Methods in Ecology and Evolution*, 13(3), 577–584.
+  [doi:10.1111/2041-210X.13777](https://doi.org/10.1111/2041-210X.13777)
 
 * Kéry, M. &amp; Royle, J. A. (2016). *Applied Hierarchical Modeling in
   Ecology*. Vol. 1. Academic Press.

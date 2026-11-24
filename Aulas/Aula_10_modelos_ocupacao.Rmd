@@ -33,6 +33,7 @@ library(dplyr)
 library(tidyr)
 library(knitr)
 library(rethinking)
+library(ubms)
 ```
 
 ```{r xaringan-themer, include=FALSE}
@@ -129,15 +130,23 @@ cor.base <- "#586e75"
 ## não estiverem, lê os resultados salvos na última compilação.
 ajusta_ou_le <- function(arquivo, rotulos, objetos, dados) {
     ## Amostras das posteriores, precis e diagnósticos dos modelos que estão na sessão
+    ## (para os ajustes do ubms, guarda o resumo de cada submodelo no lugar do precis)
     extrai <- function() {
         mods <- lapply(setNames(objetos, objetos), get, envir = globalenv())
-        list(post = lapply(mods, extract.samples),
-             precis = lapply(mods, precis, depth = 2, prob = 0.95),
+        u <- function(m) inherits(m, "ubmsFit")
+        list(post = lapply(mods, function(m)
+                 if (u(m)) rstan::extract(m@stanfit) else extract.samples(m)),
+             precis = lapply(mods, function(m)
+                 if (u(m)) sapply(names(m@submodels@submodels), function(sm) summary(m, sm),
+                                  simplify = FALSE)
+                 else precis(m, depth = 2, prob = 0.95)),
              diag = sapply(mods, function(m)
-                 c(divergencias = if (inherits(m, "CmdStanMCMC")) # ajustes do cstan()
-                       sum(m$diagnostic_summary(quiet = TRUE)$num_divergent)
-                   else divergent(m),
-                   rhat.max = max(precis(m, depth = 2)$rhat, na.rm = TRUE))))
+                 if (u(m))
+                     c(divergencias = rstan::get_num_divergent(m@stanfit),
+                       rhat.max = max(rstan::summary(m@stanfit)$summary[, "Rhat"], na.rm = TRUE))
+                 else
+                     c(divergencias = divergent(m),
+                       rhat.max = max(precis(m, depth = 2)$rhat, na.rm = TRUE))))
     }
     if (!isTRUE(getOption("knitr.in.progress"))) {
         if (all(sapply(objetos, exists, envir = globalenv()))) return(extrai())
@@ -402,7 +411,7 @@ se a espécie não ocorre, a única possibilidade é $y_i = 0$. É uma
 ## O modelo no rethinking
 
 .pull-left[
-.codigo-pequeno[
+
 ```{r m-const, eval = FALSE, echo = TRUE}
 f1 <- alist(
     y | det == 1 ~ custom(
@@ -420,7 +429,7 @@ dl1 <- list(y = y, J = J,
 m.const <- ulam( f1, data = dl1, chains = 4, cores = 4)
 ```
 ]
-]
+
 
 .pull-right[
 
@@ -448,32 +457,35 @@ post.const <- aj.const$post$m.const
 
 ## Do modelo teórico ao código
 
-.pull-left[
-
 ### Sítios com detecção ( $y_i > 0$ ):
 
 $$\log P(y_i) = \log \phi + \log \text{Binomial}(y_i \mid J, p)$$
 
-```{r, eval = FALSE, echo = TRUE}
-log(phi) + binomial_lpmf(y | J, p)
+```{r, eval = FALSE, echo = TRUE, prompt = FALSE}
+y | det == 1 ~ custom(
+               log(phi) + binomial_lpmf(y | J, p)
+           )
 ```
 
 * `binomial_lpmf(y | J, p)`: log da função de probabilidade (*log
   probability mass function*) da binomial, uma função do Stan.
 
 * O produto de probabilidades vira uma **soma** de logs.
-]
 
-.pull-right[
+---
+
+## Do modelo teórico ao código
 
 ### Sítios sem detecção ( $y_i = 0$ ):
 
 $$\log P(y_i) = \log \left[ \phi (1 - p)^J + (1 - \phi) \right]$$
 
-```{r, eval = FALSE, echo = TRUE}
-log_sum_exp(
-  log(phi) + binomial_lpmf(y | J, p),
-  log1m(phi))
+```{r, eval = FALSE, echo = TRUE, prompt=FALSE}
+y | det == 0 ~ custom(
+               log_sum_exp(
+                   log(phi) + binomial_lpmf(y | J, p),
+                   log1m(phi)
+               ))
 ```
 
 * `log_sum_exp(a, b)` = $\log(e^a + e^b)$: o log de uma **soma** de
@@ -483,7 +495,7 @@ log_sum_exp(
 * `log1m(phi)` = $\log(1 - \phi)$.
 
 * Com $y_i = 0$, `binomial_lpmf(0 | J, p)` = $J \log(1 - p)$.
-]
+
 
 ---
 
@@ -562,14 +574,13 @@ ggplot(d.const, aes(valor)) +
 Pelo teorema de Bayes:
 
 $$\begin{aligned}
-&P(z_i = 1 \mid y_i = 0) = \\[0.3em]
-&= \frac{P(y_i = 0 \mid z_i = 1) P(z_i = 1)}{P(y_i = 0)} \\[0.5em]
-&= \frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
+&P(z_i = 1 \mid y_i = 0) = \\[0.5em]
+&\frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
 \end{aligned}$$
 
-* **Numerador**: o caminho da árvore que gera um falso zero.
+* **Numerador**: o caminho da árvore que gera um falso zero: probabilidade de não registrar a espécie em $J$ tentativas, sendo que ela ocorre no sítio.
 
-* **Denominador**: todos os caminhos que geram um zero.
+* **Denominador**: todos os caminhos que geram um zero: probabilidade anterior somada à probabilidade de que o sítio não é ocupado.
 ]
 
 .pull-right[
@@ -703,7 +714,7 @@ y_i &\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.5em]
 ]
 
 .pull-right[
-.codigo-pequeno[
+
 ```{r m-cov, eval = FALSE, echo = TRUE}
 m.cov <- ulam(
   alist(
@@ -719,10 +730,56 @@ m.cov <- ulam(
   ),
   data = dl2, chains = 4, cores = 4)
 ```
-]
+
 
 .f6[A verossimilhança é a mesma do modelo anterior: só mudam os preditores
 lineares de `phi` e `p`.]
+]
+
+---
+
+## O modelo no ubms
+
+.pull-left[
+
+```{r m-cov-u, eval = FALSE, echo = TRUE}
+library(ubms)
+## Dados: detecções e covariáveis
+umf2 <- unmarkedFrameOccu(
+  y = Y,
+  siteCovs = data.frame(x = x))
+## Ajuste
+m.cov.u <- stan_occu(
+  ~ x ~ x,
+  data = umf2,
+  prior_intercept_state = normal(0, 1.5),
+  prior_coef_state = normal(0, 1),
+  prior_intercept_det = normal(0, 1.5),
+  prior_coef_det = normal(0, 1),
+  chains = 4, cores = 4)
+## Resumo das posteriores
+m.cov.u
+```
+]
+
+.pull-right[
+
+* `unmarkedFrameOccu()`: organiza os dados. `y` é a **matriz de
+  detecções** (sítios $\times$ visitas, com 0 e 1), e não o número de
+  detecções por sítio.
+
+* `~ x ~ x`: fórmula com **dois lados direitos**: primeiro o modelo da
+  **detecção**, depois o da **ocupação**. O logito é o link implícito.
+
+* O pacote monta e marginaliza a verossimilhança, como fizemos com o
+  `custom()`.
+
+* `prior_...`: prioris dos interceptos e coeficientes. O padrão é
+  `logistic(0, 1)`.
+
+* Imprimir o ajuste mostra as posteriores dos dois **submodelos**, na
+  escala logito. `summary(m.cov.u, "state")` ou `"det"` retorna o
+  resumo de cada um como um data frame.
 ]
 
 ---
@@ -746,7 +803,7 @@ b &\sim \text{Normal}(0, \, 1)
 ]
 
 .pull-right[
-.codigo-pequeno[
+
 ```{r m-ing, eval = FALSE, echo = TRUE}
 m.ing <- ulam(
   alist(
@@ -757,7 +814,7 @@ m.ing <- ulam(
   ),
   data = dl2, chains = 4, cores = 4)
 ```
-]
+
 ]
 
 ```{r ajuste-cov, include = FALSE}
@@ -841,7 +898,7 @@ só podem ser separados porque as visitas repetidas informam sobre $p$.
 * Agora $p_{ij}$ varia entre as visitas $j$ de um mesmo sítio $i$.
 
 * O número de detecções $y_i$ **deixa de ser binomial** (as $J$
-  tentativas têm probabilidades diferentes).
+  tentativas têm probabilidades de detecção diferentes).
 
 * Usamos o histórico de detecções completo: cada visita é uma
   Bernoulli.
@@ -910,7 +967,78 @@ detecções e as temperaturas das $J$ visitas ao sítio $i$.]
 
 ---
 
-## O modelo no rethinking
+## Dados no formato do unmarked
+
+.codigo-pequeno[
+```{r umf-vis, echo = TRUE, R.options = list(digits = 2)}
+umf3 <- unmarkedFrameOccu(
+  y = Y.v,                      # detecções
+  siteCovs = data.frame(x = x), # covariáveis de sítio
+  obsCovs = list(temp = W))     # covariáveis de visita
+head(umf3, 3)
+```
+]
+
+.pull-left[
+
+* `y`: matriz sítios $\times$ visitas, com 1 (detecção), 0 (não
+  detecção) ou `NA` (visita não realizada).
+
+* `siteCovs`: data frame com uma linha por sítio e uma coluna por
+  covariável.
+]
+
+.pull-right[
+
+* `obsCovs`: lista de matrizes sítios $\times$ visitas, uma por
+  covariável de visita. O nome na lista ( `temp` ) é usado na fórmula
+  do modelo.
+
+* `summary(umf3)` resume os dados: n de sítios, visitas, detecções e as
+  covariáveis.
+]
+
+---
+
+## Ajuste com o ubms
+
+.pull-left[
+
+```{r m-vis-u, eval = FALSE, echo = TRUE}
+m.vis.u <- stan_occu(
+  ~ x + temp ~ x,
+  data = umf3,
+  prior_intercept_state = normal(0, 1.5),
+  prior_coef_state = normal(0, 1),
+  prior_intercept_det = normal(0, 1.5),
+  prior_coef_det = normal(0, 1),
+  chains = 4, cores = 4)
+summary(m.vis.u, "state")
+summary(m.vis.u, "det")
+```
+
+]
+
+.pull-right[
+
+* Na fórmula da **detecção** podem entrar covariáveis de sítio ( `x` ) e
+  de visita ( `temp` ).
+
+* Na fórmula da **ocupação**, só covariáveis de sítio (população
+  fechada).
+
+* O pacote usa o histórico de detecções completo, como no modelo do
+  próximo slide, feito com o `ulam()`.
+]
+
+```{r ajuste-vis-u, include = FALSE}
+aj.vis.u <- ajusta_ou_le("posteriores_ocupacao_vis_ubms.rds", "m-vis-u", "m.vis.u",
+                         list(Y.v, x, W))
+```
+
+---
+
+## O mesmo modelo no rethinking
 
 .codigo-pequeno[
 ```{r m-vis, eval = FALSE, echo = TRUE}
@@ -956,24 +1084,30 @@ aj.vis <- ajusta_ou_le("posteriores_ocupacao_vis.rds", "m-vis", "m.vis", dl3)
 
 .pull-left[
 ```{r tab-vis}
-pr.vis <- as.data.frame(aj.vis$precis$m.vis)[c("a_phi", "b_phi", "a_p", "b_p", "c_p"), ]
-kable(data.frame(Real = c(0.3, 1, -0.5, -1, 0.8), pr.vis[, c("mean", "2.5%", "97.5%", "rhat")]),
-      digits = 2, col.names = c("Valor real", "Média", "2,5%", "97,5%", "Rhat"),
+sm.vis <- aj.vis.u$precis$m.vis.u
+pr.u <- rbind(sm.vis$state, sm.vis$det)
+pr.r <- as.data.frame(aj.vis$precis$m.vis)[c("a_phi", "b_phi", "a_p", "b_p", "c_p"), ]
+tab.vis <- data.frame(Real = c(0.3, 1, -0.5, -1, 0.8), ulam = pr.r$mean,
+                      pr.u[, c("mean", "2.5%", "97.5%", "Rhat")])
+rownames(tab.vis) <- c("φ: intercepto", "φ: x", "p: intercepto", "p: x", "p: temp")
+kable(tab.vis, digits = 2,
+      col.names = c("Real", "ulam", "ubms", "2,5%", "97,5%", "Rhat"),
       format.args = list(decimal.mark = ","))
 ```
-.f6[Escala logito. Saída do `precis(m.vis, prob = 0.95)`.]
+.f6[Escala logito. Valor real, média da posterior do `ulam` e média e
+intervalo de 95% do `ubms` ( `summary(m.vis.u, "state")` e
+`summary(m.vis.u, "det")` ).]
 ]
 
 .pull-right[
 
 * As estimativas recuperam os valores usados na simulação.
 
-* **Sítios com números diferentes de visitas**: complete as matrizes com
-  zeros e inclua uma matriz indicadora das visitas realizadas, que
-  multiplica os termos de cada visita.
+* Os dois ajustes, com o `ulam()` e com o `stan_occu()`, dão as mesmas
+  posteriores, a menos do erro de Monte Carlo.
 
-* Com covariáveis só de sítio, a versão binomial é equivalente e mais
-  rápida.
+* **Sítios com números diferentes de visitas**: no `unmarked`, basta
+  colocar `NA` nas visitas não realizadas.
 ]
 
 ---
@@ -1007,15 +1141,13 @@ class: inverse, center, middle
 set.seed(42)
 R <- 15; M <- 300; J <- 4
 reg <- rep(1:R, length.out = M) # região
-a.reg <- rnorm(R, 0.3, 1)  # interceptos
-x <- rnorm(M)
-z <- rbinom(M, 1,
-            inv_logit(a.reg[reg] + 1 * x))
-Y <- matrix(rbinom(M * J, 1,
-                   z * inv_logit(-0.5 - 1 * x)),
+a.reg <- rnorm(R, 0.3, 1) # interceptos
+p.sim <- 0.4              # detecção
+z <- rbinom(M, 1, inv_logit(a.reg[reg]))
+Y <- matrix(rbinom(M * J, 1, z * p.sim),
             nrow = M)
 y <- rowSums(Y)
-dl4 <- list(y = y, J = J, x = x, reg = reg,
+dl4 <- list(y = y, J = J, reg = reg,
             det = as.integer(y > 0))
 ```
 ]
@@ -1028,15 +1160,17 @@ dl4 <- list(y = y, J = J, x = x, reg = reg,
 .pull-left[
 
 $$\begin{aligned}
-z_i &\sim \text{Bernoulli}(\phi_i) \\[0.4em]
-y_i &\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
-\text{logit}(\phi_i) &= \alpha_{\text{REG}[i]} + \beta_\phi \, x_i \\[0.4em]
-\text{logit}(p_i) &= \alpha_p + \beta_p \, x_i \\[0.4em]
-\alpha_r &\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.4em]
-\bar\alpha, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\[0.4em]
-\beta_\phi, \, \beta_p &\sim \text{Normal}(0, \, 1) \\[0.4em]
+z_i &\sim \text{Bernoulli}(\phi_i) \\[0.2em]
+y_i &\sim \text{Binomial}(J, \, z_i \, p) \\[0.2em]
+\text{logit}(\phi_i) &= \alpha_{\text{REG}[i]} \\[0.2em]
+\text{logit}(p) &= \alpha_p \\[0.2em]
+\alpha_r &\sim \text{Normal}(\bar\alpha, \, \sigma) \\[0.2em]
+\bar\alpha, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\[0.2em]
 \sigma &\sim \text{Exponencial}(1)
 \end{aligned}$$
+
+* Só os interceptos da ocupação variam entre regiões: $\bar\alpha$ é o
+  logito da ocupação na região típica e $\sigma$, a variação entre elas.
 ]
 
 .pull-right[
@@ -1044,17 +1178,14 @@ y_i &\sim \text{Binomial}(J, \, z_i \, p_i) \\[0.4em]
 ```{r m-ef, eval = FALSE, echo = TRUE}
 m.ef <- ulam(
   alist(
-    y | det == 1 ~ custom(
-      log(phi) + binomial_lpmf(y | J, p)),
+    y | det == 1 ~ custom(log(phi) +
+      binomial_logit_lpmf(y | J, a_p)),
     y | det == 0 ~ custom(log_sum_exp(
-      log(phi) + binomial_lpmf(y | J, p),
+      log(phi) + binomial_logit_lpmf(y | J, a_p),
       log1m(phi))),
-    logit(phi) <- abar + u[reg] * sigma +
-      b_phi * x,
-    logit(p) <- a_p + b_p * x,
+    logit(phi) <- abar + u[reg] * sigma,
     u[reg] ~ dnorm(0, 1),
     c(abar, a_p) ~ dnorm(0, 1.5),
-    c(b_phi, b_p) ~ dnorm(0, 1),
     sigma ~ dexp(1),
     gq> vector[reg]:a_r <<- abar + u * sigma
   ),
@@ -1064,7 +1195,8 @@ m.ef <- ulam(
 
 .f6[Parametrização **não centrada**: $\alpha_r = \bar\alpha + u_r \, \sigma$,
 com $u_r \sim \text{Normal}(0, 1)$. A linha `gq>` calcula os $\alpha_r$
-como quantidade gerada.]
+como quantidade gerada. Como $p$ é constante, `binomial_logit_lpmf()`
+recebe direto o seu logito, `a_p`.]
 ]
 
 ```{r ajuste-ef, include = FALSE}
@@ -1074,34 +1206,88 @@ post.ef <- aj.ef$post$m.ef
 
 ---
 
+## Ajuste com o ubms
+
+.pull-left[
+
+```{r m-ef-u, eval = FALSE, echo = TRUE}
+umf4 <-
+    unmarkedFrameOccu(
+        y = Y,
+        siteCovs = data.frame(
+            reg = factor(reg) )
+    )
+m.ef.u <- stan_occu(
+  ~ 1 ~ (1 | reg),
+  data = umf4,
+  prior_intercept_state = normal(0, 1.5),
+  prior_intercept_det = normal(0, 1.5),
+  prior_sigma = gamma(1, 1),
+  chains = 4, cores = 4)
+summary(m.ef.u, "state")
+## intercepto de cada região
+ranef(m.ef.u, "state", summary = TRUE)
+```
+
+]
+
+.pull-right[
+
+* `(1 | reg)`: intercepto aleatório para cada região, com a sintaxe do
+  pacote `lme4`. A variável de agrupamento deve ser um **fator**.
+
+* `prior_sigma`: priori do desvio-padrão entre regiões. A Gama(1, 1) é
+  a mesma Exponencial(1) do modelo do `ulam()`.
+
+* `summary(m.ef.u, "state")`: $\bar\alpha$ (intercepto) e $\sigma$.
+
+* `ranef()`: interceptos de cada região, $\alpha_r$, com a média
+  $\bar\alpha$ já somada.
+]
+
+```{r ajuste-ef-u, include = FALSE}
+aj.ef.u <- ajusta_ou_le("posteriores_ocupacao_ef_ubms.rds", "m-ef-u", "m.ef.u",
+                        list(Y, reg))
+post.ef.u <- aj.ef.u$post$m.ef.u
+```
+
+---
+
 ## Ocorrência em cada região
 
 ```{r grafico-ef, fig.width = 12, fig.asp = 0.42, out.width = "92%"}
-est.reg <- data.frame(reg = 1:R, real = inv_logit(a.reg),
-                      ingenua = tapply(dl4$det, dl4$reg, mean),
-                      t(apply(inv_logit(post.ef$a_r), 2, resumo)))
-est.reg$indice <- rank(est.reg$real, ties.method = "first")
+## Interceptos de cada região no ubms: média geral + desvios da região
+a.r.u <- post.ef.u$beta_state[, 1] + post.ef.u$b_state
+reg.mod <- function(a, nome)
+    data.frame(reg = 1:R, modelo = nome, t(apply(inv_logit(a), 2, resumo)))
+est.reg <- rbind(reg.mod(post.ef$a_r, "ulam"), reg.mod(a.r.u, "ubms"))
+reais.reg <- data.frame(reg = 1:R, real = inv_logit(a.reg),
+                        ingenua = tapply(dl4$det, dl4$reg, mean))
+ordem.reg <- rank(reais.reg$real, ties.method = "first")
+est.reg$indice <- ordem.reg[est.reg$reg]
+reais.reg$indice <- ordem.reg
 phi.bar <- resumo(inv_logit(post.ef$abar))
 ggplot(est.reg, aes(indice)) +
     annotate("rect", xmin = -Inf, xmax = Inf, ymin = phi.bar["inf"], ymax = phi.bar["sup"],
              fill = "#93a1a1", alpha = 0.4) +
-    geom_pointrange(aes(y = media, ymin = inf, ymax = sup, colour = "Modelo hierárquico"),
-                    size = 0.4, linewidth = 0.8) +
-    geom_point(aes(y = real, colour = "Valor real"), shape = 4, size = 4, stroke = 1.5) +
-    geom_point(aes(y = ingenua, colour = "Ingênua"), size = 3) +
-    scale_colour_manual(values = c("Modelo hierárquico" = cor.mod, "Valor real" = cor.real,
-                                   "Ingênua" = cor.ing), name = NULL) +
+    geom_pointrange(aes(y = media, ymin = inf, ymax = sup, colour = modelo),
+                    position = position_dodge(width = 0.5), size = 0.4, linewidth = 0.8) +
+    geom_point(data = reais.reg, aes(y = real, colour = "Valor real"), shape = 4, size = 4,
+               stroke = 1.5) +
+    geom_point(data = reais.reg, aes(y = ingenua, colour = "Ingênua"), size = 3) +
+    scale_colour_manual(values = c("ulam" = cor.mod, "ubms" = "#d33682", "Valor real" = cor.real,
+                                   "Ingênua" = cor.ing), name = NULL,
+                        breaks = c("ulam", "ubms", "Valor real", "Ingênua")) +
     scale_x_continuous(breaks = 1:R) +
-    labs(x = "Região (ordenadas pelo valor real)", y = "Prob. de ocorrência (x = 0)") +
+    labs(x = "Região (ordenadas pelo valor real)", y = "Prob. de ocorrência") +
     theme_Publication(18) +
     theme(legend.key.size = unit(0.8, "cm"))
 ```
 
-.right[.f6[Modelo hierárquico: média e intervalo de 95% da posterior de
-$\text{logit}^{-1}(\alpha_r)$. Ingênua: proporção de sítios com detecção na
-região. Faixa cinza: intervalo de 95% de $\text{logit}^{-1}(\bar\alpha)$.
-Desvio-padrão entre regiões ( $\sigma$ ): real = 1; estimado =
-`r med_ic(post.ef$sigma)`.]]
+.right[.f6[ulam e ubms: média e IC 95% de $\text{logit}^{-1}(\alpha_r)$.
+Ingênua: proporção de sítios com detecção. Faixa: IC 95% de
+$\text{logit}^{-1}(\bar\alpha)$. $\sigma$: real = 1; ulam =
+`r med_ic(post.ef$sigma)`; ubms = `r med_ic(post.ef.u$sigma_state[, 1])`.]]
 
 ---
 
@@ -1162,29 +1348,42 @@ class: inverse, center, middle
 ]
 
 .pull-right[
-```{r desenho-robusto, fig.width = 6, fig.asp = 0.75, out.width = "100%"}
+```{r desenho-robusto, fig.width = 6, fig.asp = 0.8, out.width = "100%"}
 temp <- data.frame(t = 1:3, xmin = c(0, 4, 8), xmax = c(3, 7, 11))
-visitas <- expand.grid(t = 1:3, j = 1:3)
-visitas$x <- temp$xmin[visitas$t] + visitas$j - 0.5
+## Registros de 3 sítios em 3 visitas por temporada (1 = detecção)
+reg.ex <- rbind(A = c(1, 0, 1,  0, 0, 0,  0, 1, 0),
+                B = c(0, 0, 0,  0, 0, 0,  1, 1, 0),
+                C = c(1, 1, 1,  1, 0, 1,  0, 1, 1))
+visitas <- data.frame(sitio = rep(rownames(reg.ex), times = 9),
+                      k = rep(1:9, each = 3), det = as.vector(reg.ex))
+visitas$t <- (visitas$k - 1) %/% 3 + 1
+visitas$x <- temp$xmin[visitas$t] + (visitas$k - 1) %% 3 + 0.5
+visitas$y <- c(A = 1.5, B = 1, C = 0.5)[visitas$sitio]
+visitas$registro <- factor(ifelse(visitas$det == 1, "Detecção", "Não detecção"),
+                           levels = c("Detecção", "Não detecção"))
 setas <- data.frame(x = c(3.1, 7.1), xend = c(3.9, 7.9))
 ggplot() +
     geom_rect(data = temp, aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = 2),
               fill = "#eee8d5", colour = cor.base) +
-    geom_point(data = visitas, aes(x, 1), size = 5, colour = cor.ing) +
+    geom_point(data = visitas, aes(x, y, colour = sitio, shape = registro),
+               size = 5, stroke = 1.5) +
     geom_text(data = temp, aes((xmin + xmax) / 2, 2.4, label = paste("Temporada", t)),
               size = 5, colour = cor.base, fontface = "bold") +
-    geom_text(data = temp, aes((xmin + xmax) / 2, 0.4, label = "fechada"),
+    geom_text(data = temp, aes((xmin + xmax) / 2, -0.3, label = "fechada"),
               size = 4.5, colour = cor.base, fontface = "italic") +
     geom_segment(data = setas, aes(x = x, xend = xend, y = 1, yend = 1),
                  arrow = arrow(length = unit(0.25, "cm")), colour = cor.mod, linewidth = 1) +
     annotate("text", x = c(3.5, 7.5), y = 1.45, label = "gamma*','~epsilon",
              parse = TRUE, size = 6, colour = cor.mod) +
-    annotate("text", x = c(3.5, 7.5), y = -0.25, label = "aberta",
+    annotate("text", x = c(3.5, 7.5), y = -0.3, label = "aberta",
              size = 4.5, colour = cor.mod, fontface = "italic") +
-    annotate("text", x = 5.5, y = -0.75, label = "Pontos: visitas a um sítio",
-             size = 4.5, colour = cor.base) +
-    coord_cartesian(xlim = c(-0.2, 11.2), ylim = c(-1, 2.7)) +
-    theme_void()
+    scale_colour_manual(values = c(A = "#268bd2", B = "#d33682", C = "#b58900"),
+                        name = "Sítio") +
+    scale_shape_manual(values = c("Detecção" = 16, "Não detecção" = 1), name = NULL) +
+    coord_cartesian(xlim = c(-0.2, 11.2), ylim = c(-0.5, 2.6)) +
+    theme_void(base_size = 16) +
+    theme(legend.position = "bottom", legend.box = "vertical",
+          text = element_text(colour = cor.base))
 ```
 ]
 
@@ -1194,23 +1393,32 @@ ggplot() +
 
 .pull-left[
 
-Entre duas temporadas, o estado de um sítio muda com as probabilidades:
+Probabilidades de mudança de estado entre duas temporadas (matriz $\mathbf{P}$):
 
-$$\mathbf{P} = \begin{pmatrix} 1 - \gamma & \gamma \\ \varepsilon & 1 - \varepsilon \end{pmatrix}$$
+```{r matriz-transicao, fig.width = 6, fig.asp = 0.45, out.width = "85%"}
+celulas <- data.frame(x = c(1, 2.2, 1, 2.2), y = c(2, 2, 1, 1),
+                      prob = c("1 - gamma", "gamma", "epsilon", "1 - epsilon"))
+ggplot(celulas) +
+    geom_tile(aes(x, y), fill = "#eee8d5", colour = cor.base, width = 1.1, height = 0.9) +
+    geom_text(aes(x, y, label = prob), parse = TRUE, size = 7, colour = "#cb4b16") +
+    annotate("text", x = c(1, 2.2), y = 2.75, size = 4.5, colour = cor.base, lineheight = 0.9,
+             label = c("não ocupado\n(z = 0)", "ocupado\n(z = 1)")) +
+    annotate("text", x = 0.45, y = c(2, 1), size = 4.5, colour = cor.base, hjust = 1,
+             label = c("não ocupado (z = 0)", "ocupado (z = 1)")) +
+    annotate("text", x = 1.6, y = 3.4, label = "depois", size = 5.5,
+             fontface = "bold", colour = cor.base) +
+    annotate("text", x = -1.45, y = 1.5, label = "antes", size = 5.5, angle = 90,
+             fontface = "bold", colour = cor.base) +
+    coord_cartesian(xlim = c(-1.6, 2.8), ylim = c(0.5, 3.5)) +
+    theme_void()
+```
 
-.f6[Linhas: estado na temporada anterior (não ocupado, ocupado). Colunas:
-estado na temporada atual.]
+Ocupação esperada e seu **equilíbrio**:
 
-A ocupação esperada muda como:
-
-$$\psi_{t+1} = \psi_t \, (1 - \varepsilon) + (1 - \psi_t) \, \gamma$$
-
-e tende ao **equilíbrio**:
-
-$$\psi^{\ast} = \frac{\gamma}{\gamma + \varepsilon}$$
-
-.f6[É um modelo de metapopulação com "chuva de propágulos": a colonização
-não depende da fração de sítios ocupados.]
+$$\begin{aligned}
+\psi_{t+1} &= \psi_t \, (1 - \varepsilon) + (1 - \psi_t) \, \gamma \\[0.3em]
+\psi^{\ast} &= \gamma / (\gamma + \varepsilon)
+\end{aligned}$$
 ]
 
 .pull-right[
@@ -1231,11 +1439,16 @@ for (t in 2:n.temp)
   z[, t] <- rbinom(M, 1,
     z[, t - 1] * (1 - eps.sim) +
     (1 - z[, t - 1]) * gama.sim)
-## n de detecções em cada temporada
-y <- matrix(rbinom(M * n.temp, J, z * p.sim),
-            nrow = M)
+## Detecções: colunas com as J visitas de
+## cada temporada, em sequência
+z.vis <- z[, rep(1:n.temp, each = J)]
+Y <- matrix(rbinom(M * n.temp * J, 1,
+                   z.vis * p.sim), nrow = M)
 ```
 ]
+
+.f6[É um modelo de metapopulação com "chuva de propágulos": a colonização
+não depende da fração de sítios ocupados.]
 ]
 
 ---
@@ -1248,7 +1461,7 @@ $$\begin{aligned}
 z_{i1} &\sim \text{Bernoulli}(\psi_1) \\[0.4em]
 z_{it} &\sim \text{Bernoulli}(\pi_{it}) \\[0.4em]
 \pi_{it} &= z_{i,t-1} (1 - \varepsilon) + (1 - z_{i,t-1}) \, \gamma \\[0.4em]
-y_{it} &\sim \text{Binomial}(J, \, z_{it} \, p) \\[0.4em]
+y_{itj} &\sim \text{Bernoulli}(z_{it} \, p) \\[0.4em]
 \text{logit}(\psi_1) &= \alpha_\psi \quad \text{logit}(\gamma) = \alpha_\gamma \\[0.4em]
 \text{logit}(\varepsilon) &= \alpha_\varepsilon \quad \text{logit}(p) = \alpha_p \\[0.4em]
 \alpha_\psi, \, \alpha_\gamma, \, \alpha_\varepsilon, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5)
@@ -1259,216 +1472,137 @@ y_{it} &\sim \text{Binomial}(J, \, z_{it} \, p) \\[0.4em]
 
 * $z_{it}$: ocupação do sítio $i$ na temporada $t$ (latente).
 
-* $y_{it}$: n de visitas com detecção na temporada $t$.
+* $y_{itj}$: detecção (1) ou não (0) na visita $j$ da temporada $t$.
 
 * A ocupação segue uma **cadeia de Markov** que não observamos
   diretamente: é um **modelo oculto de Markov** (*hidden Markov model*),
   ou modelo de **espaço de estados** (Royle & Kéry 2007).
 
-* A parte de observação ( $y_{it}$ dado $z_{it}$ ) é igual à do modelo
+* A parte de observação ( $y_{itj}$ dado $z_{it}$ ) é igual à do modelo
   de uma temporada.
 ]
 
 ---
 
-## Marginalização: o algoritmo progressivo
+## Dados no formato do unmarked
 
-.pull-left[
-
-* Cada sítio tem $2^T$ históricos possíveis de ocupação. Em vez de
-  somar todos, acumulamos as probabilidades temporada a temporada
-  (*forward algorithm*).
-
-* Seja $\boldsymbol{\alpha}_{it}$ o vetor com as probabilidades conjuntas
-  de cada estado na temporada $t$ e das detecções até $t$:
-
-$$\boldsymbol{\alpha}_{it} = \big(P(z_{it} = 0, \, \mathbf{y}_{i,1:t}), \; P(z_{it} = 1, \, \mathbf{y}_{i,1:t})\big)$$
-
-* $\mathbf{y}_{i,1:t}$: detecções no sítio $i$ da temporada 1 até a $t$.
-
-* Verossimilhança das detecções na temporada $t$, para cada estado (como
-  no modelo de uma temporada):
-
-$$\mathbf{L}_{it} = \big(\mathbb{1}(y_{it} = 0), \; \text{Binomial}(y_{it} \mid J, p)\big)$$
-]
-
-.pull-right[
-
-**Recursão**
-
-$$\begin{aligned}
-\boldsymbol{\alpha}_{i1} &= (1 - \psi_1, \; \psi_1) \circ \mathbf{L}_{i1} \\[0.5em]
-\boldsymbol{\alpha}_{it} &= (\boldsymbol{\alpha}_{i,t-1} \, \mathbf{P}) \circ \mathbf{L}_{it} \\[0.5em]
-P(\mathbf{y}_{i,1:T}) &= \alpha_{iT,0} + \alpha_{iT,1}
-\end{aligned}$$
-
-* $\circ$: produto elemento a elemento.
-
-* $\boldsymbol{\alpha}_{i,t-1} \mathbf{P}$: **projeta** as probabilidades
-  dos estados para a próxima temporada (colonização e extinção).
-
-* $\circ \, \mathbf{L}_{it}$: **atualiza** com as detecções da temporada.
-]
-
----
-
-## Por que não o `ulam`?
-
-<br>
-
-* No `ulam`, cada linha da fórmula descreve **uma observação**. Aqui, a
-  verossimilhança de um sítio envolve um laço pelas temporadas, que
-  carrega o vetor $\boldsymbol{\alpha}$ de uma temporada para a outra.
-
-* Por isso escrevemos o modelo diretamente em **Stan**, e o ajustamos com
-  a função `cstan()` do rethinking.
-
-* O código Stan tem a mesma estrutura do que o `ulam` gera (veja
-  `stancode(m.const)`): blocos `data`, `parameters` e `model`.
-
-* O ajuste retornado pelo `cstan()` pode ser usado com `precis()` e
-  `extract.samples()`, como os do `ulam`.
-
----
-
-## O modelo em Stan (1)
-
-.pull-left[
 .codigo-pequeno[
-```{cat, echo = TRUE, prompt = FALSE, engine.opts = list(file = "ocupacao_dinamica_1.stan", lang = "stan")}
-functions {
-  // Verossimilhança das detecções em uma
-  // temporada: (não ocupado, ocupado)
-  row_vector verossim(int y, int J, real p) {
-    return [y == 0, exp(binomial_lpmf(y | J, p))];
-  }
-}
-data {
-  int<lower=1> M;  // n de sítios
-  int<lower=2> T;  // n de temporadas
-  int<lower=1> J;  // n de visitas por temporada
-  array[M, T] int<lower=0, upper=J> y;
-}
-parameters {
-  real a_psi1;  // logitos
-  real a_gama;
-  real a_eps;
-  real a_p;
-}
-transformed parameters {
-  real psi1 = inv_logit(a_psi1);
-  real gama = inv_logit(a_gama);
-  real eps = inv_logit(a_eps);
-  real p = inv_logit(a_p);
-}
+```{r umf-din, echo = TRUE}
+umf5 <- unmarkedMultFrame(
+  y = Y,              # sítios x (temporadas x visitas)
+  numPrimary = n.temp # n de temporadas
+)
 ```
 ]
+
+```{r tabela-din}
+## primeiras 3 temporadas de 4 sítios
+tab.din <- as.data.frame(Y[1:4, 1:(3 * J)])
+names(tab.din) <- paste0("T", rep(1:3, each = J), ".", rep(1:J, 3))
+kable(cbind(Sítio = 1:4, tab.din, "..." = "..."), align = "c")
+```
+
+.pull-left[
+
+* `y`: uma linha por sítio e as visitas de cada temporada em sequência
+  (T1.1, T1.2...). Visitas não realizadas são `NA`.
+
+* `numPrimary`: número de temporadas.
 ]
 
 .pull-right[
 
-* `functions`: funções definidas por nós. A função `verossim()` retorna
-  o vetor $\mathbf{L}_{it}$.
-
-* `data`: declara os dados e seus tipos. `y` é uma matriz de inteiros,
-  sítios $\times$ temporadas.
-
-* `parameters`: os parâmetros, na escala logito.
-
-* `transformed parameters`: as probabilidades, calculadas a partir dos
-  logitos. São guardadas junto com as amostras da posterior.
+* Covariáveis: `siteCovs` (sítio), `yearlySiteCovs` (sítio em cada
+  temporada) e `obsCovs` (visita).
 ]
 
 ---
 
-## O modelo em Stan (2)
+## Ajuste com o ubms
 
 .pull-left[
-.codigo-pequeno[
-```{cat, echo = TRUE, prompt = FALSE, engine.opts = list(file = "ocupacao_dinamica_2.stan", lang = "stan")}
-model {
-  // Matriz de transição P
-  matrix[2, 2] P = [[1 - gama, gama],
-                    [eps, 1 - eps]];
-  for (i in 1:M) {
-    row_vector[2] alfa = [1 - psi1, psi1] .*
-                         verossim(y[i, 1], J, p);
-    for (t in 2:T)
-      alfa = (alfa * P) .* verossim(y[i, t], J, p);
-    target += log(sum(alfa));
-  }
-  a_psi1 ~ normal(0, 1.5);
-  a_gama ~ normal(0, 1.5);
-  a_eps ~ normal(0, 1.5);
-  a_p ~ normal(0, 1.5);
-}
-generated quantities {
-  // Ocupação esperada por temporada
-  vector[T] psi;
-  psi[1] = psi1;
-  for (t in 2:T)
-    psi[t] = psi[t - 1] * (1 - eps) +
-             (1 - psi[t - 1]) * gama;
-  real psi_eq = gama / (gama + eps);
-}
+
+```{r m-din, eval = FALSE, echo = TRUE}
+m.din <- stan_colext(
+  psiformula = ~ 1,     # ocupação inicial
+  gammaformula = ~ 1,   # colonização
+  epsilonformula = ~ 1, # extinção
+  pformula = ~ 1,       # detecção
+  data = umf5,
+  prior_intercept_psi = normal(0, 1.5),
+  prior_intercept_gamma = normal(0, 1.5),
+  prior_intercept_eps = normal(0, 1.5),
+  prior_intercept_det = normal(0, 1.5),
+  chains = 4, cores = 4)
+m.din
 ```
-]
+
 ]
 
 .pull-right[
 
-* `alfa`: o vetor $\boldsymbol{\alpha}_{it}$ da recursão. `*` é o
-  produto de matrizes e `.*` o produto elemento a elemento.
+* Uma fórmula para cada submodelo. `~ 1`: só o intercepto, ou seja,
+  probabilidade constante.
 
-* `target += log(sum(alfa))`: soma o log da verossimilhança de cada
-  sítio ao log da posterior, como o `custom()` do `ulam`.
+* Covariáveis e efeitos aleatórios entram nas fórmulas como no
+  `stan_occu()`.
 
-* `generated quantities`: quantidades derivadas, calculadas para cada
-  amostra da posterior. Aqui, a trajetória esperada da ocupação e o seu
-  equilíbrio.
+* O pacote marginaliza as ocupações latentes $z_{it}$ com o **algoritmo
+  progressivo** (*forward algorithm*): temporada a temporada, projeta as
+  probabilidades de cada estado com a matriz $\mathbf{P}$ e as atualiza
+  com as detecções.
+
+* Submodelos: `"state"` ( $\psi_1$ ), `"col"` ( $\gamma$ ), `"ext"`
+  ( $\varepsilon$ ) e `"det"` ( $p$ ).
 ]
-
-```{r junta-stan, include = FALSE}
-## Junta as duas partes do código mostradas nos slides em um único arquivo
-writeLines(c(readLines("ocupacao_dinamica_1.stan"), readLines("ocupacao_dinamica_2.stan")),
-           "ocupacao_dinamica.stan")
-```
 
 ```{r ajuste-din, include = FALSE}
-dl5 <- list(M = M, T = n.temp, J = J, y = y)
-aj.din <- ajusta_ou_le("posteriores_ocupacao_din.rds", "m-din", "m.din",
-                       list(dl5, readLines("ocupacao_dinamica.stan")))
-## amostras de parâmetros escalares vêm como matrizes de uma coluna
-post.din <- lapply(aj.din$post$m.din, function(a) if (is.matrix(a) && ncol(a) == 1) a[, 1] else a)
+aj.din <- ajusta_ou_le("posteriores_ocupacao_din_ubms.rds", "m-din", "m.din", list(Y, n.temp))
+pd <- aj.din$post$m.din
+## posteriores na escala de probabilidade
+post.din <- list(psi1 = inv_logit(pd$beta_state[, 1]), gama = inv_logit(pd$beta_col[, 1]),
+                 eps = inv_logit(pd$beta_ext[, 1]), p = inv_logit(pd$beta_det[, 1]))
+## ocupação esperada em cada temporada e no equilíbrio
+post.din$psi <- matrix(NA, length(post.din$psi1), n.temp)
+post.din$psi[, 1] <- post.din$psi1
+for (t in 2:n.temp)
+    post.din$psi[, t] <- post.din$psi[, t - 1] * (1 - post.din$eps) +
+        (1 - post.din$psi[, t - 1]) * post.din$gama
+post.din$psi_eq <- post.din$gama / (post.din$gama + post.din$eps)
 ```
 
 ---
 
-## Ajuste com o rethinking
+## Resultados
 
 .pull-left[
-```{r m-din, eval = FALSE, echo = TRUE}
-dl5 <- list(M = M, T = n.temp,
-            J = J, y = y)
-m.din <- cstan(
-  file = "ocupacao_dinamica.stan",
-  data = dl5, chains = 4, cores = 4)
+
+```{r post-din, eval = FALSE, echo = TRUE}
+## Amostras das posteriores (logitos)
+post <- extract(m.din)
+gama <- inv_logit(post$beta_col[, 1])
+eps <- inv_logit(post$beta_ext[, 1])
 ```
-```{r precis-din, eval = FALSE, echo = TRUE}
-precis(m.din, prob = 0.95,
-  pars = c("psi1", "gama", "eps", "p"))
-```
+
 ```{r tab-din}
-tab_precis(aj.din$precis$m.din, c("psi1", "gama", "eps", "p"))
+tab.din <- t(sapply(post.din[c("psi1", "gama", "eps", "p")], resumo))
+rownames(tab.din) <- c("ψ1", "γ", "ε", "p")
+kable(data.frame(Real = c(psi1.sim, gama.sim, eps.sim, p.sim), tab.din), digits = 2,
+      col.names = c("Valor real", "Média", "2,5%", "97,5%"),
+      format.args = list(decimal.mark = ","))
 ```
+.f6[Escala de probabilidade.]
 ]
 
 .pull-right[
 
-**Estimativas ingênuas** das taxas, calculadas com os registros:
+**Estimativas ingênuas** das taxas:
 
+.codigo-pequeno[
 ```{r ingenuas-din, echo = TRUE}
-D <- y > 0 # registros
+## registro em cada temporada (M x T)
+D <- sapply(1:n.temp, function(t)
+  rowSums(Y[, (t - 1) * J + 1:J]) > 0)
 antes <- D[, -n.temp]
 depois <- D[, -1]
 ## colonização aparente
@@ -1476,10 +1610,10 @@ sum(!antes & depois) / sum(!antes)
 ## extinção aparente
 sum(antes & !depois) / sum(antes)
 ```
+]
 
-.f6[Valores reais: $\gamma$ = `r fmt(gama.sim, 2)` e $\varepsilon$ =
-`r fmt(eps.sim, 2)`. Uma não detecção depois de uma detecção parece uma
-extinção, e uma detecção depois de um falso zero parece uma colonização.]
+.f6[Uma não detecção depois de uma detecção parece uma extinção, e uma
+detecção depois de um falso zero parece uma colonização.]
 ]
 
 ---
@@ -1487,8 +1621,6 @@ extinção, e uma detecção depois de um falso zero parece uma colonização.]
 ## Posteriores
 
 ```{r grafico-din, fig.width = 12, fig.asp = 0.38, out.width = "92%"}
-D <- y > 0
-antes <- D[, -n.temp]; depois <- D[, -1]
 nomes <- c(psi1 = "Ocupação inicial (ψ1)", gama = "Colonização (γ)",
            eps = "Extinção (ε)", p = "Detecção (p)")
 d.din <- do.call(rbind, lapply(names(nomes), function(n)
@@ -1545,8 +1677,9 @@ ggplot(traj, aes(t)) +
 
 .pull-right[
 
-* **Modelo**: média e intervalo de 95% da posterior de $\psi_t$ (bloco
-  `generated quantities`).
+* **Modelo**: média e intervalo de 95% da posterior de $\psi_t$,
+  calculada com a recursão $\psi_{t+1} = \psi_t (1 - \varepsilon) + (1 - \psi_t) \gamma$
+  para cada amostra da posterior.
 
 * **Valor real**: proporção de sítios ocupados na simulação.
 
@@ -1593,7 +1726,12 @@ ggplot(traj, aes(t)) +
 
 ## Referências
 
-.f5[
+.f6[
+
+* Kellner, K. F. et al. (2022). ubms: An R package for fitting
+  hierarchical occupancy and N-mixture abundance models in a Bayesian
+  framework. *Methods in Ecology and Evolution*, 13(3), 577–584.
+  [doi:10.1111/2041-210X.13777](https://doi.org/10.1111/2041-210X.13777)
 
 * Kéry, M. & Royle, J. A. (2016). *Applied Hierarchical Modeling in
   Ecology*. Vol. 1. Academic Press.

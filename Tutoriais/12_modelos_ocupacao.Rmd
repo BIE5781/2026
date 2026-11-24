@@ -1,0 +1,965 @@
+---
+title: "Modelos de ocupação com detecção imperfeita"
+author:
+ - "Paulo Inácio Prado"
+date: "2026-11-25"
+output:
+    distill::distill_article:
+      toc: true
+      toc_depth: 3
+      mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+---
+
+
+```{r setup, echo=FALSE}
+library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE, message = FALSE, warning = FALSE, echo = TRUE)
+# clipboard
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "Copiar código <i class=\"fa fa-clipboard\"></i>",
+    success_text = "Copiado! <i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "Não copiado 😕 <i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+  )
+```
+
+# Ponto de partida
+
+Em inventários de espécies, procuramos uma espécie em muitos **sítios**
+(locais, manchas de hábitat, lagoas, hospedeiros...) e registramos se
+ela foi encontrada (1) ou não (0). Um registro é inequívoco, se não há
+erros de identificação. Mas um zero pode acontecer por duas razões: a
+espécie não ocorre no sítio, ou ocorre e não foi detectada. Ignorar
+essa diferença faz a proporção de sítios com registro **subestimar** a
+ocorrência e pode enviesar os efeitos das variáveis que afetam a
+ocorrência.
+
+Uma solução é visitar cada sítio mais de uma vez, num período em que a
+ocupação dos sítios não muda. Nos sítios em que a espécie foi
+registrada, a frequência de visitas sem registro informa sobre a
+probabilidade de detecção. Com isso, podemos separar a
+**probabilidade de ocorrência** ( $\phi$ , letra grega phi) da **probabilidade de
+detecção** ( $p$ ). Na literatura, a probabilidade de ocorrência também
+é chamada de $\psi$ (letra grega psi).
+
+Neste tutorial vamos ajustar modelos de ocupação a dados simulados, em
+cinco casos de complexidade crescente. Com dados simulados conhecemos
+os valores verdadeiros dos parâmetros, e podemos conferir se os modelos
+os recuperam. No primeiro caso, escrevemos o modelo para ajustar com a função `rethinking::ulam()`, para
+entender como ele funciona. Nos outros, usamos o pacote [*ubms*](https://ecoverser.github.io/ubms/)
+(Kellner et al. 2022), que ajusta modelos de ocupação com o Stan a
+partir de uma sintaxe de fórmulas parecida com o padrão para modelos lineares
+do R.
+
+Vamos carregar os pacotes:
+
+```{r pacotes, eval=TRUE}
+library(rethinking)
+library(ubms)    # instale com install.packages("ubms")
+library(ggplot2)
+library(knitr)
+```
+
+Ao carregar os dois pacotes, aparece um aviso de que a classe
+`stanfit` está definida tanto no *rethinking* quanto no *rstan*, usado
+pelo *ubms*. O aviso pode ser ignorado.
+
+# Caso 1: ocorrência e detecção constantes
+
+## Simulação dos dados
+
+Vamos simular 200 sítios, cada um visitado 4 vezes. A espécie ocorre
+com probabilidade $\phi = 0{,}6$, e, se ocorre, é detectada em cada
+visita com probabilidade $p = 0{,}3$:
+
+```{r sim-const, eval=TRUE}
+set.seed(2)
+M <- 200       # n de sítios
+J <- 4         # n de visitas por sítio
+phi.sim <- 0.6 # prob. de ocorrência
+p.sim <- 0.3   # prob. de detecção
+## Ocorrência (não observada)
+z <- rbinom(M, size = 1, prob = phi.sim)
+## Histórico de detecções: matriz sítios x visitas
+Y <- matrix(rbinom(M * J, size = 1, prob = z * p.sim), nrow = M)
+## n de visitas com detecção em cada sítio
+y <- rowSums(Y)
+```
+
+Note que a probabilidade de detecção em cada sítio é `z * p.sim`: se a
+espécie não ocorre ( $z_i = 0$ ), ela nunca é detectada. Compare a
+proporção de sítios ocupados com a proporção de sítios com pelo menos
+uma detecção, que seria a estimativa **ingênua** da ocupação:
+
+```{r ingenua-const}
+mean(z)      # proporção de sítios ocupados
+mean(y > 0)  # proporção de sítios com registro
+```
+
+## O modelo
+
+$$
+\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi) \\
+y_i &\sim \text{Binomial}(J, \, z_i \, p) \\
+\text{logit}(\phi) &= \alpha_\phi \\
+\text{logit}(p) &= \alpha_p \\
+\alpha_\phi, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5)
+\end{aligned}
+$$
+
+em que $z_i$ indica se a espécie ocorre (1) ou não (0) no sítio $i$, e
+$y_i$ é o número de visitas com detecção nesse sítio. O modelo é
+**hierárquico**: a distribuição de $y_i$ depende de $z_i$, que tem a sua
+própria distribuição. Mas $z_i$ não é observado: é uma **variável
+latente**.
+
+O Stan não amostra variáveis discretas como $z_i$. Por isso, somamos
+(**marginalizamos**) as duas possibilidades para $z_i$:
+
+* Se $y_i > 0$, a espécie certamente ocorre, e
+  $P(y_i) = \phi \; \text{Binomial}(y_i \mid J, p)$.
+
+* Se $y_i = 0$, a espécie ocorre e não foi detectada em nenhuma visita,
+  **ou** não ocorre: $P(y_i = 0) = \phi \, (1 - p)^J + (1 - \phi)$.
+
+É uma **mistura** de duas distribuições, que resulta em um modelo binomial com excesso de
+zeros. A priori $\text{Normal}(0; \, 1{,}5)$ na escala logito é
+aproximadamente plana na escala de probabilidade.
+
+## Ajuste com o `ulam()`
+
+Para escrever a verossimilhança de cada tipo de sítio, usamos a sintaxe
+condicional do `ulam()` (`y | det == 1`) e a função `custom()`, que
+recebe o **logaritmo** da verossimilhança de cada observação:
+
+```{r ajuste-const, cache=TRUE, results='hide'}
+dl1 <- list(y = y, J = J, det = as.integer(y > 0))
+m1 <- ulam(
+    alist(
+        y | det == 1 ~ custom(log(phi) + binomial_lpmf(y | J, p)),
+        y | det == 0 ~ custom(log_sum_exp(
+                           log(phi) + binomial_lpmf(y | J, p),
+                           log1m(phi))),
+        logit(phi) <- a_phi,
+        logit(p) <- a_p,
+        c(a_phi, a_p) ~ dnorm(0, 1.5)
+    ),
+    data = dl1, chains = 4, cores = 4)
+```
+
+* `det` indica se houve pelo menos uma detecção no sítio. A linha
+  `y | det == 1 ~ ...` vale só para os sítios com `det == 1`, e a linha
+  `y | det == 0 ~ ...`, só para os outros.
+
+* `binomial_lpmf(y | J, p)` é o logaritmo da função de probabilidade da
+  binomial (*log probability mass function*), uma função do Stan. Na
+  escala log, o produto $\phi \times \text{Binomial}(y_i \mid J, p)$
+  vira a soma `log(phi) + binomial_lpmf(y | J, p)`.
+
+* `log_sum_exp(a, b)` calcula $\log(e^a + e^b)$: o logaritmo de uma
+  **soma** de probabilidades, a partir dos logaritmos de cada parcela, de
+  forma numericamente estável. Com $y_i = 0$,
+  `binomial_lpmf(0 | J, p)` $= J \log(1 - p)$, e `log1m(phi)`
+  $= \log(1 - \phi)$. Assim, a expressão é o logaritmo de
+  $\phi (1 - p)^J + (1 - \phi)$.
+
+Você pode ver o código Stan gerado pelo `ulam()` com `stancode(m1)`.
+
+## Resultados
+
+```{r resumo-const}
+precis(m1, prob = 0.95)
+```
+
+As estimativas estão na escala logito. Os valores usados na simulação
+foram $\alpha_\phi = \text{logit}(0{,}6) \approx 0{,}41$ e
+$\alpha_p = \text{logit}(0{,}3) \approx -0{,}85$. Para a escala de
+probabilidade, aplicamos o inverso do logito às amostras da posterior:
+
+```{r posteriores-const}
+post1 <- extract.samples(m1)
+phi <- inv_logit(post1$a_phi)
+p <- inv_logit(post1$a_p)
+dens(phi, xlim = c(0, 1), xlab = "Probabilidade", ylab = "Densidade posterior")
+dens(p, add = TRUE, col = 2)
+abline(v = c(phi.sim, p.sim), col = 1:2, lty = 2)      # valores reais
+abline(v = mean(y > 0), col = 4, lty = 3)              # ocupação ingênua
+legend("topright", legend = c("Ocorrência", "Detecção", "Ingênua"),
+       col = c(1, 2, 4), lty = c(1, 1, 3), bty = "n")
+```
+
+## Quantidade derivada: a ocorrência onde não houve detecção
+
+Qual a probabilidade de a espécie ocorrer num sítio sem nenhuma
+detecção? Pelo teorema de Bayes:
+
+$$
+P(z_i = 1 \mid y_i = 0) = \frac{P(y_i = 0 \mid z_i = 1) \, P(z_i = 1)}{P(y_i = 0)} =
+\frac{\phi \, (1 - p)^J}{\phi \, (1 - p)^J + (1 - \phi)}
+$$
+
+O numerador é a probabilidade de uma **falsa ausência** (a espécie
+ocorre no sítio mas não foi detectada em nenhuma visita). O
+denominador é a probabilidade de **qualquer** tipo de ausência (a soma
+da probabilidade de dois eventos alternativos: ausência falsa ou
+genuína). Calculamos essa expressão para cada amostra da posterior. A
+partir dela também obtemos a posterior do **número de sítios
+ocupados** na amostra: os sítios com detecção estão certamente
+ocupados, e cada sítio sem detecção está ocupado com probabilidade
+$P(z_i = 1 \mid y_i = 0)$:
+
+```{r derivada-const}
+## P(ocorre | nenhuma detecção)
+phi0 <- phi * (1 - p)^J / (phi * (1 - p)^J + (1 - phi))
+mean(phi0)
+PI(phi0, prob = 0.95)
+## n de sítios ocupados
+n0 <- sum(dl1$det == 0)    # n de sítios sem detecção
+N.ocup <- sum(dl1$det) + rbinom(length(phi0), n0, phi0)
+PI(N.ocup, prob = 0.95)
+sum(z)                     # valor real
+sum(dl1$det)               # estimativa ingênua
+```
+
+### Para pensar
+
+* A estimativa ingênua da ocupação está dentro do intervalo de 95% da
+  posterior de $\phi$?
+
+* Refaça a simulação e o ajuste com 2 visitas por sítio, e depois com 8.
+  O que acontece com a largura dos intervalos de $\phi$ e de $p$? E com
+  $P(z_i = 1 \mid y_i = 0)$?
+
+* E com uma única visita? Por que, nesse caso, só é possível estimar o
+  produto $\phi \, p$?
+
+# Caso 2: covariáveis na ocorrência e na detecção
+
+## Uma variável que afeta os dois processos
+
+Suponha que a espécie prefere a vegetação densa, mas que na vegetação
+densa é mais difícil vê-la. A densidade da vegetação ( $x$ ) então
+**aumenta** a probabilidade de ocorrência e **diminui** a de detecção:
+
+```{r sim-cov, eval=TRUE}
+set.seed(2024)
+M <- 300; J <- 4
+x <- rnorm(M)                       # densidade da vegetação (padronizada)
+phi.x <- inv_logit(0.3 + 1 * x)     # ocorrência aumenta com x
+p.x <- inv_logit(-0.5 - 1 * x)      # detecção diminui com x
+z <- rbinom(M, 1, phi.x)
+Y <- matrix(rbinom(M * J, 1, z * p.x), nrow = M)
+```
+
+## O modelo
+
+$$
+\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\
+y_{ij} &\sim \text{Bernoulli}(z_i \, p_i) \\
+\text{logit}(\phi_i) &= \alpha_\phi + \beta_\phi \, x_i \\
+\text{logit}(p_i) &= \alpha_p + \beta_p \, x_i \\
+\alpha_\phi, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\
+\beta_\phi, \, \beta_p &\sim \text{Normal}(0, \, 1)
+\end{aligned}
+$$
+
+em que $y_{ij}$ é o registro da visita $j$ ao sítio $i$. A
+verossimilhança marginal é a mesma do caso 1, só que agora cada sítio
+tem a sua probabilidade de ocorrência ( $\phi_i$ ) e de detecção
+( $p_i$ ). Poderíamos ajustar este modelo com o `ulam()`, mudando apenas
+as duas linhas dos preditores lineares. Vamos usar o *ubms*, que monta
+e marginaliza a verossimilhança por nós.
+
+## Os dados no formato do *unmarked*
+
+O *ubms* usa as mesmas estruturas de dados do pacote *unmarked*, que ajusta os
+mesmos modelos por máxima verossimilhança. Para modelos de ocupação de
+uma temporada, organizamos os dados  num objeto da classe `unmarkedFrameOccu`:
+
+```{r umf-cov}
+umf2 <- unmarkedFrameOccu(y = Y, siteCovs = data.frame(x = x))
+summary(umf2)
+```
+
+* `y` é a **matriz de detecções**, com uma linha por sítio e uma coluna
+  por visita, com 1 (detecção), 0 (não detecção) ou `NA` (visita não
+  realizada). Não é o número de detecções por sítio, como no caso 1.
+
+* `siteCovs` é um *data frame* com as covariáveis de cada sítio, uma
+  linha por sítio.
+
+## Ajuste com o `stan_occu()`
+
+Com o objeto criado acima, usamos a função `ubms::stanoccu()` para realizar o ajuste Bayesiano:
+
+```{r ajuste-cov, cache=TRUE, results='hide'}
+m2 <- stan_occu(~ x ~ x,
+                data = umf2,
+                prior_intercept_state = normal(0, 1.5),
+                prior_coef_state = normal(0, 1),
+                prior_intercept_det = normal(0, 1.5),
+                prior_coef_det = normal(0, 1),
+                chains = 4, cores = 4)
+```
+
+* A fórmula tem **dois lados direitos**, iniciados com um til (`~`): o primeiro é o modelo da
+  **detecção**, e o segundo, o da **ocupação**, ou estado do sítio. O link logito está implícito nos dois.
+
+* Os argumentos `prior_...` definem as prioris dos interceptos e dos
+  coeficientes de cada submodelo. Usamos as mesmas do modelo
+  definido acima. A priori padrão do *ubms* é `logistic(0, 1)`, que é
+  plana na escala de probabilidade.
+
+* Os demais argumentos, como `chains`, `cores` e `iter`, são passados
+  ao Stan.
+
+## Resultados
+
+Ao imprimir o objeto do ajuste, vemos as posteriores dos dois
+submodelos, chamados de `state` (ocupação) e `det` (detecção):
+
+```{r resumo-cov}
+m2
+## O resumo de cada submodelo também pode ser obtido como um data frame:
+summary(m2, "state")
+summary(m2, "det")
+```
+
+Os valores usados na simulação foram $\alpha_\phi = 0{,}3$,
+$\beta_\phi = 1$, $\alpha_p = -0{,}5$ e $\beta_p = -1$.
+
+Para ver as relações estimadas, a função `predict()` calcula a média e o
+intervalo de 95% da posterior da probabilidade de ocupação ou de
+detecção, para uma tabela de novos valores da covariável:
+
+```{r predicoes-cov}
+grade <- data.frame(x = seq(-2.5, 2.5, length.out = 50))
+prev.phi <- predict(m2, "state", newdata = grade)
+prev.p <- predict(m2, "det", newdata = grade)
+head(prev.phi)
+```
+
+## Comparação com uma regressão logística ingênua
+
+Como seria a análise que ignora a detecção imperfeita? Uma regressão
+logística da presença de registros em função de $x$:
+
+```{r ajuste-ingenuo, cache=TRUE, results='hide'}
+dl2 <- list(det = as.integer(rowSums(Y) > 0), x = x)
+m2.ing <- ulam(
+    alist(
+        det ~ dbern(q),
+        logit(q) <- a + b * x,
+        a ~ dnorm(0, 1.5),
+        b ~ dnorm(0, 1)
+    ),
+    data = dl2, chains = 4, cores = 4)
+```
+
+Note que $q_i$ não é a probabilidade de ocorrência, e sim a probabilidade da espécie
+**ocorrer e ser detectada** ao menos uma vez:
+$q_i = \phi_i \left[ 1 - (1 - p_i)^J \right]$. O gráfico compara as
+duas estimativas da relação entre a ocorrência e a densidade da
+vegetação com a relação verdadeira:
+
+```{r grafico-cov, fig.asp=0.7}
+prev.ing <- link(m2.ing, data = list(x = grade$x))
+curvas <- rbind(
+    data.frame(x = grade$x, modelo = "Modelo de ocupação",
+               media = prev.phi$Predicted, inf = prev.phi$`2.5%`,
+               sup = prev.phi$`97.5%`),
+    data.frame(x = grade$x, modelo = "Logística ingênua",
+               media = colMeans(prev.ing),
+               inf = apply(prev.ing, 2, PI, prob = 0.95)[1, ],
+               sup = apply(prev.ing, 2, PI, prob = 0.95)[2, ]))
+ggplot(curvas, aes(x, media)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup, fill = modelo), alpha = 0.3) +
+    geom_line(aes(color = modelo)) +
+    geom_function(fun = function(x) inv_logit(0.3 + x), linetype = 2) +
+    labs(x = "Densidade da vegetação (padronizada)",
+         y = "Probabilidade de ocorrência", color = NULL, fill = NULL) +
+    theme_classic()
+```
+
+A linha tracejada é a relação usada na simulação.
+
+### Para pensar
+
+* Compare a inclinação da logística ingênua ( `b` ) com a do modelo de
+  ocupação ( `x` no submodelo `state` ). Por que a logística estima um
+  coeficiente baixo para a variável de densidade de vegetação?
+
+* Faça o gráfico da probabilidade de detecção estimada ( `prev.p` ) em
+  função de $x$. Ele recupera a relação usada na simulação?
+
+# Caso 3: covariáveis de detecção que mudam a cada visita
+
+## Simulação dos dados
+
+A detecção também pode depender das condições de **cada visita**, como
+horário, temperatura, pluviosidade, observador, esforço, entre outras.
+Vamos acrescentar
+aos sítios do caso 2 uma covariável medida em cada visita, a
+temperatura ( $w_{ij}$ ), que aumenta a detecção. A temperatura fica numa
+matriz com uma linha por sítio e uma coluna por visita, como as
+detecções:
+
+```{r sim-vis, eval=TRUE}
+set.seed(2025)
+## temperatura (padronizada) de cada visita
+W <- matrix(rnorm(M * J), nrow = M)
+p.xw <- inv_logit(-0.5 - 1 * x + 0.8 * W)    # matriz M x J
+Y.v <- matrix(rbinom(M * J, 1, z * p.xw), nrow = M)
+```
+
+Para tornar o exemplo mais realista, vamos supor que 10% das visitas
+não foram feitas. Nelas, não temos nem o registro nem a temperatura:
+
+```{r faltantes, eval=TRUE}
+faltam <- sample(M * J, size = 0.1 * M * J)
+Y.v[faltam] <- NA
+W[faltam] <- NA
+```
+
+## O modelo
+
+$$
+\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\
+y_{ij} &\sim \text{Bernoulli}(z_i \, p_{ij}) \\
+\text{logit}(\phi_i) &= \alpha_\phi + \beta_\phi \, x_i \\
+\text{logit}(p_{ij}) &= \alpha_p + \beta_p \, x_i + \gamma_p \, w_{ij}
+\end{aligned}
+$$
+
+com as mesmas prioris do caso 2, e $\gamma_p \sim \text{Normal}(0, 1)$.
+Agora $p_{ij}$ varia entre as visitas de um mesmo sítio, e o número de
+detecções num sítio **deixa de ser binomial**, pois as tentativas têm
+probabilidades diferentes. A verossimilhança usa o histórico de
+detecções completo:
+
+* com detecção: $\phi_i \prod_j p_{ij}^{y_{ij}} (1 - p_{ij})^{1 - y_{ij}}$;
+
+* sem detecção: $\phi_i \prod_j (1 - p_{ij}) + (1 - \phi_i)$;
+
+em que os produtos incluem só as visitas realizadas.
+
+## Os dados no formato do *unmarked*
+
+As covariáveis de visita vão no argumento `obsCovs`, como uma lista com
+uma matriz sítios $\times$ visitas para cada covariável:
+
+```{r umf-vis}
+umf3 <- unmarkedFrameOccu(y = Y.v,
+                          siteCovs = data.frame(x = x),
+                          obsCovs = list(temp = W))
+summary(umf3)
+head(umf3)
+```
+
+O nome de cada elemento da lista ( `temp` ) é o nome da covariável que
+usamos na fórmula do modelo. As visitas não realizadas ficam como `NA`
+na matriz de detecções e nas covariáveis de visita, e são ignoradas no
+ajuste.
+
+## Ajuste e resultados
+
+```{r ajuste-vis, cache=TRUE, results='hide'}
+m3 <- stan_occu(~ x + temp ~ x,
+                data = umf3,
+                prior_intercept_state = normal(0, 1.5),
+                prior_coef_state = normal(0, 1),
+                prior_intercept_det = normal(0, 1.5),
+                prior_coef_det = normal(0, 1),
+                chains = 4, cores = 4)
+```
+
+Na fórmula da **detecção** podem entrar covariáveis de sítio ( `x` ) e
+de visita ( `temp` ). Na fórmula da **ocupação**, só covariáveis de
+sítio, já que supomos que a ocupação não muda entre as visitas.
+
+```{r resumo-vis}
+m3
+```
+
+Os valores usados na simulação foram $\alpha_\phi = 0{,}3$,
+$\beta_\phi = 1$, $\alpha_p = -0{,}5$, $\beta_p = -1$ e
+$\gamma_p = 0{,}8$. 
+
+A seguir amostramos a posterior do efeito da temperatura na detecção, para um sítio
+com densidade de vegetação média ( $x = 0$ ):
+
+```{r grafico-vis, fig.asp=0.7}
+grade.t <- data.frame(x = 0, temp = seq(-2.5, 2.5, length.out = 50))
+prev.t <- predict(m3, "det", newdata = grade.t)
+ggplot(cbind(grade.t, prev.t), aes(temp, Predicted)) +
+    geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.3) +
+    geom_line() +
+    geom_function(fun = function(t) inv_logit(-0.5 + 0.8 * t), linetype = 2) +
+    labs(x = "Temperatura (padronizada)", y = "Probabilidade de detecção") +
+    theme_classic()
+```
+
+### Para pensar
+
+* Ajuste um modelo sem a temperatura ( `~ x ~ x` ). As estimativas da
+  ocupação mudam? Por que a variação da detecção entre visitas, se não
+  for modelada, afeta menos a ocupação do que a variação entre sítios?
+  (Veja o próximo caso.)
+
+
+# Caso 4: variação da detecção entre sítios
+
+## Heterogeneidade na detecção
+
+Nos casos anteriores, sítios com os mesmos valores das covariáveis têm a
+mesma probabilidade de detecção. Mas a detecção pode variar entre
+sítios por razões que não medimos: o número de indivíduos no sítio, a
+estrutura do microhábitat, a habilidade de quem fez as visitas, etc. Essa
+**heterogeneidade** na detecção é um problema sério. Num sítio com
+detecção baixa, a espécie pode passar despercebida em todas as visitas.
+Se o modelo supõe que todos os sítios têm a mesma detecção, ele não tem
+como saber que esses zeros são mais prováveis do que parecem, e
+**subestima** a ocupação.
+
+Podemos representar essa variação com um **efeito aleatório de sítio na
+detecção**, como os efeitos aleatórios dos modelos hierárquicos que já
+vimos: cada sítio tem um desvio na probabilidade de detecção, sorteado
+de uma distribuição normal na escala logito. Vamos simular dados assim,
+mantendo o efeito da densidade da vegetação na ocorrência:
+
+```{r sim-het, eval=TRUE}
+set.seed(1)
+M <- 300; J <- 5
+x <- rnorm(M)                           # densidade da vegetação
+phi.i <- inv_logit(0.3 + 1 * x)         # ocorrência
+e.sitio <- rnorm(M, mean = 0, sd = 1)   # desvio de cada sítio na detecção
+p.i <- inv_logit(-0.5 + e.sitio)        # detecção de cada sítio
+z <- rbinom(M, 1, phi.i)
+Y <- matrix(rbinom(M * J, 1, z * p.i), nrow = M)
+```
+
+## O modelo
+
+$$
+\begin{aligned}
+z_i &\sim \text{Bernoulli}(\phi_i) \\
+y_{ij} &\sim \text{Bernoulli}(z_i \, p_i) \\
+\text{logit}(\phi_i) &= \alpha_\phi + \beta_\phi \, x_i \\
+\text{logit}(p_i) &= \alpha_p + \varepsilon_i \\
+\varepsilon_i &\sim \text{Normal}(0, \, \sigma_p) \\
+\alpha_\phi, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5) \\
+\beta_\phi &\sim \text{Normal}(0, \, 1) \\
+\sigma_p &\sim \text{Exponencial}(1)
+\end{aligned}
+$$
+
+* $\varepsilon_i$ é o desvio do sítio $i$ em relação à detecção de um
+  sítio típico, e $\sigma_p$ mede a variação da detecção entre sítios.
+
+* $\text{logit}^{-1}(\alpha_p)$ é a probabilidade de detecção num sítio
+  típico (com $\varepsilon_i = 0$).
+
+## Os dados e o ajuste
+
+Para incluir um efeito aleatório de sítio, precisamos de uma covariável
+de sítio com a identidade de cada sítio, **como fator**:
+
+```{r umf-het}
+umf4 <- unmarkedFrameOccu(y = Y,
+                          siteCovs = data.frame(x = x, sitio = factor(1:M)))
+```
+
+No *ubms*, os efeitos aleatórios são indicados nas fórmulas com a
+sintaxe do pacote *lme4*. O termo `(1 | sitio)` na fórmula da detecção
+indica um intercepto aleatório para cada sítio. A priori do
+desvio-padrão do efeito aleatório é definida pelo argumento
+`prior_sigma`. A $\text{Gama}(1, 1)$ é a mesma distribuição que a
+$\text{Exponencial}(1)$:
+
+```{r ajuste-het, cache=TRUE, results='hide'}
+m4 <- stan_occu(~ (1 | sitio) ~ x,
+                data = umf4,
+                prior_intercept_state = normal(0, 1.5),
+                prior_coef_state = normal(0, 1),
+                prior_intercept_det = normal(0, 1.5),
+                prior_sigma = gamma(1, 1),
+                chains = 4, cores = 4, iter = 8000)
+```
+
+Para comparar, vamos ajustar também o modelo que ignora a
+heterogeneidade, com a mesma detecção em todos os sítios:
+
+```{r ajuste-hom, cache=TRUE, results='hide'}
+m4.hom <- stan_occu(~ 1 ~ x,
+                    data = umf4,
+                    prior_intercept_state = normal(0, 1.5),
+                    prior_coef_state = normal(0, 1),
+                    prior_intercept_det = normal(0, 1.5),
+                    chains = 4, cores = 4)
+```
+
+### Nota: amostragem do efeito aleatório
+
+Repare que usamos 8.000 iterações em cada cadeia, o quádruplo do
+padrão. Com o padrão, o tamanho efetivo das amostras ( `n_eff` ) de
+$\sigma_p$ fica muito baixo, o `Rhat` passa de 1,01 e o Stan avisa que
+a *Bayesian Fraction of Missing Information* (BFMI) está baixa. Com mais
+iterações, os diagnósticos ficam aceitáveis, mas o `n_eff` de
+$\sigma_p$ continua bem menor que o dos outros parâmetros. Confira:
+
+```{r diagnostico-het}
+m4
+```
+
+O motivo é o mesmo que vimos no tutorial sobre [modelos generalizados
+hierárquicos](Tutoriais/09_glmm.html). O *ubms* usa a **parametrização centrada** para os efeitos
+aleatórios, e há **pouca informação sobre cada grupo**. Um sítio tem só
+5 visitas. E nos sítios onde a espécie não ocorre, os dados não dizem
+nada sobre a detecção: o desvio $\varepsilon_i$ desses sítios é sorteado
+da própria distribuição $\text{Normal}(0, \sigma_p)$. A posterior tem a
+forma de funil, difícil de percorrer. A parametrização não-centrada
+resolveria isso, mas o *ubms* não a oferece. Quando aparecerem esses
+avisos, aumente o número de iterações e confira se as cadeias concordam
+entre si ( `Rhat` próximo de 1).
+
+## Resultados
+
+Vamos comparar as estimativas dos parâmetros da ocupação nos dois
+modelos, e a **ocupação média** dos sítios estimada por cada um. A
+função `posterior_linpred()`, com `transform = TRUE`, retorna as
+amostras da posterior de $\phi_i$ de cada sítio usado no ajuste, numa
+matriz com uma linha por amostra e uma coluna por sítio. A média de
+cada linha é a proporção esperada de sítios ocupados naquela amostra:
+
+```{r prepara-het, ref.label = c("umf-het", "ajuste-het", "ajuste-hom"), eval = TRUE, include = FALSE}
+## Chunk oculto: executa o código dos chunks acima (que têm eval = FALSE),
+## para criar os objetos usados na tabela a seguir
+```
+
+```{r tabela-het, eval=TRUE}
+compara <- function(m, nome) {
+    est <- summary(m, "state")
+    ## posterior da média de phi entre os sítios: uma média por amostra
+    phi.media <- rowMeans(posterior_linpred(m, transform = TRUE, submodel = "state"))
+    data.frame(modelo = nome,
+               parametro = c("Intercepto", "Inclinação", "Ocupação média"),
+               media = c(est$mean, mean(phi.media)),
+               inf = c(est$`2.5%`, PI(phi.media, prob = 0.95)[1]),
+               sup = c(est$`97.5%`, PI(phi.media, prob = 0.95)[2]))
+}
+tab.het <- rbind(
+    data.frame(modelo = "Valor real",
+               parametro = c("Intercepto", "Inclinação", "Ocupação média"),
+               media = c(0.3, 1, mean(phi.i)), inf = NA, sup = NA),
+    compara(m4, "Com heterogeneidade"),
+    compara(m4.hom, "Sem heterogeneidade"))
+options(knitr.kable.NA = "")   # células sem valor ficam em branco
+kable(tab.het, digits = 2, row.names = FALSE,
+      col.names = c("Modelo", "Parâmetro", "Média", "2,5%", "97,5%"),
+      format.args = list(decimal.mark = ","))
+```
+
+O intercepto e a inclinação estão na escala logito. A proporção de
+sítios com pelo menos uma detecção (estimativa ingênua) foi
+`r format(round(mean(rowSums(Y) > 0), 2), decimal.mark = ",")`.
+
+### Para pensar
+
+* Por que a variação da detecção **entre sítios** faz o modelo sem
+  heterogeneidade subestimar a ocupação, enquanto a variação **entre
+  visitas** de um mesmo sítio (caso 3) tem um efeito muito menor? Dica:
+  pense em quais sítios têm mais chance de ficar sem nenhuma detecção.
+
+* Calcule a probabilidade de detectar a espécie pelo menos uma vez
+  num sítio ocupado, $1 - (1 - p_i)^J$, para um sítio típico e para um
+  sítio com detecção um desvio-padrão abaixo da média. Use as
+  posteriores de $\alpha_p$ e $\sigma_p$ (`summary(m4, "det")`).
+
+* Uma causa comum de heterogeneidade na detecção é a variação na
+  abundância: é mais fácil detectar a espécie onde há mais indivíduos.
+  O modelo de Royle & Nichols (2003), que pode ser ajustado com a
+  função `stan_occuRN()` do *ubms*, usa essa ideia para estimar a
+  abundância a partir de dados de presença e ausência.
+
+# Caso 5: dinâmica da ocupação, colonização e extinção
+
+## O desenho robusto
+
+Até aqui supusemos que a ocupação dos sítios não muda durante as
+visitas. Se os sítios forem inspecionados em várias **temporadas**
+(anos, estações reprodutivas...), com várias visitas em cada uma,
+podemos estudar como a ocupação muda ao longo do tempo. É o **desenho
+robusto** (Pollock 1982):
+
+* **Dentro** de cada temporada, a população é suposta **fechada**: as
+  visitas repetidas informam sobre a detecção, como antes.
+
+* **Entre** temporadas, a população é **aberta**: um sítio ocupado pode
+  sofrer extinção local, e um sítio vazio pode ser colonizado.
+
+Com isso, podemos estimar as probabilidades de **colonização**
+( $\gamma$ ) e de **extinção** ( $\varepsilon$ ), separadas da detecção
+(MacKenzie et al. 2003).
+
+## O processo de ocupação
+
+Entre duas temporadas, o estado de um sítio muda com as probabilidades
+da matriz de transição
+
+$$
+\mathbf{P} = \begin{pmatrix} 1 - \gamma & \gamma \\ \varepsilon & 1 - \varepsilon \end{pmatrix}
+$$
+
+em que as linhas são o estado na temporada anterior (não ocupado,
+ocupado) e as colunas, o estado na temporada seguinte. A ocupação
+esperada muda como
+
+$$
+\psi_{t+1} = \psi_t \, (1 - \varepsilon) + (1 - \psi_t) \, \gamma
+$$
+
+e tende ao equilíbrio $\psi^{*} = \gamma / (\gamma + \varepsilon)$. É um
+modelo de metapopulação com "chuva de propágulos", em que a colonização
+não depende da fração de sítios ocupados.
+
+Vamos simular 150 sítios em 6 temporadas, com 3 visitas por temporada:
+
+```{r sim-din, eval=TRUE}
+set.seed(7)
+M <- 150; n.temp <- 6; J <- 3
+psi1.sim <- 0.7    # ocupação na primeira temporada
+gama.sim <- 0.2    # colonização
+eps.sim <- 0.3     # extinção
+p.sim <- 0.4       # detecção
+## Ocupação: matriz sítios x temporadas
+z <- matrix(NA, M, n.temp)
+z[, 1] <- rbinom(M, 1, psi1.sim)
+for (t in 2:n.temp)
+    z[, t] <- rbinom(M, 1, z[, t - 1] * (1 - eps.sim) + (1 - z[, t - 1]) * gama.sim)
+## Detecções: matriz sítios x (temporadas x visitas), com as J visitas
+## de cada temporada em colunas consecutivas
+z.vis <- z[, rep(1:n.temp, each = J)]
+Y <- matrix(rbinom(M * n.temp * J, 1, z.vis * p.sim), nrow = M)
+```
+
+## O modelo
+
+$$
+\begin{aligned}
+z_{i1} &\sim \text{Bernoulli}(\psi_1) \\
+z_{it} &\sim \text{Bernoulli}\big(z_{i,t-1} (1 - \varepsilon) + (1 - z_{i,t-1}) \, \gamma\big) \\
+y_{itj} &\sim \text{Bernoulli}(z_{it} \, p) \\
+\text{logit}(\psi_1) = \alpha_\psi, \quad \text{logit}(\gamma) &= \alpha_\gamma, \quad
+\text{logit}(\varepsilon) = \alpha_\varepsilon, \quad \text{logit}(p) = \alpha_p \\
+\alpha_\psi, \, \alpha_\gamma, \, \alpha_\varepsilon, \, \alpha_p &\sim \text{Normal}(0; \, 1{,}5)
+\end{aligned}
+$$
+
+em que $z_{it}$ é a ocupação do sítio $i$ na temporada $t$ e $y_{itj}$ é
+o registro da visita $j$ nessa temporada. A ocupação segue uma **cadeia
+de Markov** que não observamos diretamente: é um **modelo oculto de
+Markov** (*hidden Markov model*), ou modelo de espaço de estados (Royle
+& Kéry 2007).
+
+Para marginalizar as ocupações latentes, agora não bastam duas
+parcelas: cada sítio tem $2^T$ históricos de ocupação possíveis. O
+*ubms* usa o **algoritmo progressivo** (*forward algorithm*), que
+acumula as probabilidades temporada a temporada. Em cada temporada, ele
+projeta as probabilidades de cada estado para a temporada seguinte com
+a matriz $\mathbf{P}$, e as atualiza com as detecções daquela temporada.
+
+## Os dados no formato do *unmarked*
+
+Para várias temporadas, os dados ficam num objeto da classe
+`unmarkedMultFrame`. A matriz de detecções tem uma linha por sítio e as
+visitas de cada temporada em sequência: as $J$ primeiras colunas são as
+visitas da temporada 1, as $J$ seguintes as da temporada 2, e assim por
+diante. O argumento `numPrimary` informa o número de temporadas:
+
+```{r umf-din}
+umf5 <- unmarkedMultFrame(y = Y, numPrimary = n.temp)
+summary(umf5)
+```
+
+Covariáveis podem ser fixas em cada sítio (`siteCovs`), variar entre
+sítios e temporadas (`yearlySiteCovs`, por exemplo o clima de cada ano)
+ou entre visitas (`obsCovs`).
+
+## Ajuste com o `stan_colext()`
+
+O modelo tem uma fórmula para cada submodelo: ocupação inicial,
+colonização, extinção e detecção. A fórmula `~ 1` indica só o
+intercepto, ou seja, uma probabilidade constante:
+
+```{r ajuste-din, cache=TRUE, results='hide'}
+m5 <- stan_colext(psiformula = ~ 1,      # ocupação inicial
+                  gammaformula = ~ 1,    # colonização
+                  epsilonformula = ~ 1,  # extinção
+                  pformula = ~ 1,        # detecção
+                  data = umf5,
+                  prior_intercept_psi = normal(0, 1.5),
+                  prior_intercept_gamma = normal(0, 1.5),
+                  prior_intercept_eps = normal(0, 1.5),
+                  prior_intercept_det = normal(0, 1.5),
+                  chains = 4, cores = 4)
+```
+
+Covariáveis e efeitos aleatórios entram nas fórmulas como no
+`stan_occu()`.
+
+## Resultados
+
+```{r resumo-din}
+m5
+```
+
+Os submodelos se chamam `state` ( $\psi_1$ ), `col` ( $\gamma$ ), `ext`
+( $\varepsilon$ ) e `det` ( $p$ ), e as estimativas estão na escala
+logito. Para a escala de probabilidade, extraímos as amostras da
+posterior com a função `extract()` e aplicamos o inverso do logito:
+
+```{r posteriores-din}
+post5 <- extract(m5)
+names(post5)
+psi1 <- inv_logit(post5$beta_state[, 1])
+gama <- inv_logit(post5$beta_col[, 1])
+eps <- inv_logit(post5$beta_ext[, 1])
+p <- inv_logit(post5$beta_det[, 1])
+```
+
+E qual seria a estimativa ingênua das taxas de colonização e extinção?
+Considerando que a espécie ocorre num sítio numa temporada se houve
+pelo menos um registro, a colonização aparente é a proporção de sítios
+sem registro numa temporada que passam a ter registro na seguinte. A
+extinção aparente é a proporção dos sítios com registro que deixam de
+tê-lo:
+
+```{r ingenuas-din}
+## Registro em cada temporada: matriz sítios x temporadas
+D <- sapply(1:n.temp, function(t) rowSums(Y[, (t - 1) * J + 1:J]) > 0)
+antes <- D[, -n.temp]
+depois <- D[, -1]
+col.ing <- sum(!antes & depois) / sum(!antes)   # colonização aparente
+ext.ing <- sum(antes & !depois) / sum(antes)    # extinção aparente
+```
+
+A tabela compara as estimativas com os valores reais e as estimativas
+ingênuas:
+
+```{r prepara-din, ref.label = c("umf-din", "ajuste-din", "posteriores-din", "ingenuas-din"), eval = TRUE, include = FALSE}
+## Chunk oculto: executa o código dos chunks acima (que têm eval = FALSE),
+## para criar os objetos usados na tabela a seguir
+```
+
+```{r tabela-din, eval=TRUE}
+resumo <- function(a) c(mean(a), PI(a, prob = 0.95))
+tab.din <- data.frame(
+    real = c(psi1.sim, gama.sim, eps.sim, p.sim),
+    rbind(resumo(psi1), resumo(gama), resumo(eps), resumo(p)),
+    ingenua = c(mean(D[, 1]), col.ing, ext.ing, NA))
+rownames(tab.din) <- c("Ocupação inicial", "Colonização", "Extinção", "Detecção")
+kable(tab.din, digits = 2,
+      col.names = c("Valor real", "Média", "2,5%", "97,5%", "Ingênua"),
+      format.args = list(decimal.mark = ","))
+```
+
+Uma não detecção depois de uma detecção parece uma extinção, e uma
+detecção depois de um falso zero parece uma colonização. Por isso as
+taxas ingênuas superestimam a renovação (*turnover*) dos sítios.
+
+## Trajetória da ocupação
+
+A partir da posterior de $\psi_1$, $\gamma$ e $\varepsilon$, calculamos
+a ocupação esperada em cada temporada com a equação de recorrência, para
+cada amostra da posterior. Também calculamos a ocupação de equilíbrio:
+
+```{r trajetoria-din}
+psi <- matrix(NA, length(psi1), n.temp)    # amostras x temporadas
+psi[, 1] <- psi1
+for (t in 2:n.temp)
+    psi[, t] <- psi[, t - 1] * (1 - eps) + (1 - psi[, t - 1]) * gama
+psi.eq <- gama / (gama + eps)
+PI(psi.eq, prob = 0.95)
+gama.sim / (gama.sim + eps.sim)     # valor real
+```
+
+E o gráfico com a trajetória estimada, a proporção de sítios ocupados
+na simulação e a proporção de sítios com registro em cada temporada:
+
+```{r grafico-trajetoria, fig.asp=0.7}
+traj <- data.frame(temporada = 1:n.temp,
+                   media = colMeans(psi),
+                   inf = apply(psi, 2, PI, prob = 0.95)[1, ],
+                   sup = apply(psi, 2, PI, prob = 0.95)[2, ],
+                   real = colMeans(z),
+                   ingenua = colMeans(D))
+ggplot(traj, aes(temporada)) +
+    geom_ribbon(aes(ymin = inf, ymax = sup), alpha = 0.3) +
+    geom_line(aes(y = media)) +
+    geom_point(aes(y = real, color = "Valor real"), shape = 4, size = 3) +
+    geom_point(aes(y = ingenua, color = "Ingênua"), size = 2) +
+    geom_hline(yintercept = mean(psi.eq), linetype = 2) +
+    coord_cartesian(ylim = c(0, 1)) +
+    labs(x = "Temporada", y = "Ocupação", color = NULL) +
+    theme_classic()
+```
+
+A linha tracejada é a média da posterior da ocupação de equilíbrio. O
+*ubms* também tem a função `projected()`, que calcula a posterior da
+ocupação de cada sítio em cada temporada.
+
+### Para pensar
+
+* As estimativas de colonização e extinção do modelo recuperam os
+  valores verdadeiros? E as ingênuas?
+
+* Por que a extinção aparente fica mais enviesada que a colonização
+  aparente? Dica: compare o número de falsos zeros esperados entre os
+  sítios ocupados com o número de sítios vazios.
+
+* O modelo supõe que $\gamma$ e $\varepsilon$ são os mesmos em todos os
+  sítios e temporadas. Que covariáveis poderiam afetar a colonização? E
+  a extinção? Em qual fórmula do `stan_colext()` você as incluiria?
+
+* Numa metapopulação, a colonização de um sítio deveria depender de
+  quantos sítios vizinhos estão ocupados. Que premissa do modelo isso
+  viola?
+
+# Referências
+
+* Kellner, K. F., Fowler, N. L., Petroelje, T. R., Kautz, T. M., Beyer,
+  D. E. & Belant, J. L. (2022). ubms: An R package for fitting
+  hierarchical occupancy and N-mixture abundance models in a Bayesian
+  framework. *Methods in Ecology and Evolution* 13, 577–584.
+  <https://doi.org/10.1111/2041-210X.13777>.
+
+* Kéry, M. & Royle, J. A. (2016). *Applied Hierarchical Modeling in
+  Ecology*. Vol. 1. Academic Press.
+
+* MacKenzie, D. I. et al. (2002). Estimating site occupancy rates when
+  detection probabilities are less than one. *Ecology* 83, 2248–2255.
+
+* MacKenzie, D. I. et al. (2003). Estimating site occupancy,
+  colonization, and local extinction when a species is detected
+  imperfectly. *Ecology* 84, 2200–2207.
+
+* MacKenzie, D. I. et al. (2018). *Occupancy Estimation and Modeling*.
+  2nd ed. Academic Press.
+
+* McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course
+  with Examples in R and Stan*. 2nd ed. CRC Press.
+
+* Pollock, K. H. (1982). A capture-recapture design robust to unequal
+  probability of capture. *Journal of Wildlife Management* 46, 752–757.
+
+* Royle, J. A. & Kéry, M. (2007). A Bayesian state-space formulation of
+  dynamic occupancy models. *Ecology* 88, 1813–1823.
+
+* Royle, J. A. & Nichols, J. D. (2003). Estimating abundance from
+  repeated presence–absence data or point counts. *Ecology* 84,
+  777–790.
